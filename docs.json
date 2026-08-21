@@ -1,36 +1,67 @@
 {
+  "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "OpenWrench",
+  "name": "OpenWrench API",
+  "description": "Reference documentation for the OpenWrench External API — buyer, supplier, and partner surfaces.",
   "colors": {
     "primary": "#0D9373",
     "light": "#07C983",
     "dark": "#0D9373"
   },
-  "favicon": "/favicon.svg",
   "logo": {
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
+  "favicon": "/favicon.svg",
   "navbar": {
     "links": [
       {
-        "label": "Support",
-        "href": "mailto:support@useopenwrench.com"
+        "href": "mailto:support@useopenwrench.com",
+        "label": "Support"
       }
     ]
   },
   "navigation": {
     "tabs": [
       {
-        "tab": "Buyer API"
+        "tab": "Buyer API",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["buyer-api/introduction"]
+          },
+          {
+            "group": "API Reference",
+            "openapi": "openapi/buyer.json"
+          }
+        ]
       },
       {
-        "tab": "Supplier API"
+        "tab": "Supplier API",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["supplier-api/introduction"]
+          },
+          {
+            "group": "API Reference",
+            "openapi": "openapi/supplier.json"
+          }
+        ]
       },
       {
-        "tab": "Partners API"
+        "tab": "Partners API",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["partners-api/introduction"]
+          },
+          {
+            "group": "API Reference",
+            "openapi": "openapi/partners.json"
+          }
+        ]
       }
     ]
-  },
-  "description": "Documentation for OpenWrench — the all-in-one facilities management platform for buyers, suppliers, and internal teams."
+  }
 }
