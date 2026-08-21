@@ -78,7 +78,9 @@
           },
           {
             "group": "AI & Automation",
-            "pages": []
+            "pages": [
+              "buyers/vfa"
+            ]
           }
         ]
       },
@@ -87,7 +89,9 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": []
+            "pages": [
+              "suppliers/overview"
+            ]
           },
           {
             "group": "Doing the Work",
