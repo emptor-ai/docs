@@ -97,12 +97,16 @@
           {
             "group": "Doing the Work",
             "pages": [
-              "suppliers/work-orders"
+              "suppliers/work-orders",
+              "suppliers/on-site",
+              "suppliers/inventory"
             ]
           },
           {
             "group": "Getting Paid",
-            "pages": []
+            "pages": [
+              "suppliers/quotes"
+            ]
           },
           {
             "group": "Growing Your Business",
