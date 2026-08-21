@@ -105,12 +105,16 @@
           {
             "group": "Getting Paid",
             "pages": [
-              "suppliers/quotes"
+              "suppliers/quotes",
+              "suppliers/invoicing"
             ]
           },
           {
             "group": "Growing Your Business",
-            "pages": []
+            "pages": [
+              "suppliers/compliance",
+              "suppliers/performance"
+            ]
           }
         ]
       },
@@ -119,7 +123,9 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": []
+            "pages": [
+              "internal-teams/overview"
+            ]
           },
           {
             "group": "Field Work",
