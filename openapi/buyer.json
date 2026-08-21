@@ -3,7 +3,7 @@
   "info": {
     "title": "OpenWrench Buyer API",
     "version": "1.0.0",
-    "description": "External REST API for OpenWrench buyers (facilities-management side). Generated from the application source (Play routes, controllers and models).\n\n## Authentication\nEvery request must carry a buyer API key in the `X-API-KEY` header. The key resolves to a buyer contact, and all reads/writes are tenant-scoped to that contact's buyer company (plus, on several endpoints, role-based location/brand restrictions). Endpoints under `/v1/buyer/super_admin/...` (and a few others noted per-operation) additionally require the key's contact to be a buyer super admin.\n\n## Rate limiting\n10 requests per 20-second window per API key; requests beyond that receive **429**. A handful of operations noted per-operation bypass the rate limiter.\n\n## Response envelope\nSingle-entity responses: `{ \"type\": \"<EntityName>\", \"data\": { ... }, \"status\": \"ok\" }`.\nList responses: `{ \"type\": \"<EntityName>\", \"data\": [ ... ], \"count\": <total>, \"status\": \"ok\" }`.\ncount_by responses: `{ \"type\": \"CountBy\", \"data\": <integer>, \"status\": \"ok\" }`.\nErrors: `{ \"message\": \"...\", \"type\": \"<ExceptionType>\", \"status\": \"error\", \"traceId\": \"...\" }` \u2014 401 missing/invalid key, 400 bad input, 404 not found, 429 rate limit.\n\n## Pagination & filtering\nList endpoints accept `offset`, `limit` (default 10, max 25 \u2014 the locations list clamps to 10), `sort_by` and `order` (asc|desc). Every other query parameter is treated as a filter and matched against the entity's indexed columns (multi-value filters are comma-separated strings); these are combined with the tenant-security filters derived from the API key.\n\nTimestamps are ISO 8601 strings unless noted otherwise.\n\n## Date formats\nDate-time fields serialize as strings in one of two shapes depending on the underlying type: ISO 8601 with offset (e.g. `2026-08-14T13:05:22.000-07:00`) for most timestamps, or `yyyy-MM-dd HH:mm:ss.S` (space-separated, no offset) for database timestamp fields. Plain dates are `yyyy-MM-dd`. When sending date-times, ISO 8601 is accepted."
+    "description": "External REST API for OpenWrench buyers (facilities-management side). Generated from the application source (Play routes, controllers and models).\n\n## Authentication\nEvery request must carry a buyer API key in the `X-API-KEY` header. The key resolves to a buyer contact, and all reads/writes are tenant-scoped to that contact's buyer company (plus, on several endpoints, role-based location/brand restrictions). Endpoints under `/v1/buyer/super_admin/...` (and a few others noted per-operation) additionally require the key's contact to be a buyer super admin.\n\n## Rate limiting\n10 requests per 20-second window per API key; requests beyond that receive **429**. A handful of operations noted per-operation bypass the rate limiter.\n\n## Response envelope\nSingle-entity responses: `{ \"type\": \"<EntityName>\", \"data\": { ... }, \"status\": \"ok\" }`.\nList responses: `{ \"type\": \"<EntityName>\", \"data\": [ ... ], \"count\": <total>, \"status\": \"ok\" }`.\ncount_by responses: `{ \"type\": \"CountBy\", \"data\": <integer>, \"status\": \"ok\" }`.\nErrors: `{ \"message\": \"...\", \"type\": \"<ExceptionType>\", \"status\": \"error\", \"traceId\": \"...\" }` \u2014 401 missing/invalid key, 400 bad input, 404 not found, 429 rate limit.\n\n## Pagination & filtering\nList endpoints accept `offset`, `limit` (default 10, max 25 \u2014 the locations list clamps to 10), `sort_by` and `order` (asc|desc). Every other query parameter is treated as a filter and matched against the entity's indexed columns (multi-value filters are comma-separated strings); these are combined with the tenant-security filters derived from the API key.\n\nTimestamps are ISO 8601 strings unless noted otherwise.\n\n## Date formats\nDate-time fields serialize as strings in one of two shapes depending on the underlying type: ISO 8601 with offset (e.g. `2026-08-14T13:05:22.000-07:00`) for most timestamps, or `yyyy-MM-dd HH:mm:ss.S` (space-separated, no offset) for database timestamp fields. Plain dates are `yyyy-MM-dd`. When sending date-times, ISO 8601 is accepted.\n\n## Required headers\nEvery request must carry BOTH `X-API-KEY` (your API key) and `OW-KEY` (the OpenWrench shared secret issued with it). Requests missing either return 401."
   },
   "servers": [
     {
@@ -12,7 +12,8 @@
   ],
   "security": [
     {
-      "ApiKeyAuth": []
+      "ApiKeyAuth": [],
+      "OwKeyAuth": []
     }
   ],
   "tags": [
@@ -5777,6 +5778,12 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-KEY"
+      },
+      "OwKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "OW-KEY",
+        "description": "OpenWrench shared secret. Required on every request alongside X-API-KEY; issued together with your API key."
       }
     },
     "parameters": {

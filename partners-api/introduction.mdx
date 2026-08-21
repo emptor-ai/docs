@@ -19,14 +19,14 @@ Internal-teams endpoints are served under the `/v1/partners/` path prefix.
 
 These endpoints require a **partner API key** — a separate credential from buyer and supplier API keys. A buyer API key will not work against `/v1/partners/` endpoints, even though this section lives under the Buyer API docs.
 
-Send the partner key in the `X-API-KEY` header on every request. The key automatically scopes every request to your company's data.
+Every request must carry **two headers**: `X-API-KEY` (the partner key) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your company's data. Requests missing either header return `401`.
 
 ```bash
-curl -H "X-API-KEY: <your-key>" \
+curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
   "https://api.useopenwrench.com/api/external/v1/partners/ping"
 ```
 
-To have a partner API key issued, contact [support@useopenwrench.com](mailto:support@useopenwrench.com).
+To have a partner API key and shared secret issued, contact [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
 ## Rate limits
 

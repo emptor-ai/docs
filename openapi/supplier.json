@@ -3,7 +3,7 @@
   "info": {
     "title": "OpenWrench Supplier API",
     "version": "1.0.0",
-    "description": "External REST API for OpenWrench suppliers (service providers).\n\n## Authentication\nEvery request must carry a supplier API key in the `X-API-KEY` header. The key resolves to a supplier contact; all reads and writes are tenant-scoped to that contact's supplier facility/company. Missing or invalid keys are answered with 401.\n\n## Rate limiting\n10 requests per 20-second window per API key. Requests beyond that are answered with 429 and the standard error envelope. (A few endpoints, noted in their descriptions, are not rate-limited.)\n\n## Response envelope\nSingle entity: `{\"type\": \"<EntityName>\", \"data\": {...}, \"status\": \"ok\"}`. Lists: `{\"type\": \"<EntityName>\", \"data\": [...], \"count\": <total>, \"status\": \"ok\"}`. count_by endpoints return the integer count in `data`. The `type` label is hard-coded on some endpoints (e.g. \"WorkOrderNotes\", \"pingpong\") and derived via Scala reflection on generic CRUD endpoints, where it may appear as the fully qualified server class name - treat it as informational. Errors: `{\"message\": \"...\", \"type\": \"<ExceptionType>\", \"status\": \"error\", \"traceId\": \"...\"}` with HTTP 400 (bad input, and also permission-denied reads/writes), 401 (missing/invalid key), 404 (not found), 429 (rate limit).\n\n## Pagination\nList endpoints accept `offset`, `limit` (default 10, max 25 - the supplier locations list caps at 10), `sort_by` and `order` (`asc`|`desc`), plus entity-specific query-string filters on indexed columns.\n\n## Data masking\nFor third-party suppliers (keys whose supplier company is not a buyer's internal service team), work order, location and invoice responses are masked: buyer-private fields are blanked before the response is returned.\n\n## Date formats\nDate-time fields serialize as strings in one of two shapes depending on the underlying type: ISO 8601 with offset (e.g. `2026-08-14T13:05:22.000-07:00`) for most timestamps, or `yyyy-MM-dd HH:mm:ss.S` (space-separated, no offset) for database timestamp fields. Plain dates are `yyyy-MM-dd`. When sending date-times, ISO 8601 is accepted."
+    "description": "External REST API for OpenWrench suppliers (service providers).\n\n## Authentication\nEvery request must carry a supplier API key in the `X-API-KEY` header. The key resolves to a supplier contact; all reads and writes are tenant-scoped to that contact's supplier facility/company. Missing or invalid keys are answered with 401.\n\n## Rate limiting\n10 requests per 20-second window per API key. Requests beyond that are answered with 429 and the standard error envelope. (A few endpoints, noted in their descriptions, are not rate-limited.)\n\n## Response envelope\nSingle entity: `{\"type\": \"<EntityName>\", \"data\": {...}, \"status\": \"ok\"}`. Lists: `{\"type\": \"<EntityName>\", \"data\": [...], \"count\": <total>, \"status\": \"ok\"}`. count_by endpoints return the integer count in `data`. The `type` label is hard-coded on some endpoints (e.g. \"WorkOrderNotes\", \"pingpong\") and derived via Scala reflection on generic CRUD endpoints, where it may appear as the fully qualified server class name - treat it as informational. Errors: `{\"message\": \"...\", \"type\": \"<ExceptionType>\", \"status\": \"error\", \"traceId\": \"...\"}` with HTTP 400 (bad input, and also permission-denied reads/writes), 401 (missing/invalid key), 404 (not found), 429 (rate limit).\n\n## Pagination\nList endpoints accept `offset`, `limit` (default 10, max 25 - the supplier locations list caps at 10), `sort_by` and `order` (`asc`|`desc`), plus entity-specific query-string filters on indexed columns.\n\n## Data masking\nFor third-party suppliers (keys whose supplier company is not a buyer's internal service team), work order, location and invoice responses are masked: buyer-private fields are blanked before the response is returned.\n\n## Date formats\nDate-time fields serialize as strings in one of two shapes depending on the underlying type: ISO 8601 with offset (e.g. `2026-08-14T13:05:22.000-07:00`) for most timestamps, or `yyyy-MM-dd HH:mm:ss.S` (space-separated, no offset) for database timestamp fields. Plain dates are `yyyy-MM-dd`. When sending date-times, ISO 8601 is accepted.\n\n## Required headers\nEvery request must carry BOTH `X-API-KEY` (your API key) and `OW-KEY` (the OpenWrench shared secret issued with it). Requests missing either return 401."
   },
   "servers": [
     {
@@ -12,7 +12,8 @@
   ],
   "security": [
     {
-      "ApiKeyAuth": []
+      "ApiKeyAuth": [],
+      "OwKeyAuth": []
     }
   ],
   "tags": [
@@ -7720,6 +7721,12 @@
         "type": "apiKey",
         "in": "header",
         "name": "X-API-KEY"
+      },
+      "OwKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "OW-KEY",
+        "description": "OpenWrench shared secret. Required on every request alongside X-API-KEY; issued together with your API key."
       }
     },
     "schemas": {

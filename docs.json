@@ -1,7 +1,7 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "OpenWrench API",
+  "name": "OpenWrench Docs",
   "description": "Reference documentation for the OpenWrench External API \u2014 buyer, supplier, and partner surfaces.",
   "colors": {
     "primary": "#0D9373",
@@ -12,7 +12,7 @@
     "light": "/logo/light.svg",
     "dark": "/logo/dark.svg"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.png",
   "navbar": {
     "links": [
       {
