@@ -1,0 +1,73 @@
+---
+title: "Buyer companies, locations, assets, and data masking"
+sidebarTitle: "Reference data"
+description: "Read the buyer-side reference data suppliers can see: related buyer companies, locations and regions, assets and asset types, and how masking works."
+---
+
+Work orders reference a world owned by your buyers: their companies, locations, regions, and assets. The Supplier API exposes read-only views of all of them, filtered to what your relationships entitle you to see.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Data masking
+
+How much you see depends on what kind of supplier your key belongs to:
+
+- **Internal service team keys** (your supplier company is the buyer's own in-house team) receive full records.
+- **Third-party supplier keys** receive masked records on work orders, locations, and invoices: buyer-private fields are blanked before the response returns.
+
+If a field you expect is consistently empty, masking is the first thing to check. The scoping itself cannot be widened by filters; tenant-security filters derived from your key always apply.
+
+## Buyer companies
+
+`GET /v1/supplier/buyer_company/buyer_companies` returns every buyer company that has a relationship with your supplier. No pagination or filters are honored: the full tenant-scoped set comes back in one response (each company's `buyerCompanySettings` is stripped).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/buyer_company/buyer_companies"
+```
+
+Use it to key per-buyer behavior in your integration (which problem types to use, which buyers auto-approve third-party completions, and so on).
+
+## Locations and regions
+
+```bash
+# List: page size is capped at 10 on this endpoint (larger limits are silently reduced)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/location/locations?limit=10"
+
+# Count, one, or several at once
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/count_by"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/multiple/1204,1205"
+```
+
+- The location list clamps `limit` to **10**; most other lists allow 25.
+- `multiple/{ids}` silently drops ids you cannot read; the response `count` equals what was actually returned.
+- Regions (buyer-company groupings of locations) are at `GET /v1/supplier/location/regions` and `/regions/{id}` with standard pagination.
+
+## Assets and asset types
+
+Assets are the equipment your technicians service; asset types classify them.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/assets?locationId=1204&limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/assets/5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_types?limit=25"
+```
+
+The single-asset read hydrates the asset's meters (envelope type `ApiAssetWithMeter`), which gives your techs meter history context before a visit. All four endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) are read-only with standard pagination and field filters.
+
+## Caching strategy
+
+Reference data changes slowly. A practical setup:
+
+- Refresh buyer companies daily (one call).
+- Sync locations and assets for active work orders on demand, caching by id.
+- Treat `400` on a single read as "outside your scope" and `404` as "does not exist", and expect ids to disappear from your view when a buyer relationship ends.

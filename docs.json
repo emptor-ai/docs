@@ -69,6 +69,21 @@
                 ]
               },
               {
+                "group": "Guides",
+                "pages": [
+                  "buyer-api/work-orders",
+                  "buyer-api/service-calls",
+                  "buyer-api/assets-and-locations",
+                  "buyer-api/invoices",
+                  "buyer-api/quotes-and-proposals",
+                  "buyer-api/planned-maintenance",
+                  "buyer-api/supplier-network",
+                  "buyer-api/site-survey-walkthroughs",
+                  "buyer-api/files-and-attachments",
+                  "buyer-api/account-and-utilities"
+                ]
+              },
+              {
                 "group": "API Reference",
                 "openapi": {
                   "source": "openapi/buyer.json",
@@ -79,6 +94,8 @@
                 "group": "Internal Teams API",
                 "pages": [
                   "partners-api/introduction",
+                  "partners-api/purchasing-flow",
+                  "partners-api/catalog-and-stock",
                   {
                     "group": "Endpoints",
                     "openapi": {
@@ -129,6 +146,18 @@
                 "group": "Getting Started",
                 "pages": [
                   "supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "supplier-api/work-orders",
+                  "supplier-api/service-calls",
+                  "supplier-api/wrenchmode",
+                  "supplier-api/quotes-and-invoicing",
+                  "supplier-api/purchasing-and-inventory",
+                  "supplier-api/reference-data",
+                  "supplier-api/files-and-users"
                 ]
               },
               {

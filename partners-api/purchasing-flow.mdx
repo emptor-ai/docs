@@ -1,0 +1,144 @@
+---
+title: "The purchasing flow: requests to orders to receipts"
+sidebarTitle: "Purchasing flow"
+description: "Walk the Internal Teams API purchasing lifecycle end to end: read approved purchase requests, cut purchase orders, associate line items, and record receipts."
+---
+
+This guide walks the purchasing lifecycle end to end with the Internal Teams API: technicians raise **purchase requests** (PRs), your purchasing system turns them into **purchase orders** (POs) with a vendor, and goods arrive as **receipts** that update stock. It assumes you have a partner API key (see the [introduction](/partners-api/introduction)).
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"      # X-API-KEY header
+export SECRET="<shared-secret>"     # OW-KEY header
+```
+
+## Status vocabulary
+
+**Purchase requests**: `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`. A PR's status is recomputed from its line items as they get associated to POs, so most of the movement happens automatically.
+
+**Purchase orders**: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
+
+## 1. Read approved purchase requests
+
+```bash
+# The ordering backlog
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_requests?status=approved"
+
+# One PR with its part and equipment line items
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_requests/601"
+```
+
+Any query parameter other than the paging parameters acts as an equality filter on the entity's columns (`status=approved`, `stockLocationId=42`), always inside your company's scope.
+
+For a cross-PR worklist, query line items directly:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items?status=approved"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items/count_by?status=approved"
+```
+
+PR statuses can also be set directly when your approval flow lives outside OpenWrench: `PATCH .../purchase_requests/{id}/{status}` for any status in the vocabulary, and `PATCH .../purchase_requests/{id}/cancelled` to cancel (only from `requested` or `approved`; otherwise `400`).
+
+## 2. Create the purchase order
+
+`POST /v1/partners/inventory/purchase_orders` creates the PO with its line items in one call. Required: `status` (typically `new`), `partEquipmentVendorId`, `currencyId`, and `createdByEmail`. `totalCost` is required unless your company's inventory settings mark PO cost as non-mandatory (it is mandatory by default). `supplierCompanyId` and `supplierFacilityId` are derived from your key.
+
+```bash
+curl -X POST "$BASE/v1/partners/inventory/purchase_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "new",
+    "partEquipmentVendorId": 44,
+    "currencyId": "USD",
+    "createdByEmail": "purchasing@example.com",
+    "stockLocationId": 7,
+    "totalBeforeTax": 620.00,
+    "tax": 52.70,
+    "totalCost": 672.70,
+    "incomingLineItems": [
+      {
+        "isEquipmentLine": false,
+        "partId": 210,
+        "partQuantity": 2,
+        "partUomId": 1,
+        "partCost": 310.00,
+        "partCurrencyId": "USD",
+        "prLineItemIds": [8801, 8802]
+      }
+    ]
+  }'
+```
+
+Each line item sets `isEquipmentLine` and then either the `part*` fields or the `equipment*` fields. `prLineItemIds` records which PR lines the PO line fulfils. Passing a top-level `id` replaces an existing PO's writable fields instead of creating a new one.
+
+### Associate PR line items
+
+If you did not link PRs via `prLineItemIds` at creation time, associate them explicitly:
+
+```bash
+curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items/associate_po_line_item/8801,8802/9902"
+```
+
+Each listed PR line item moves to `orderInProgress` with its `associatedPurchaseOrderLineItemId` set, and each parent PR's status is recomputed. Ids your key cannot read are **silently skipped** (the call can return an empty list), so verify the returned items against what you sent.
+
+### Revise line items
+
+`POST /v1/partners/inventory/purchase_order_line_items/bulk` takes a **JSON array** of line items, all referencing the same `supplierPurchaseOrderId`, and has replace semantics:
+
+<Warning>
+All existing **non-received** line items on the PO are deleted first, then the submitted ones are created. Send the complete intended set of open lines every time. Line status is not settable here: new lines start as `new`, and a line resubmitted with its `id` keeps its status.
+</Warning>
+
+The PO's part/equipment/purchase-request id lists are recomputed and the purchase-order notification is re-sent. `supplierFacilityId`/`supplierCompanyId` per item come from your key; items without write permission are silently skipped.
+
+## 3. Mark the order placed
+
+```bash
+curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_orders/350/ordered"
+```
+
+This sets the PO to `ordered` and emails the order to the vendor. The success response is the confirmation string envelope (`"type": "Email"`, `"data": "Email has been sent"`), **not** the PO; re-fetch the PO for its new state. To abort instead, `PATCH .../purchase_orders/{id}/cancel` (which does return the updated PO).
+
+## 4. Record receipts as goods arrive
+
+`PUT /v1/partners/inventory/purchase_order_receipts` records receiving against one PO line item. On this endpoint `updatedBy` and `supplierFacilityId` **must be supplied in the body**; they are not derived from the key.
+
+```bash
+curl -X PUT "$BASE/v1/partners/inventory/purchase_order_receipts" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptNumber": "RCPT-1042",
+    "purchaseOrderId": 350,
+    "purchaseOrderLineItemId": 9902,
+    "receivedQuantity": 2,
+    "pricePerQuantity": 310.00,
+    "updatedBy": "warehouse@example.com",
+    "supplierFacilityId": 12
+  }'
+```
+
+Rules:
+
+- `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy`, and `supplierFacilityId` are required.
+- `receivedQuantity` must be non-zero; **a negative value records a return**.
+- Updating a receipt adjusts the received quantities and costs on the PO line item and the stock records at the destination stock location.
+- For serialized equipment, send one entry per unit in `equipmentPerStockLocationReceiptValues`, `assetReceiptValues`, or `receiptValuesWithoutId`. The array length must equal `receivedQuantity`, these arrays may not accompany a return, and serial or asset numbers already in use are rejected.
+- Vendor invoice metadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) can be captured on the receipt.
+
+Read a receipt back with `GET /v1/partners/inventory/purchase_order_receipts/{id}`.
+
+## Idempotency and error handling
+
+- Creates are not idempotent: retrying a timed-out PO create can duplicate the order. Use the list endpoint with a filter (for example on your `receiptNumber`-style external references) to check before retrying.
+- Permission problems surface as `400` (with the standard error envelope), and silently-skipped ids on the bulk and associate endpoints mean a "successful" call may have done less than you asked. Always reconcile the response payload against your request.
+- The [catalog endpoints](/partners-api/catalog-and-stock) supply the `partId`, `equipmentTypeId`, `partEquipmentVendorId`, and `stockLocationId` values this flow needs.

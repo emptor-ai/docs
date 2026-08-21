@@ -1,0 +1,69 @@
+---
+title: "Files and attachments in the Buyer API"
+sidebarTitle: "Files & attachments"
+description: "Upload files to OpenWrench private storage and reference them as work order, asset, and invoice attachments with the Buyer API."
+---
+
+Attachments across the Buyer API (work orders, assets, asset types, invoices, proposals) are references into OpenWrench's private file storage. The flow is always the same: upload the bytes first, then use the returned file reference in the entity's attachment field.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Upload
+
+`POST /v1/buyer/file/upload` is a multipart request with a single part named `file`, up to **512 MB**:
+
+```bash
+curl -X POST "$BASE/v1/buyer/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@site-photo.jpg"
+```
+
+The response (envelope type `FileManager`) is a `FileDetails` record:
+
+```json
+{
+  "type": "FileManager",
+  "data": {
+    "fileName": "site-photo.jpg",
+    "fileId": "a1b2c3d4e5"
+  },
+  "status": "ok"
+}
+```
+
+Non-ASCII characters are stripped from `fileName` on upload. A storage-level failure returns `500`; retry with backoff.
+
+## Reference the file from an entity
+
+Attachment fields (for example `buyerAttachments` on a work order create, or `attachments` on an asset type) take arrays of `FileDetails` objects, exactly as returned by the upload:
+
+```json
+{
+  "buyerAttachments": [
+    { "fileName": "site-photo.jpg", "fileId": "a1b2c3d4e5" }
+  ]
+}
+```
+
+## Download
+
+`GET /v1/buyer/file/download/{id}/{name}` streams the stored bytes with `Content-Disposition: attachment`. `{id}` is the `fileId` from upload (or from any `FileDetails` you read off an entity); `{name}` is the file name to serve the download as:
+
+```bash
+curl -OJ -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/file/download/a1b2c3d4e5/site-photo.jpg"
+```
+
+The response's content type is the stored file's own type. This is also how you pull supplier-submitted evidence: read `supplierAttachments` off a work order, or `invoicePDFs`/`attachments` off an invoice, and download each `fileId`.
+
+## Practical notes
+
+- Uploads count against the rate limit (10 requests per 20-second window), so batch-heavy migrations should throttle to roughly one upload every 2 seconds.
+- Store the `fileId` alongside your own records; there is no listing endpoint to rediscover files after the fact.
+- The same two-step pattern applies on the supplier side, and invoice PDFs have a dedicated supplier endpoint that uploads and publishes in one call.

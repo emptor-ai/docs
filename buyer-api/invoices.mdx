@@ -1,0 +1,109 @@
+---
+title: "Invoice lifecycle and payment workflows in the Buyer API"
+sidebarTitle: "Invoices"
+description: "Read, approve, and pay supplier invoices with the OpenWrench Buyer API, including status transitions, AP-system sync, flattened exports, and bulk updates."
+---
+
+Suppliers bill completed work orders through invoices; the Buyer API is where your AP integration reads them, moves them through approval, and marks them paid.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Invoice statuses
+
+Invoices carry a lowercase `status`:
+
+| Status | Meaning |
+| --- | --- |
+| `draft` | Supplier is still editing. **Never visible in buyer reads.** |
+| `pending` | Published to you, awaiting review. |
+| `approved` | Approved for payment. |
+| `processing` | In your payment run. |
+| `paid` | Settled. |
+| `disputed` | You disputed it (raised in-app). |
+| `pastdue`, `transferred`, `void` | Aging, hand-off, and voided states. |
+
+The buyer-controlled path is `pending → approved → processing → paid`. Each move has a dedicated endpoint; there is no generic status setter.
+
+## Reading invoices
+
+```bash
+# Pending invoices, newest first
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+
+# Count only
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices/count_by?status=pending"
+
+# One invoice
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
+```
+
+An invoice links back to its `workOrderId`, `locationId`, and `supplierFacilityId`, and carries the money breakdown in sections (labor, material, travel, freight, misc), each with line items, a `taxRate`, and a `totalBeforeTax`, rolling up to `invoiceTotalBeforeTax`, `invoiceTax`, and `invoiceTotalAfterTax`. Monetary values serialize as strings. The rendered PDF is in `invoicePDFs`; supporting files are in `attachments` (see [Files and attachments](/buyer-api/files-and-attachments)).
+
+### Flattened export
+
+`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. Same filters as the list endpoint.
+
+## Moving an invoice through approval
+
+Each transition endpoint takes just the invoice id:
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/approved" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 7710 }'
+```
+
+The four endpoints are `status/pending`, `status/approved`, `status/processing`, and `status/paid`. Shared behavior:
+
+- Each transition **clears the invoice's dispute flag**, then propagates a matching status change to the associated work order.
+- If the work-order status mapping fails, the invoice is **voided** and the call returns `400`. Treat a `400` here as "re-fetch and inspect", not "retry".
+- A save-level validation failure returns `406`.
+
+### Marking paid by work order id
+
+When your AP system knows the work order but not the OpenWrench invoice id, close the loop with:
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "workOrderId": "9001" }'
+```
+
+Lookup tries `workOrderId` first and falls back to `externalWorkOrderId`, always within your company. Already-`paid` invoices are returned unchanged (safe to retry); `approved` or `processing` invoices are marked paid; an invoice in any other status returns `400` with "Invoice not found".
+
+## Utilities
+
+**Append the work order detail page to the PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` regenerates the invoice PDF with the work order detail page appended and returns the new PDF link (envelope type `UpdatedInvoicePdf`). No request body; not rate limited.
+
+**Bulk update with filters.** `PATCH /v1/buyer/invoice/bulk_update_with_filters` applies a column update to every invoice matching a filter, always constrained to your company. Both maps are free-form column→value:
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/invoice/bulk_update_with_filters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "filters": { "status": "approved" }, "updates": { "status": "processing" } }'
+```
+
+It returns the number of invoices updated. This is a power tool that bypasses the per-invoice transition side effects, so prefer the status endpoints unless you genuinely need a sweep. Not rate limited.
+
+**Publish drafts for completed work orders.** `PATCH /v1/buyer/invoice/publish_draft_invoices_if_wo_complete_and_auto_publish_enabled` publishes supplier draft invoices whose work order is complete, for suppliers that enabled auto-publish. It requires a buyer **super-admin** API key and returns `403` for a normal key. Intended for scheduled housekeeping jobs.
+
+## AP sync pattern
+
+A robust accounts-payable sync:
+
+1. Poll `GET /invoices?status=pending` (or `publishedAt` windows) on a schedule.
+2. Pull each invoice, match totals against the approved [proposal](/buyer-api/quotes-and-proposals) and the work order's `nte`.
+3. `POST status/approved`, export to your AP system, then `POST status/processing`.
+4. On settlement, `POST status/paid` by id, or `status/paid/by_work_order_id` keyed on the work order reference your AP system carries.
+5. Log the envelope `traceId` on any `400`/`406` so support can trace the exact request.

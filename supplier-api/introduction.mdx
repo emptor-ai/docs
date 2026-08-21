@@ -63,3 +63,31 @@ Most timestamps are ISO 8601 strings with offset (e.g. `2026-08-14T13:05:22.000-
 ## Technician time data
 
 The WrenchMode endpoints expose per-technician work and drive time: `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` returns a per-technician drive/work/total rollup (window capped at 1 month), and `GET /v1/supplier/wrench_mode/events` returns the raw event log behind it. Service-call expansions (`/with_work_logs`, `/with_tech_details`) give the per-visit story.
+
+## Detailed guides
+
+The guides in this tab walk each part of the API in depth, with payloads, status semantics, and integration patterns:
+
+<CardGroup cols={2}>
+  <Card title="Work orders" href="/supplier-api/work-orders" icon="clipboard-list">
+    Receive, accept or decline, parts statuses, ECD, attachments, and notes.
+  </Card>
+  <Card title="Service calls" href="/supplier-api/service-calls" icon="truck">
+    Schedule, check in, check out, and set the completion status.
+  </Card>
+  <Card title="WrenchMode" href="/supplier-api/wrenchmode" icon="stopwatch">
+    Per-technician analytics and the raw drive/work event log.
+  </Card>
+  <Card title="Quotes & invoicing" href="/supplier-api/quotes-and-invoicing" icon="file-invoice-dollar">
+    Submit proposals, draft invoices, and publish with a PDF.
+  </Card>
+  <Card title="Purchasing & inventory" href="/supplier-api/purchasing-and-inventory" icon="boxes-stacked">
+    Purchase requests to orders to receipts, catalogs, and stock.
+  </Card>
+  <Card title="Reference data" href="/supplier-api/reference-data" icon="map-location-dot">
+    Buyer companies, locations, assets, and how data masking works.
+  </Card>
+  <Card title="Files & users" href="/supplier-api/files-and-users" icon="paperclip">
+    The file store behind attachments, and technician provisioning.
+  </Card>
+</CardGroup>

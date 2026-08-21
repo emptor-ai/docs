@@ -1,0 +1,157 @@
+---
+title: "Assets, asset types, models, meters, and locations"
+sidebarTitle: "Assets & locations"
+description: "Manage the Buyer API's physical world: locations and regions, asset types and models, creating assets with refrigerant tracking, and recording meter readings."
+---
+
+Everything a work order points at lives here: **locations** (your physical sites, grouped into **regions**) and **assets** (equipment at a location, classified by **asset type**, optionally standardized by **asset model**, and instrumented with **meters**).
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Locations
+
+Locations are read-mostly through the API:
+
+```bash
+# List (page size on this endpoint is clamped to 10, even if you ask for more)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations?limit=10"
+
+# Count matching a filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/count_by?regionId=4"
+
+# One location, or several in one round trip
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/multiple/1204,1205,1210"
+```
+
+Notes:
+
+- The list endpoint clamps `limit` to **10** (most list endpoints allow 25). Plan pagination loops accordingly.
+- `multiple/{ids}` takes comma-separated ids and **silently omits** any id you lack read permission for; check which ids came back rather than assuming all did.
+- The only write is `PATCH /v1/buyer/location/locations/{id}`, and it reads **only `locationTypeDetails`** from the body (custom field values for the location's type). All other fields are ignored.
+
+Regions group locations: `GET /v1/buyer/location/regions` and `GET /v1/buyer/location/regions/{id}`.
+
+## Asset types
+
+Asset types classify equipment ("Walk-in cooler", "Rooftop unit") and carry class-level defaults, including refrigerant settings.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/asset_types" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Walk-in cooler",
+    "usesRefrigerant": true,
+    "refrigerantTypeCode": "R-448A",
+    "fullChargeLb": 12.5
+  }'
+```
+
+- `name` is the only required field. `buyerCompanyId` is derived from your key and cannot be set.
+- `applianceCategory`, `refrigerantTypeCode`, and `fullChargeLb` accept an **explicit `null` to clear** the class-level default. `fullChargeLb` must be positive when supplied.
+- Passing an `id` upserts an existing type.
+
+Read with `GET /v1/buyer/asset/asset_types` and `GET /v1/buyer/asset/asset_types/{id}`.
+
+## Assets
+
+Create an asset with `POST /v1/buyer/asset/assets`. Required: `name`, `assetTypeId`, `locationId`, `isActive`, `isLeased`.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/assets" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Cooler #2 - back of house",
+    "assetTypeId": 301,
+    "locationId": 1204,
+    "isActive": true,
+    "isLeased": false,
+    "serialNumber": "WC2-99841",
+    "manufacturer": "Arctic Air",
+    "assetModelId": 77,
+    "installDate": "2024-05-01"
+  }'
+```
+
+Behavior to know:
+
+- `buyerFacilityId` and `buyerCompanyId` are **derived from the location**, never read from the body.
+- **Refrigerant overrides are clearable.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory`, and `refrigerantRequiresProcessShutdown` are per-unit overrides of the asset type's defaults. Omitting the key keeps the stored value; an explicit `null` (or blank string) clears it back to inheriting from the type. `isRefrigerantTracked` behaves similarly: omitted or `null` keeps the stored value, and enrolment is turned off only by an explicit `false`.
+- **Sub-assets.** `parentId` makes this a sub-asset. It requires sub-assets to be enabled for your company, and the child must be at the same location as the parent.
+- Passing an `id` upserts an existing asset.
+
+Reads:
+
+```bash
+# Full listing with filters
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets?locationId=1204&limit=25"
+
+# Lite projection: id, name, type, serial, location, warranties
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asset_lite?locationId=1204"
+
+# One asset, hydrated with its meters
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
+```
+
+`asset_lite` is the cheap way to sync an asset picker: when you pass no pagination parameters it returns the **unpaginated full set**, with `count` equal to the number of items returned. The single-asset read hydrates meters (the envelope `type` reads `ApiAssetWithMeter`).
+
+## Asset models
+
+Models standardize specs and manuals per type. `POST /v1/buyer/asset/asset_models` requires `modelName` and `assetTypeId`, with optional `manuals` and `specs` attachments.
+
+The fuzzy matcher is handy during imports, when your source data has free-text model names:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_models/fuzzy/Arctic%20Air%20WC-200/301"
+```
+
+`GET /v1/buyer/asset/asset_models/fuzzy/{name}/{assetTypeId}` returns the closest model within the asset type, or `404` when nothing is sufficiently close. Fall back to creating the model on `404`.
+
+## Meters and readings
+
+Meters attach a measurable series to an asset (temperature, runtime hours, cycle counts). Create the meter once, then record readings against it:
+
+```bash
+# 1. Create the meter
+curl -X POST "$BASE/v1/buyer/asset/meters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Box temperature",
+    "assetId": 5511,
+    "locationId": 1204,
+    "meterTypeId": 2,
+    "seriesType": "continuous",
+    "valueType": "number",
+    "valueUnit": "F"
+  }'
+
+# 2. Record readings (e.g. from an IoT bridge)
+curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meterId": 9310,
+    "value": "38.2",
+    "expectedValue": "36",
+    "recordedAt": "2026-08-21T09:00:00.000-07:00",
+    "recordedBy": "iot-bridge@example.com"
+  }'
+```
+
+<Note>
+The meter and reading payloads are parsed by a shared server-side helper, and the documented schema is abridged. The fields shown above are the reliable core; verify anything beyond them against the API Reference pages or with support.
+</Note>
+
+## Sync strategy
+
+For a nightly asset sync: page `asset_lite` for the id set, diff against your system, then fetch full records by id only for changed assets. That keeps you inside the rate limit (10 requests per 20-second window) far more comfortably than paging the full listing at 25 per call.

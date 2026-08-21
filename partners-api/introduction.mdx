@@ -61,3 +61,14 @@ List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `or
 ## The purchasing flow
 
 A typical integration follows the purchasing lifecycle: read approved **purchase requests** and their line items, create a **purchase order** against a vendor, associate PR line items to PO line items, mark the PO **ordered**, and record **receipts** as items arrive (negative received quantities record returns). Parts, equipment types, vendors, and stock locations round out the reference data.
+
+## Detailed guides
+
+<CardGroup cols={2}>
+  <Card title="Purchasing flow" href="/partners-api/purchasing-flow" icon="cart-flatbed">
+    The lifecycle end to end: requests, orders, line items, and receipts.
+  </Card>
+  <Card title="Catalog & stock" href="/partners-api/catalog-and-stock" icon="boxes-stacked">
+    Parts, equipment, vendors, stock locations, and work order consumption.
+  </Card>
+</CardGroup>

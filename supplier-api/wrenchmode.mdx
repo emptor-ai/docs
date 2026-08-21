@@ -1,0 +1,74 @@
+---
+title: "WrenchMode time tracking data in the Supplier API"
+sidebarTitle: "WrenchMode"
+description: "Pull per-technician drive and work time from WrenchMode: the analytics rollup, the raw event log with its filters, and payroll integration patterns."
+---
+
+WrenchMode captures what technicians actually do with their time: driving, working, pausing. The Supplier API exposes it two ways: a **per-technician analytics rollup** for reporting, and the **raw event log** for auditing and per-visit reconstruction.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Per-technician analytics
+
+`GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` returns one row per technician with their drive time, work time, and total over the window.
+
+```bash
+# One week of tech time
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-08-10/2026-08-16"
+
+# Only the techs under one supervisor
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-08-10/2026-08-16?supervisorEmail=lead@supplier.com"
+```
+
+Constraints:
+
+- Both dates are `yyyy-MM-dd`, and the window may span **at most one month**. Split longer ranges into month-sized calls.
+- The rollup covers your API key's supplier facility. A key whose contact is not attached to a supplier facility gets `401`.
+
+## The raw event log
+
+`GET /v1/supplier/wrench_mode/events` returns the underlying events, tenant-scoped to your supplier. Filters:
+
+| Parameter | Notes |
+| --- | --- |
+| `workOrderId`, `serviceCallId`, `locationId` | Scope to one job, visit, or site. |
+| `scheduleId` | One WrenchMode schedule. **Disables pagination**: the schedule's full event timeline is returned in one response. |
+| `eventTypes` | Comma-separated. Valid values: `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Unknown values are rejected with `400`. |
+| `supplierEmails` | Comma-separated technician emails, matched case-insensitively. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; malformed dates are `400`. |
+
+Standard pagination (`offset`, `limit` max 25, `sort_by`, `order`) applies except under `scheduleId`. One formatting trap: a present-but-empty CSV filter (for example `eventTypes=,`) is rejected as malformed rather than ignored.
+
+```bash
+# All work events for one work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?workOrderId=9001&eventTypes=started_work,ended_work"
+
+# One technician's day
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
+```
+
+The event vocabulary splits into trip events (`began_trip` through `trip_cancelled`, plus `drive_note`) and work events (`started_work`, `ended_work`, and the `location_*` timer events that mark pauses and resumes on site).
+
+## Choosing between them
+
+- **Analytics** for dashboards, payroll, and utilization reports: one number per technician per period, pause math already done.
+- **Raw events** for auditing a suspicious total, reconstructing a visit minute-by-minute, or feeding your own analytics warehouse.
+- **Per-visit** questions are usually better served by the service-call expansion `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, which returns exactly the events in the visit's check-in/check-out window plus the pause-excluded `trueWorkTimeMillis`. See [Service calls](/supplier-api/service-calls#reading-a-service-call-back).
+
+## Worked patterns
+
+**Weekly payroll pull.** Every Monday, call analytics for the prior week, join on technician email against your payroll system, and use work + drive time as the paid-hours input. One call per week per facility keeps you far under the rate limit.
+
+**Monthly utilization report.** Analytics with month boundaries (`2026-08-01` to `2026-08-31` is within the one-month cap); divide work time by scheduled time from your rostering system.
+
+**Labor cost reconciliation on an invoice.** For each service call on the invoiced work order, fetch `/with_work_logs`, sum `trueWorkTimeMillis`, and compare against the labor line items before the buyer ever sees a dispute.

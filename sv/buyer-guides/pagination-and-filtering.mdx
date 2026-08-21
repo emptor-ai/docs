@@ -18,11 +18,11 @@ Loopa tills du har hämtat `count` poster:
 ```bash theme={null}
 # Page 1
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=0"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?limit=25&offset=0"
 
 # Page 2
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=25"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?limit=25&offset=25"
 ```
 
 Värdet `count` i svarshöljet är totalen, inte antalet på den här sidan.
@@ -33,14 +33,14 @@ Filtrera på valfritt dokumenterat fält. Separera värden med komma för att ma
 
 ```bash theme={null}
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?status=open,in_progress&limit=25"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?status=Unassigned,PendingApproval&limit=25"
 ```
 
 ## Sortering
 
 ```bash theme={null}
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?sort_by=created_at&order=desc"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?sort_by=createdAt&order=desc"
 ```
 
 ## Hastighetsgränser och paginering

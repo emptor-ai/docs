@@ -1,0 +1,121 @@
+---
+title: "Working work orders with the Supplier API"
+sidebarTitle: "Work orders"
+description: "Receive, accept, decline, and progress work orders as a supplier: status updates, parts tracking, estimated completion dates, attachments, and notes."
+---
+
+For a supplier integration, the work order queue is the inbox. This guide covers the endpoints under `/v1/supplier/work_order/` for receiving jobs, responding to them, and keeping buyers informed while the work progresses. Scheduling visits and completing work happen through [service calls](/supplier-api/service-calls).
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Reading your queue
+
+```bash
+# Newly assigned work, oldest first
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=assignedAt&order=asc"
+
+# Count by filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+
+# One work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter filters on the entity's indexed columns. Everything is tenant-scoped to your facility. Two things to remember:
+
+- **Reads come from a read replica**, so your own just-written change can lag a moment in list results.
+- **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
+
+## Accept or decline
+
+**Accept** with `POST /v1/supplier/work_order/work_orders/status_update/confirm`, which sets the status to `ConfirmedByServiceProvider`. A work order already in a completed or closed display status cannot be accepted (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Decline** with `POST .../status_update/decline`. Only contacts of the work order's assigned supplier facility may decline. The work order leaves your queue through the supplier-change flow: its status returns to `PendingApproval`, or a private-network supplier is auto-picked, depending on the buyer's configuration. The note's `text` is recorded as the decline reason and reflected in what the buyer sees, so make it specific.
+
+Both calls take `{ "id": ..., "note": { ... } }` and return the updated work order.
+
+## Keep the buyer informed
+
+Three lightweight signals while the job is in flight:
+
+**Parts tracking.** Three status endpoints, same `{ id, note }` body shape as above:
+
+| Endpoint | Resulting status |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Estimated completion date.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` reads only `estimatedCompletionDate` (ISO 8601) from the body:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Attachments.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` appends file references to `supplierAttachments`, preserving what is already there. Upload the file first (see [Files and users](/supplier-api/files-and-users)), then:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Notes
+
+Append to the shared buyer–supplier thread with `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), and read a work order's thread with `GET /v1/supplier/work_order/work_order_notes/{woId}`. Reading updates read receipts for your contact, and a denied read returns an empty list rather than an error.
+
+## Create a supplier-initiated work order
+
+Suppliers can open work orders themselves (a tech spots a broken door while on site for something else). `POST /v1/supplier/work_order/work_orders` requires `title` and `locationId`; the location determines the buyer facility and company.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "isSupplierInitiated": true,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Defaults when omitted: `problemTypeId` falls back to the first leaf problem type of the location's buyer company, and `woPriorityId` to a default priority for that company. `status` is derived from the buyer company's configuration (typically `Unassigned` or `PendingApproval`). An `assetId`, if given, must exist, and its area is inherited when `areaId` is not set. The field is `needApproval` (no "s") on this create body.
+
+## Problem types
+
+`GET /v1/supplier/work_order/problem_types` lists problem types across your related buyer companies (not rate limited). Use it to classify supplier-initiated work orders correctly per buyer.
+
+## Typical integration loop
+
+1. Poll the queue for newly assigned work (`sort_by=assignedAt`), or diff on `statusChangedAt`.
+2. `confirm` or `decline` within your SLA.
+3. Schedule the visit via [service calls](/supplier-api/service-calls); post parts statuses and an ECD as things develop.
+4. Complete via check-out, then bill via [quotes and invoicing](/supplier-api/quotes-and-invoicing).

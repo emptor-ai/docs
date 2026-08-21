@@ -1,0 +1,68 @@
+---
+title: "Identity, user provisioning, and utilities in the Buyer API"
+sidebarTitle: "Account & utilities"
+description: "Verify credentials, inspect the identity behind a Buyer API key, provision buyer users with scoped roles, and fetch currency exchange rates."
+---
+
+This page covers the smaller endpoints every integration ends up needing: the health check, key identity, user provisioning, and currency exchange rates.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ping and identity
+
+`GET /v1/buyer/ping` verifies both headers and returns `{"type":"pingpong","data":"pong","status":"ok"}`. It is not rate limited, so it is safe for monitoring probes.
+
+`GET /v1/buyer/me` returns the identity behind your key as a deliberately small projection: contact `email`, name, `contactType`, `buyerFacilityName`, `buyerCompanyId`, and `buyerCompanyName`.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/me"
+```
+
+Call it once at startup: work order creation needs your `buyerCompanyId` and facility id [in the request body](/buyer-api/work-orders#create-a-work-order), and logging the identity makes key mix-ups obvious.
+
+## Provisioning buyer users
+
+`POST /v1/buyer/user/provision` creates a buyer contact, optionally with a login, and sends an invite email. Use it to sync users from your HR or identity system.
+
+```bash
+curl -X POST "$BASE/v1/buyer/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jordan@example.com",
+    "nameGiven": "Jordan",
+    "nameFamily": "Rivera",
+    "roles": ["BUYER_FM"],
+    "title": "Facilities Manager",
+    "hasAccessToAllLocations": false,
+    "locationIds": [1204, 1205]
+  }'
+```
+
+Rules enforced by the endpoint:
+
+- `email`, `nameGiven`, `nameFamily`, and `roles` are required. **Admin and super-admin roles are rejected with `403`**; API provisioning is for regular roles only.
+- The target facility defaults to your API key's facility. A supplied `facilityId` must belong to the same buyer company (`403` otherwise).
+- An account or contact already existing for the email returns `400` with a conflict message.
+- With a `password`, the login is created immediately and the invite email says "invited you to OpenWrench"; without one, the invite asks the user to sign up. `passwordResetRequired` forces a change on first login.
+- Location scoping: `hasAccessToAllLocations`, or explicit `locationIds`/`brandIds`.
+- Technicians' EPA 608 credentials can be attached with `epaCertificationType` (validated against the recognized classes; unrecognized values are `400`) and `epaCertificationNumber` (free-form, max 64 characters).
+
+The created contact is returned in the standard envelope.
+
+## Currency exchange rates
+
+Multi-currency portfolios can fetch the latest stored rate between two currency codes:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/currency_exchange/latest/CAD/USD"
+```
+
+`GET /v1/buyer/currency_exchange/latest/{targetCurrencyId}/{baseCurrencyId}` takes currency codes (for example `USD`, `CAD`) and returns the latest rate from base to target. Work orders carry the related fields `currencyId`, `locationCurrencyId`, and the two `currencyExchangeRate...` values when cross-currency pricing is in play.
