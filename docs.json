@@ -4,9 +4,9 @@
   "name": "OpenWrench Docs",
   "description": "Reference documentation and integration guides for the OpenWrench External API \u2014 buyer, supplier, and partner surfaces.",
   "colors": {
-    "primary": "#0D9373",
-    "light": "#07C983",
-    "dark": "#0D9373"
+    "primary": "#6D28D9",
+    "light": "#8B5CF6",
+    "dark": "#5B21B6"
   },
   "logo": {
     "light": "/logo/light.svg",
