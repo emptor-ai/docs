@@ -62,11 +62,17 @@
           },
           {
             "group": "Maintenance & Assets",
-            "pages": []
+            "pages": [
+              "buyers/maintenance/preventive-maintenance",
+              "buyers/maintenance/assets",
+              "buyers/maintenance/locations"
+            ]
           },
           {
             "group": "Suppliers & Reporting",
-            "pages": []
+            "pages": [
+              "buyers/suppliers/managing-suppliers"
+            ]
           }
         ]
       },
