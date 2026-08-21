@@ -1,11 +1,11 @@
 ---
-title: "Partners API"
+title: "Internal Teams API"
 sidebarTitle: "Introduction"
-description: "Purchasing and inventory integration for partner systems — purchase requests, purchase orders, receipts, parts, and stock"
+description: "Purchasing and inventory access for your internal service teams — purchase requests, purchase orders, receipts, parts, and stock"
 icon: "boxes-stacked"
 ---
 
-The OpenWrench Partners API is the integration surface for partner systems that handle purchasing and inventory — typically the tooling behind internal service teams: purchase requests and their line items, purchase orders through receipt, parts and equipment catalogs, stock locations, and the parts consumed on work orders.
+The Internal Teams API is the integration surface for the systems behind your in-house service teams' purchasing and inventory: purchase requests and their line items, purchase orders through receipt, parts and equipment catalogs, stock locations, and the parts consumed on work orders.
 
 ## Base URL
 
@@ -13,18 +13,20 @@ The OpenWrench Partners API is the integration surface for partner systems that 
 https://api.useopenwrench.com/api/external
 ```
 
-All partner endpoints are under `/v1/partners/`.
+Internal-teams endpoints are served under the `/v1/partners/` path prefix.
 
 ## Authentication
 
-Send your API key in the `X-API-KEY` header on every request. The key automatically scopes every request to your company's data.
+These endpoints require a **partner API key** — a separate credential from buyer and supplier API keys. A buyer API key will not work against `/v1/partners/` endpoints, even though this section lives under the Buyer API docs.
+
+Send the partner key in the `X-API-KEY` header on every request. The key automatically scopes every request to your company's data.
 
 ```bash
 curl -H "X-API-KEY: <your-key>" \
   "https://api.useopenwrench.com/api/external/v1/partners/ping"
 ```
 
-To get an API key, contact [support@useopenwrench.com](mailto:support@useopenwrench.com).
+To have a partner API key issued, contact [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
 ## Rate limits
 

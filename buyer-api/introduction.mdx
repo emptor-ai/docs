@@ -26,6 +26,10 @@ curl -H "X-API-KEY: <your-key>" \
 
 To get an API key, contact [support@useopenwrench.com](mailto:support@useopenwrench.com). Use `GET /v1/buyer/me` to inspect the identity (contact, facility, company) behind your key.
 
+<Note>
+The **Internal Teams API** section further down this tab uses a **separate partner API key** — your buyer key will not authenticate against those `/v1/partners/` endpoints. See the [Internal Teams API introduction](/partners-api/introduction) for details.
+</Note>
+
 ## Rate limits
 
 10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — back off and retry.

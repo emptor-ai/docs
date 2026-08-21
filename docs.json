@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "OpenWrench API",
-  "description": "Reference documentation for the OpenWrench External API — buyer, supplier, and partner surfaces.",
+  "description": "Reference documentation for the OpenWrench External API \u2014 buyer, supplier, and partner surfaces.",
   "colors": {
     "primary": "#0D9373",
     "light": "#07C983",
@@ -28,11 +28,23 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["buyer-api/introduction"]
+            "pages": [
+              "buyer-api/introduction"
+            ]
           },
           {
             "group": "API Reference",
             "openapi": "openapi/buyer.json"
+          },
+          {
+            "group": "Internal Teams API",
+            "pages": [
+              "partners-api/introduction",
+              {
+                "group": "Endpoints",
+                "openapi": "openapi/partners.json"
+              }
+            ]
           }
         ]
       },
@@ -41,24 +53,13 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": ["supplier-api/introduction"]
+            "pages": [
+              "supplier-api/introduction"
+            ]
           },
           {
             "group": "API Reference",
             "openapi": "openapi/supplier.json"
-          }
-        ]
-      },
-      {
-        "tab": "Partners API",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": ["partners-api/introduction"]
-          },
-          {
-            "group": "API Reference",
-            "openapi": "openapi/partners.json"
           }
         ]
       }
