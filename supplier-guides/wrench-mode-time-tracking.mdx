@@ -1,0 +1,23 @@
+# WrenchMode time tracking
+
+> Pull per-technician work and drive time
+
+WrenchMode exposes two endpoints:
+
+- `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` — per-technician rollup of drive time, work time, and total time. Window capped at one month.
+- `GET /v1/supplier/wrench_mode/events` — the raw event log the rollup is calculated from.
+
+## Choosing between them
+
+- Use the **analytics** endpoint for dashboards and payroll reports where you need a single number per technician per period.
+- Use the **raw events** endpoint when you need per-visit reconstruction or want to audit how the rollup was calculated.
+
+## Correlating with service calls
+
+The service-call endpoints have `/with_work_logs` and `/with_tech_details` expansions that give you the per-visit story alongside WrenchMode events.
+
+## Common patterns
+
+<Info>
+  Fill in worked examples: weekly payroll pull, monthly utilization report, per-work-order labor cost reconciliation.
+</Info>

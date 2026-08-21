@@ -1,0 +1,35 @@
+# Core concepts
+
+> How the Buyer API's main resources relate
+
+<Info>
+  Fill in this page with the concepts most relevant to your integrators. The outline below is a starting point.
+</Info>
+
+## Companies, facilities, and contacts
+
+Your API key is issued to a **contact**, who belongs to a **facility**, which rolls up to a **company**. Every request is scoped to that company.
+
+## Locations and assets
+
+- **Locations** are the physical sites you operate.
+- **Assets** are pieces of equipment attached to a location.
+
+Work orders reference both.
+
+## Work orders
+
+A **work order** is a request for service. It has a location, one or more assets, a trade, a status, and an assigned supplier (once dispatched). Work orders progress through statuses as suppliers accept, schedule, execute, and invoice work.
+
+## Suppliers
+
+Suppliers are the service providers who fulfill work orders. Your supplier network is available through the supplier endpoints; dispatching a work order assigns it to one of them.
+
+## Quotes and invoices
+
+- **Quotes** are supplier estimates you approve before work proceeds.
+- **Invoices** are the final bill for completed work.
+
+## Preventive maintenance (PM)
+
+PM schedules generate recurring work orders on assets at a defined cadence.

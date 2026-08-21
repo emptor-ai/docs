@@ -1,0 +1,36 @@
+# Accept and complete a work order
+
+> End-to-end flow for turning an incoming work order into a completed, invoiced job
+
+<Info>
+  This guide is a scaffold. Fill in the exact endpoint calls and payloads for your integration.
+</Info>
+
+## Prerequisites
+
+- A Supplier API key (see [Authentication](/supplier-guides/authentication)).
+- An incoming work order in your queue.
+
+## 1. Review the incoming work order
+
+Fetch the work order to review the location, assets, trade, and any buyer instructions.
+
+## 2. Accept the work order
+
+Update the work order status to signal acceptance.
+
+## 3. Schedule a service call
+
+Create a service call against the work order with the scheduled time and assigned technician.
+
+## 4. Document the visit
+
+As the technician works, log work notes, parts used, and (if enabled) WrenchMode time events.
+
+## 5. Submit a quote, if required
+
+If the work requires buyer approval before completion, submit a quote and wait for approval.
+
+## 6. Complete and invoice
+
+Close out the work order and submit an invoice.

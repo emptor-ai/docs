@@ -1,0 +1,48 @@
+# Pagination and filtering
+
+> Walk large result sets and narrow them down with field filters
+
+List endpoints accept four standard query parameters:
+
+- `offset` — number of records to skip (default `0`).
+- `limit` — page size (default `10`, max `25`).
+- `sort_by` — field name to sort on.
+- `order` — `asc` or `desc`.
+
+Every additional query parameter is treated as a **field filter**: pass the field name with a value, or a comma-separated list of values, to narrow the result set. Each endpoint's reference page lists its notable filters.
+
+## Paginating a full result set
+
+Loop until you've fetched `count` records:
+
+```bash theme={null}
+# Page 1
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=0"
+
+# Page 2
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=25"
+```
+
+The response envelope's `count` is the total, not the count on this page.
+
+## Filtering
+
+Filter by any documented field. Comma-separate values to match any of them:
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?status=open,in_progress&limit=25"
+```
+
+## Sorting
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?sort_by=created_at&order=desc"
+```
+
+## Rate limits and pagination
+
+Pagination loops can trip the rate limit (10 requests per 20-second window per key). Sleep between pages, or catch `429` responses and back off. See [Errors and rate limits](/buyer-guides/errors-and-rate-limits).
