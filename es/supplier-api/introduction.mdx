@@ -1,0 +1,90 @@
+# Supplier API
+
+> Acceso programático para proveedores de servicio: órdenes de trabajo, llamadas de servicio, cotizaciones, facturas, WrenchMode e inventario
+
+La Supplier API de OpenWrench da a los proveedores de servicio acceso programático a su lado de la plataforma: recibir y actualizar órdenes de trabajo, programar y documentar llamadas de servicio, enviar cotizaciones y facturas, extraer datos de tiempo del técnico desde WrenchMode y gestionar compras e inventario.
+
+## URL base
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Todos los endpoints del proveedor están bajo `/v1/supplier/`.
+
+## Autenticación
+
+Cada solicitud debe llevar **dos cabeceras**: `X-API-KEY` (tu clave de API, emitida por contacto de proveedor) y `OW-KEY` (el secreto compartido de OpenWrench emitido junto a ella). La clave delimita automáticamente cada solicitud a tu instalación: solo verás órdenes de trabajo, facturas y datos que te pertenezcan. Las solicitudes a las que les falte cualquiera de las cabeceras devuelven `401`.
+
+```bash
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/ping"
+```
+
+Para obtener una clave de API y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Límites de tasa
+
+10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`. Aplica back off y reintenta.
+
+## Envoltura de respuesta
+
+Respuestas de una sola entidad:
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Las respuestas de listado añaden un `count` total:
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Errores:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` significa credenciales faltantes o inválidas; `400` cubre entrada inválida, filtros incorrectos y denegaciones de permisos; `429` es el límite de tasa.
+
+## Paginación y filtrado
+
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order` (`asc` | `desc`). Los parámetros de consulta adicionales se tratan como filtros de campo: pasa un nombre de campo con un valor (separa varios valores por coma) para filtrar el conjunto de resultados. Cada página de referencia lista sus filtros más destacados.
+
+## Formatos de fecha
+
+La mayoría de las marcas de tiempo son cadenas ISO 8601 con offset (por ejemplo `2026-08-14T13:05:22.000-07:00`); algunos campos de marca de tiempo de base de datos se serializan como `yyyy-MM-dd HH:mm:ss.S`. Las fechas simples son `yyyy-MM-dd`. Cuando envíes fecha-hora, usa ISO 8601.
+
+## Datos de tiempo del técnico
+
+Los endpoints de WrenchMode exponen el tiempo de trabajo y conducción por técnico: `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` devuelve un resumen por técnico de conducción/trabajo/total (ventana limitada a 1 mes), y `GET /v1/supplier/wrench_mode/events` devuelve el registro bruto de eventos que lo respalda. Las expansiones de llamada de servicio (`/with_work_logs`, `/with_tech_details`) dan la historia por visita.
+
+## Guías detalladas
+
+Las guías de esta pestaña recorren cada parte de la API en profundidad, con payloads, semántica de estados y patrones de integración:
+
+<CardGroup cols={2}>
+  <Card title="Órdenes de trabajo" href="/supplier-api/work-orders" icon="clipboard-list">
+    Recibir, aceptar o rechazar, estados de partes, ECD, adjuntos y notas.
+  </Card>
+  <Card title="Llamadas de servicio" href="/supplier-api/service-calls" icon="truck">
+    Programar, hacer check-in, check-out y establecer el estado de finalización.
+  </Card>
+  <Card title="WrenchMode" href="/supplier-api/wrenchmode" icon="stopwatch">
+    Analítica por técnico y el registro bruto de eventos de conducción/trabajo.
+  </Card>
+  <Card title="Cotizaciones y facturación" href="/supplier-api/quotes-and-invoicing" icon="file-invoice-dollar">
+    Enviar propuestas, borradores de facturas y publicar con un PDF.
+  </Card>
+  <Card title="Compras e inventario" href="/supplier-api/purchasing-and-inventory" icon="boxes-stacked">
+    Desde solicitudes de compra hasta órdenes y recibos, catálogos y stock.
+  </Card>
+  <Card title="Datos de referencia" href="/supplier-api/reference-data" icon="map-location-dot">
+    Empresas compradoras, ubicaciones, activos y cómo funciona el enmascaramiento de datos.
+  </Card>
+  <Card title="Archivos y usuarios" href="/supplier-api/files-and-users" icon="paperclip">
+    El almacén de archivos detrás de los adjuntos y el aprovisionamiento de técnicos.
+  </Card>
+</CardGroup>

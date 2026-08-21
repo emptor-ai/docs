@@ -208,6 +208,54 @@
             ]
           },
           {
+            "tab": "Buyer API",
+            "groups": [
+              {
+                "group": "Kom ig\u00e5ng",
+                "pages": [
+                  "sv/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guider",
+                "pages": [
+                  "sv/buyer-api/work-orders",
+                  "sv/buyer-api/service-calls",
+                  "sv/buyer-api/assets-and-locations",
+                  "sv/buyer-api/invoices",
+                  "sv/buyer-api/quotes-and-proposals",
+                  "sv/buyer-api/planned-maintenance",
+                  "sv/buyer-api/supplier-network",
+                  "sv/buyer-api/site-survey-walkthroughs",
+                  "sv/buyer-api/files-and-attachments",
+                  "sv/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "API-referens",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "sv/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "sv/partners-api/introduction",
+                  "sv/partners-api/purchasing-flow",
+                  "sv/partners-api/catalog-and-stock",
+                  {
+                    "group": "Endpoints",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "sv/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "tab": "Leverant\u00f6rsguider",
             "groups": [
               {
@@ -236,6 +284,36 @@
                 "pages": [
                   "sv/supplier-guides/errors-and-rate-limits"
                 ]
+              }
+            ]
+          },
+          {
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "Kom ig\u00e5ng",
+                "pages": [
+                  "sv/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guider",
+                "pages": [
+                  "sv/supplier-api/work-orders",
+                  "sv/supplier-api/service-calls",
+                  "sv/supplier-api/wrenchmode",
+                  "sv/supplier-api/quotes-and-invoicing",
+                  "sv/supplier-api/purchasing-and-inventory",
+                  "sv/supplier-api/reference-data",
+                  "sv/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "API-referens",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "sv/supplier-reference"
+                }
               }
             ]
           }
@@ -278,6 +356,54 @@
             ]
           },
           {
+            "tab": "Buyer API",
+            "groups": [
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Gu\u00edas",
+                "pages": [
+                  "es/buyer-api/work-orders",
+                  "es/buyer-api/service-calls",
+                  "es/buyer-api/assets-and-locations",
+                  "es/buyer-api/invoices",
+                  "es/buyer-api/quotes-and-proposals",
+                  "es/buyer-api/planned-maintenance",
+                  "es/buyer-api/supplier-network",
+                  "es/buyer-api/site-survey-walkthroughs",
+                  "es/buyer-api/files-and-attachments",
+                  "es/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "Referencia de la API",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "es/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "es/partners-api/introduction",
+                  "es/partners-api/purchasing-flow",
+                  "es/partners-api/catalog-and-stock",
+                  {
+                    "group": "Endpoints",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "es/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "tab": "Gu\u00edas para proveedores",
             "groups": [
               {
@@ -306,6 +432,36 @@
                 "pages": [
                   "es/supplier-guides/errors-and-rate-limits"
                 ]
+              }
+            ]
+          },
+          {
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Gu\u00edas",
+                "pages": [
+                  "es/supplier-api/work-orders",
+                  "es/supplier-api/service-calls",
+                  "es/supplier-api/wrenchmode",
+                  "es/supplier-api/quotes-and-invoicing",
+                  "es/supplier-api/purchasing-and-inventory",
+                  "es/supplier-api/reference-data",
+                  "es/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "Referencia de la API",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "es/supplier-reference"
+                }
               }
             ]
           }
@@ -348,6 +504,54 @@
             ]
           },
           {
+            "tab": "Buyer API",
+            "groups": [
+              {
+                "group": "D\u00e9marrage",
+                "pages": [
+                  "fr/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr/buyer-api/work-orders",
+                  "fr/buyer-api/service-calls",
+                  "fr/buyer-api/assets-and-locations",
+                  "fr/buyer-api/invoices",
+                  "fr/buyer-api/quotes-and-proposals",
+                  "fr/buyer-api/planned-maintenance",
+                  "fr/buyer-api/supplier-network",
+                  "fr/buyer-api/site-survey-walkthroughs",
+                  "fr/buyer-api/files-and-attachments",
+                  "fr/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "R\u00e9f\u00e9rence de l'API",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "fr/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "fr/partners-api/introduction",
+                  "fr/partners-api/purchasing-flow",
+                  "fr/partners-api/catalog-and-stock",
+                  {
+                    "group": "Points de terminaison",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "fr/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "tab": "Guides pour fournisseurs",
             "groups": [
               {
@@ -376,6 +580,184 @@
                 "pages": [
                   "fr/supplier-guides/errors-and-rate-limits"
                 ]
+              }
+            ]
+          },
+          {
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "D\u00e9marrage",
+                "pages": [
+                  "fr/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr/supplier-api/work-orders",
+                  "fr/supplier-api/service-calls",
+                  "fr/supplier-api/wrenchmode",
+                  "fr/supplier-api/quotes-and-invoicing",
+                  "fr/supplier-api/purchasing-and-inventory",
+                  "fr/supplier-api/reference-data",
+                  "fr/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "R\u00e9f\u00e9rence de l'API",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "fr/supplier-reference"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "fr-CA",
+        "tabs": [
+          {
+            "tab": "Guides pour acheteurs",
+            "groups": [
+              {
+                "group": "D\u00e9marrage",
+                "pages": [
+                  "fr-CA/buyer-guides/overview",
+                  "fr-CA/buyer-guides/quickstart",
+                  "fr-CA/buyer-guides/authentication"
+                ]
+              },
+              {
+                "group": "Concepts",
+                "pages": [
+                  "fr-CA/buyer-guides/concepts"
+                ]
+              },
+              {
+                "group": "Proc\u00e9dures",
+                "pages": [
+                  "fr-CA/buyer-guides/create-and-dispatch-a-work-order",
+                  "fr-CA/buyer-guides/pagination-and-filtering",
+                  "fr-CA/buyer-guides/webhooks"
+                ]
+              },
+              {
+                "group": "Exploitation",
+                "pages": [
+                  "fr-CA/buyer-guides/errors-and-rate-limits"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Buyer API",
+            "groups": [
+              {
+                "group": "D\u00e9marrage",
+                "pages": [
+                  "fr-CA/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr-CA/buyer-api/work-orders",
+                  "fr-CA/buyer-api/service-calls",
+                  "fr-CA/buyer-api/assets-and-locations",
+                  "fr-CA/buyer-api/invoices",
+                  "fr-CA/buyer-api/quotes-and-proposals",
+                  "fr-CA/buyer-api/planned-maintenance",
+                  "fr-CA/buyer-api/supplier-network",
+                  "fr-CA/buyer-api/site-survey-walkthroughs",
+                  "fr-CA/buyer-api/files-and-attachments",
+                  "fr-CA/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "R\u00e9f\u00e9rence de l'API",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "fr-CA/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "fr-CA/partners-api/introduction",
+                  "fr-CA/partners-api/purchasing-flow",
+                  "fr-CA/partners-api/catalog-and-stock",
+                  {
+                    "group": "Points de terminaison",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "fr-CA/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Guides pour fournisseurs",
+            "groups": [
+              {
+                "group": "D\u00e9marrage",
+                "pages": [
+                  "fr-CA/supplier-guides/overview",
+                  "fr-CA/supplier-guides/quickstart",
+                  "fr-CA/supplier-guides/authentication"
+                ]
+              },
+              {
+                "group": "Concepts",
+                "pages": [
+                  "fr-CA/supplier-guides/concepts"
+                ]
+              },
+              {
+                "group": "Proc\u00e9dures",
+                "pages": [
+                  "fr-CA/supplier-guides/accept-and-complete-a-work-order",
+                  "fr-CA/supplier-guides/wrench-mode-time-tracking"
+                ]
+              },
+              {
+                "group": "Exploitation",
+                "pages": [
+                  "fr-CA/supplier-guides/errors-and-rate-limits"
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "D\u00e9marrage",
+                "pages": [
+                  "fr-CA/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr-CA/supplier-api/work-orders",
+                  "fr-CA/supplier-api/service-calls",
+                  "fr-CA/supplier-api/wrenchmode",
+                  "fr-CA/supplier-api/quotes-and-invoicing",
+                  "fr-CA/supplier-api/purchasing-and-inventory",
+                  "fr-CA/supplier-api/reference-data",
+                  "fr-CA/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "R\u00e9f\u00e9rence de l'API",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "fr-CA/supplier-reference"
+                }
               }
             ]
           }

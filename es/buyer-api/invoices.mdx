@@ -1,0 +1,107 @@
+# Ciclo de vida de las facturas y flujos de pago en la Buyer API
+
+> Lee, aprueba y paga facturas de proveedores con la Buyer API de OpenWrench, incluyendo transiciones de estado, sincronización con sistemas AP, exportaciones aplanadas y actualizaciones masivas.
+
+Los proveedores facturan las órdenes de trabajo completadas mediante facturas; la Buyer API es donde tu integración con AP las lee, las mueve por la aprobación y las marca como pagadas.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Estados de factura
+
+Las facturas llevan un `status` en minúsculas:
+
+| Estado | Significado |
+| --- | --- |
+| `draft` | El proveedor aún está editando. **Nunca es visible en lecturas del comprador.** |
+| `pending` | Publicada para ti, en espera de revisión. |
+| `approved` | Aprobada para pago. |
+| `processing` | En tu corrida de pagos. |
+| `paid` | Liquidada. |
+| `disputed` | La disputaste (planteada en la app). |
+| `pastdue`, `transferred`, `void` | Estados de vencimiento, transferencia y anulación. |
+
+La ruta controlada por el comprador es `pending → approved → processing → paid`. Cada movimiento tiene un endpoint dedicado; no hay un setter de estado genérico.
+
+## Leer facturas
+
+```bash
+# Facturas pendientes, más recientes primero
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+
+# Solo el conteo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices/count_by?status=pending"
+
+# Una factura
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
+```
+
+Una factura enlaza de vuelta a su `workOrderId`, `locationId` y `supplierFacilityId`, y lleva el desglose monetario en secciones (labor, material, viaje, flete, misc), cada una con líneas, una `taxRate` y un `totalBeforeTax`, que se suman a `invoiceTotalBeforeTax`, `invoiceTax` e `invoiceTotalAfterTax`. Los valores monetarios se serializan como cadenas. El PDF renderizado está en `invoicePDFs`; los archivos de soporte están en `attachments` (ver [Archivos y adjuntos](/buyer-api/files-and-attachments)).
+
+### Exportación aplanada
+
+`GET /v1/buyer/invoice/invoices/download` devuelve los mismos datos como filas planas (una fila por factura con los totales desnormalizados), pensado para exportación a hoja de cálculo e importaciones en sistemas AP. Mismos filtros que el endpoint de listado.
+
+## Mover una factura por la aprobación
+
+Cada endpoint de transición toma solo el id de la factura:
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/approved" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 7710 }'
+```
+
+Los cuatro endpoints son `status/pending`, `status/approved`, `status/processing` y `status/paid`. Comportamiento compartido:
+
+- Cada transición **borra la marca de disputa** de la factura y luego propaga un cambio de estado equivalente a la orden de trabajo asociada.
+- Si el mapeo del estado de la orden de trabajo falla, la factura se **anula** y la llamada devuelve `400`. Trata un `400` aquí como "vuelve a consultar e inspecciona", no como "reintentar".
+- Un fallo de validación a nivel de guardado devuelve `406`.
+
+### Marcar como pagada por id de orden de trabajo
+
+Cuando tu sistema AP conoce la orden de trabajo pero no el id de factura de OpenWrench, cierra el ciclo con:
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "workOrderId": "9001" }'
+```
+
+La búsqueda prueba primero con `workOrderId` y recae en `externalWorkOrderId`, siempre dentro de tu empresa. Las facturas ya `paid` se devuelven sin cambios (seguro reintentar); las facturas `approved` o `processing` se marcan como pagadas; una factura en cualquier otro estado devuelve `400` con "Invoice not found".
+
+## Utilidades
+
+**Añadir la página de detalle de la orden de trabajo al PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` regenera el PDF de la factura con la página de detalle de la orden de trabajo añadida y devuelve el nuevo enlace del PDF (envoltura tipo `UpdatedInvoicePdf`). Sin cuerpo de solicitud; sin límite de tasa.
+
+**Actualización masiva con filtros.** `PATCH /v1/buyer/invoice/bulk_update_with_filters` aplica una actualización de columna a cada factura que coincide con un filtro, siempre limitado a tu empresa. Ambos mapas son de formato libre columna→valor:
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/invoice/bulk_update_with_filters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "filters": { "status": "approved" }, "updates": { "status": "processing" } }'
+```
+
+Devuelve el número de facturas actualizadas. Es una herramienta potente que salta los efectos secundarios de la transición por factura, así que prefiere los endpoints de estado a menos que realmente necesites un barrido. Sin límite de tasa.
+
+**Publicar borradores de órdenes de trabajo completadas.** `PATCH /v1/buyer/invoice/publish_draft_invoices_if_wo_complete_and_auto_publish_enabled` publica facturas en borrador del proveedor cuya orden de trabajo esté completa, para proveedores que habilitaron la auto-publicación. Requiere una clave de API de **super-admin** de comprador y devuelve `403` para una clave normal. Está pensado para trabajos programados de mantenimiento.
+
+## Patrón de sincronización con AP
+
+Una sincronización robusta de cuentas por pagar:
+
+1. Consulta `GET /invoices?status=pending` (o ventanas de `publishedAt`) según programación.
+2. Descarga cada factura, contrasta los totales con la [propuesta](/buyer-api/quotes-and-proposals) aprobada y el `nte` de la orden de trabajo.
+3. `POST status/approved`, exporta a tu sistema AP y luego `POST status/processing`.
+4. En la liquidación, `POST status/paid` por id, o `status/paid/by_work_order_id` con la referencia de la orden de trabajo que lleva tu sistema AP.
+5. Registra el `traceId` de la envoltura en cualquier `400`/`406` para que soporte pueda rastrear la solicitud exacta.

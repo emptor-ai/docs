@@ -1,0 +1,107 @@
+# Cycle de vie des factures et flux de paiement dans l'API Acheteur
+
+> Lisez, approuvez et payez les factures des fournisseurs avec l'API Acheteur OpenWrench, incluant les transitions de statut, la synchronisation avec les comptes fournisseurs, les exports aplatis et les mises à jour en lot.
+
+Les fournisseurs facturent les bons de travail terminés au moyen de factures; l'API Acheteur est l'endroit où votre intégration comptes fournisseurs les lit, les fait progresser dans l'approbation et les marque payées.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Statuts de facture
+
+Les factures portent un `status` en minuscules :
+
+| Statut | Signification |
+| --- | --- |
+| `draft` | Le fournisseur est encore en modification. **Jamais visible dans les lectures acheteur.** |
+| `pending` | Publiée à votre intention, en attente de révision. |
+| `approved` | Approuvée pour paiement. |
+| `processing` | Dans votre cycle de paiement. |
+| `paid` | Réglée. |
+| `disputed` | Vous l'avez contestée (contestation ouverte dans l'application). |
+| `pastdue`, `transferred`, `void` | États de retard, de transfert et d'annulation. |
+
+Le chemin contrôlé par l'acheteur est `pending → approved → processing → paid`. Chaque déplacement a un endpoint dédié; il n'y a pas de setter de statut générique.
+
+## Lire les factures
+
+```bash
+# Factures en attente, les plus récentes en premier
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+
+# Nombre uniquement
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices/count_by?status=pending"
+
+# Une facture
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
+```
+
+Une facture est reliée à son `workOrderId`, `locationId` et `supplierFacilityId`, et porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`, se totalisant à `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées en chaînes de caractères. Le PDF rendu se trouve dans `invoicePDFs`; les fichiers de soutien sont dans `attachments` (voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments)).
+
+### Export aplati
+
+`GET /v1/buyer/invoice/invoices/download` retourne les mêmes données en lignes plates (une ligne par facture avec les totaux dénormalisés), conçu pour l'export en tableur et les importations vers les systèmes de comptes fournisseurs. Mêmes filtres que l'endpoint de liste.
+
+## Faire progresser une facture dans l'approbation
+
+Chaque endpoint de transition ne prend que l'id de la facture :
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/approved" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 7710 }'
+```
+
+Les quatre endpoints sont `status/pending`, `status/approved`, `status/processing` et `status/paid`. Comportement partagé :
+
+- Chaque transition **efface le drapeau de contestation de la facture**, puis propage un changement de statut correspondant au bon de travail associé.
+- Si la correspondance de statut de bon de travail échoue, la facture est **annulée** et l'appel renvoie `400`. Traitez un `400` ici comme « récupérer à nouveau et inspecter », pas « réessayer ».
+- Un échec de validation au niveau de la sauvegarde renvoie `406`.
+
+### Marquer payée par id de bon de travail
+
+Lorsque votre système comptes fournisseurs connaît le bon de travail mais pas l'id de facture OpenWrench, bouclez la boucle avec :
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "workOrderId": "9001" }'
+```
+
+La recherche essaie d'abord `workOrderId` puis retombe sur `externalWorkOrderId`, toujours à l'intérieur de votre entreprise. Les factures déjà `paid` sont retournées inchangées (sécuritaire à réessayer); les factures `approved` ou `processing` sont marquées payées; une facture dans tout autre statut renvoie `400` avec « Invoice not found ».
+
+## Utilitaires
+
+**Annexer la page de détail du bon de travail au PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` régénère le PDF de la facture avec la page de détail du bon de travail annexée et retourne le nouveau lien du PDF (enveloppe de type `UpdatedInvoicePdf`). Aucun corps de requête; non limité en débit.
+
+**Mise à jour en lot avec filtres.** `PATCH /v1/buyer/invoice/bulk_update_with_filters` applique une mise à jour de colonne à chaque facture correspondant à un filtre, toujours restreint à votre entreprise. Les deux mappings sont des `colonne→valeur` libres :
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/invoice/bulk_update_with_filters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "filters": { "status": "approved" }, "updates": { "status": "processing" } }'
+```
+
+Il retourne le nombre de factures mises à jour. C'est un outil puissant qui contourne les effets secondaires des transitions par facture, alors préférez les endpoints de statut à moins d'avoir vraiment besoin d'un balayage. Non limité en débit.
+
+**Publier les brouillons des bons de travail terminés.** `PATCH /v1/buyer/invoice/publish_draft_invoices_if_wo_complete_and_auto_publish_enabled` publie les brouillons de factures fournisseur dont le bon de travail est terminé, pour les fournisseurs qui ont activé la publication automatique. Il requiert une clé d'API acheteur **super-admin** et renvoie `403` pour une clé normale. Prévu pour les tâches d'entretien planifiées.
+
+## Modèle de synchronisation des comptes fournisseurs
+
+Une synchronisation robuste des comptes fournisseurs :
+
+1. Sondez `GET /invoices?status=pending` (ou des fenêtres `publishedAt`) selon un horaire.
+2. Récupérez chaque facture, comparez les totaux à la [proposition](/buyer-api/quotes-and-proposals) approuvée et au `nte` du bon de travail.
+3. `POST status/approved`, exportez vers votre système de comptes fournisseurs, puis `POST status/processing`.
+4. Au règlement, `POST status/paid` par id, ou `status/paid/by_work_order_id` en fonction de la référence de bon de travail que porte votre système de comptes fournisseurs.
+5. Journalisez le `traceId` de l'enveloppe sur tout `400`/`406` afin que le soutien puisse retracer la requête exacte.

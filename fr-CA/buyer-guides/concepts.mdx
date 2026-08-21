@@ -1,0 +1,35 @@
+# Concepts fondamentaux
+
+> Comment les principales ressources de l'API Acheteur sont liées
+
+<Info>
+  Remplissez cette page avec les concepts les plus pertinents pour vos intégrateurs. Le plan ci-dessous constitue un point de départ.
+</Info>
+
+## Entreprises, établissements et contacts
+
+Votre clé d'API est émise à un **contact**, qui appartient à un **établissement**, lequel est rattaché à une **entreprise**. Chaque requête est limitée à cette entreprise.
+
+## Emplacements et actifs
+
+- Les **emplacements** sont les sites physiques que vous exploitez.
+- Les **actifs** sont des équipements rattachés à un emplacement.
+
+Les bons de travail référencent les deux.
+
+## Bons de travail
+
+Un **bon de travail** est une demande de service. Il comporte un emplacement, un ou plusieurs actifs, un métier, un statut et un fournisseur assigné (une fois répartis). Les bons de travail progressent à travers différents statuts au fur et à mesure que les fournisseurs acceptent, planifient, exécutent et facturent le travail.
+
+## Fournisseurs
+
+Les fournisseurs sont les prestataires de services qui exécutent les bons de travail. Votre réseau de fournisseurs est accessible par les endpoints fournisseurs ; répartir un bon de travail consiste à l'assigner à l'un d'entre eux.
+
+## Soumissions et factures
+
+- Les **soumissions** sont des estimations des fournisseurs que vous approuvez avant que le travail ne débute.
+- Les **factures** représentent le montant final pour le travail complété.
+
+## Entretien préventif (PM)
+
+Les horaires d'entretien préventif génèrent des bons de travail récurrents sur les actifs selon une cadence définie.

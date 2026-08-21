@@ -1,0 +1,67 @@
+# Archivos y adjuntos en la Buyer API
+
+> Sube archivos al almacenamiento privado de OpenWrench y referéncialos como adjuntos de órdenes de trabajo, activos y facturas con la Buyer API.
+
+Los adjuntos en toda la Buyer API (órdenes de trabajo, activos, tipos de activos, facturas, propuestas) son referencias al almacenamiento de archivos privado de OpenWrench. El flujo es siempre el mismo: sube los bytes primero, luego usa la referencia de archivo devuelta en el campo de adjuntos de la entidad.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Subir
+
+`POST /v1/buyer/file/upload` es una solicitud multipart con una sola parte llamada `file`, de hasta **512 MB**:
+
+```bash
+curl -X POST "$BASE/v1/buyer/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@site-photo.jpg"
+```
+
+La respuesta (envoltura tipo `FileManager`) es un registro `FileDetails`:
+
+```json
+{
+  "type": "FileManager",
+  "data": {
+    "fileName": "site-photo.jpg",
+    "fileId": "a1b2c3d4e5"
+  },
+  "status": "ok"
+}
+```
+
+Los caracteres no ASCII se eliminan de `fileName` en la subida. Un fallo a nivel de almacenamiento devuelve `500`; reintenta con backoff.
+
+## Referenciar el archivo desde una entidad
+
+Los campos de adjuntos (por ejemplo `buyerAttachments` al crear una orden de trabajo, o `attachments` en un tipo de activo) toman arrays de objetos `FileDetails`, exactamente como los devuelve la subida:
+
+```json
+{
+  "buyerAttachments": [
+    { "fileName": "site-photo.jpg", "fileId": "a1b2c3d4e5" }
+  ]
+}
+```
+
+## Descargar
+
+`GET /v1/buyer/file/download/{id}/{name}` transmite los bytes almacenados con `Content-Disposition: attachment`. `{id}` es el `fileId` de la subida (o de cualquier `FileDetails` que leas de una entidad); `{name}` es el nombre de archivo con el que se sirve la descarga:
+
+```bash
+curl -OJ -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/file/download/a1b2c3d4e5/site-photo.jpg"
+```
+
+El tipo de contenido de la respuesta es el propio tipo del archivo almacenado. Así es también como recuperas la evidencia enviada por el proveedor: lee `supplierAttachments` de una orden de trabajo, o `invoicePDFs`/`attachments` de una factura, y descarga cada `fileId`.
+
+## Notas prácticas
+
+- Las subidas cuentan contra el límite de tasa (10 solicitudes por ventana de 20 segundos), así que las migraciones con muchas subidas por lote deben limitarse a aproximadamente una subida cada 2 segundos.
+- Guarda el `fileId` junto con tus propios registros; no hay endpoint de listado para redescubrir archivos después del hecho.
+- El mismo patrón de dos pasos aplica del lado del proveedor, y los PDFs de factura tienen un endpoint dedicado del lado del proveedor que sube y publica en una sola llamada.

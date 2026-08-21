@@ -1,0 +1,53 @@
+# Servicebesök och besöksbevis i Buyer API
+
+> Läs servicebesök med arbetsloggar och teknikeruppgifter från OpenWrench Buyer API för att verifiera besök, granska arbetstid och stämma av fakturor.
+
+Ett **servicebesök** är ett leverantörsbesök mot en arbetsorder: vem som var schemalagd, när de checkade in och ut, vad de dokumenterade. Arbetsordrar bäddar in sina besök i `associatedServiceCalls` (med `lastServiceCall` som en genväg), och Buyer API lägger till tre läs-slutpunkter som utökar ett enskilt besök med rikare bevis.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Vad ett servicebesök innehåller
+
+Från de inbäddade objekten på en arbetsorder får du per besök: `leadTechnicianEmail` och `additionalTechnicianEmails`, `numberOfTechs`, `serviceScheduledAt`, samt in-/utcheckningsparen (`checkInTime`, `checkInNotes`, `checkInImages`, `checkInGeoLocation`, och `checkOut*`-motsvarigheterna). Geokoordinater och foton låter dig verifiera att teknikern faktiskt var på plats.
+
+## Utökningsslutpunkter
+
+Varje `/with_*`-segment i sökvägen lyfter in en extra sektion i svaret. Kombinera dem genom att kedja segment:
+
+| Slutpunkt | Lägger till |
+| --- | --- |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs` | Besökets WrenchMode-händelser plus `trueWorkTimeMillis`. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_tech_details` | Besökets tekniker som fullständiga kontaktposter. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs/with_tech_details` | Båda. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+`{id}` är servicebesökets id, som du läser av från arbetsorderns `associatedServiceCalls`.
+
+## Arbetsloggar och faktisk arbetstid
+
+`with_work_logs` returnerar WrenchMode-händelsespåret som spelades in under besöket (arbete startat, pausat, återupptaget, avslutat) tillsammans med **`trueWorkTimeMillis`**: arbetsvaraktigheten på plats med pauser exkluderade. Det här är siffran att använda för arbetsverifiering, eftersom rådata från incheckning till utcheckning innehåller raster och avbrott.
+
+## Teknikeruppgifter och synlighet för timpris
+
+`with_tech_details` returnerar teknikerna på besöket som kontaktposter. **`hourlyRate` fylls i endast när besöket utfördes av ditt eget interna serviceteam.** Timpriser för tredjepartsleverantörer exponeras aldrig för köpare, så räkna med att `hourlyRate` saknas vid entreprenörsbesök.
+
+## Verifieringsmönster
+
+Innan du godkänner en avslutad arbetsorder eller dess faktura:
+
+1. Hämta arbetsordern och läs `associatedServiceCalls`.
+2. Begär `/with_work_logs/with_tech_details` för varje besök.
+3. Kontrollera `checkInGeoLocation` mot platsen, jämför `trueWorkTimeMillis` mot fakturerade arbetstimmar och granska utcheckningsanteckningar och bilder.
+4. Godkänn via [arbetsorderns statusåtgärder](/buyer-api/work-orders#köparens-statusåtgärder) eller bestrid via `work_unsatisfactory` och citera det du hittade i anteckningen.
+
+Fel följer standardhöljet: `404` för ett okänt besök, `400` för ett besök utanför ditt omfång.

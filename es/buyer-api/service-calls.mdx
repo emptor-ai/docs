@@ -1,0 +1,53 @@
+# Llamadas de servicio y evidencia de visita en la Buyer API
+
+> Lee llamadas de servicio con registros de trabajo y detalles del técnico desde la Buyer API de OpenWrench para verificar visitas, auditar horas de trabajo y conciliar facturas.
+
+Una **llamada de servicio** es una visita del proveedor asociada a una orden de trabajo: quién fue programado, cuándo hizo check-in y check-out, qué documentó. Las órdenes de trabajo incluyen sus llamadas en `associatedServiceCalls` (con `lastServiceCall` como atajo), y la Buyer API añade tres endpoints de lectura que expanden una sola llamada con evidencia más rica.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Qué contiene una llamada de servicio
+
+De los objetos embebidos en una orden de trabajo obtienes, por llamada: `leadTechnicianEmail` y `additionalTechnicianEmails`, `numberOfTechs`, `serviceScheduledAt` y los pares de check-in/check-out (`checkInTime`, `checkInNotes`, `checkInImages`, `checkInGeoLocation`, y los equivalentes `checkOut*`). Las coordenadas geográficas y las fotos te permiten verificar que el técnico estuvo realmente en el sitio.
+
+## Los endpoints de expansión
+
+Cada segmento de ruta `/with_*` incluye una sección extra en la respuesta. Combínalos encadenando segmentos:
+
+| Endpoint | Añade |
+| --- | --- |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs` | Los eventos WrenchMode de la llamada más `trueWorkTimeMillis`. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_tech_details` | Los técnicos de la llamada como registros de contacto completos. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs/with_tech_details` | Ambos. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+El `{id}` es el id de la llamada de servicio, que lees de `associatedServiceCalls` en la orden de trabajo.
+
+## Registros de trabajo y tiempo real trabajado
+
+`with_work_logs` devuelve el rastro de eventos WrenchMode registrados durante la visita (trabajo iniciado, pausado, reanudado, finalizado) junto con **`trueWorkTimeMillis`**: la duración del trabajo en sitio excluyendo pausas. Este es el número a usar para la verificación de labor, ya que los tramos brutos de check-in a check-out incluyen descansos e interrupciones.
+
+## Detalles del técnico y visibilidad de tarifas
+
+`with_tech_details` devuelve los técnicos de la llamada como registros de contacto. **`hourlyRate` se llena solo cuando la llamada fue realizada por tu propio equipo de servicio interno.** Las tarifas de proveedores terceros nunca se exponen a los compradores, así que espera que `hourlyRate` esté ausente en visitas de contratistas.
+
+## Patrón de verificación
+
+Antes de aprobar una orden de trabajo completada o su factura:
+
+1. Obtén la orden de trabajo y lee `associatedServiceCalls`.
+2. Para cada llamada, solicita `/with_work_logs/with_tech_details`.
+3. Contrasta `checkInGeoLocation` contra la ubicación, compara `trueWorkTimeMillis` contra las horas de trabajo facturadas y revisa las notas e imágenes de check-out.
+4. Aprueba mediante las [acciones de estado de la orden de trabajo](/buyer-api/work-orders#buyer-status-actions) o disputa mediante `work_unsatisfactory`, citando en la nota lo que encontraste.
+
+Los errores siguen la envoltura estándar: `404` para una llamada desconocida, `400` para una llamada fuera de tu alcance.

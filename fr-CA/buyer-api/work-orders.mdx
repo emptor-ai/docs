@@ -1,0 +1,188 @@
+# Bons de travail dans l'API Acheteur
+
+> Créez, listez, filtrez, réaffectez et clôturez des bons de travail avec l'API Acheteur OpenWrench, incluant les actions de statut, les notes et les types de problèmes.
+
+Les bons de travail sont au centre de l'API Acheteur. Ce guide couvre l'ensemble de la surface sous `/v1/buyer/work_order/` : la création de bons de travail, leur interrogation, les actions de statut côté acheteur, le fil de notes et les types de problèmes.
+
+Tous les exemples supposent ces variables shell :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # en-tête X-API-KEY
+export SECRET="<shared-secret>"    # en-tête OW-KEY
+```
+
+## L'objet bon de travail
+
+Un bon de travail retourné par l'API porte, entre autres champs :
+
+| Champ | Notes |
+| --- | --- |
+| `id` | Id numérique utilisé par tous les autres endpoints. |
+| `title`, `description` | Ce qu'il faut faire. `descriptionNonFormatted` est la variante en texte brut. |
+| `status`, `displayStatus` | `status` est le statut machine à granularité fine (voir [le modèle de statut](#the-status-model)); `displayStatus` est l'étiquette plus grossière affichée dans l'interface. |
+| `locationId`, `assetId`, `subAssetIds`, `areaId` | Où le travail se déroule et sur quoi il porte. |
+| `problemTypeId`, `workCategoryId`, `spendCategoryId`, `woPriorityId` | Classification. |
+| `supplierFacilityId`, `supplierPrimaryContactEmail` | Le fournisseur affecté, une fois réparti. |
+| `nte`, `price`, `currencyId` | Montant à ne pas dépasser et tarification. |
+| `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Dates clés. |
+| `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | Fil de notes acheteur-fournisseur. `lastNoteAddedAt` est en millisecondes epoch. |
+| `associatedServiceCalls`, `lastServiceCall` | Visites enregistrées par le fournisseur. Voir [Appels de service](/buyer-api/service-calls). |
+| `statusChanges` | Historique complet des statuts. |
+| `buyerAttachments`, `supplierAttachments` | Références de fichiers. Voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments). |
+| `isPM`, `plannedMaintenanceScheduleId` | Défini lorsque le bon de travail a été généré à partir d'un calendrier d'entretien préventif. |
+| `walkThroughId` | Défini lorsque le bon de travail est issu d'une visite d'inspection de site. |
+
+## Créer un bon de travail
+
+`POST /v1/buyer/work_order/work_orders` exige plus que les champs évidents. Contrairement à la plupart des endpoints acheteur, **`buyerFacilityId`, `buyerCompanyId` et `createdBy` doivent être fournis dans le corps**; ils ne sont pas dérivés de votre clé d'API sur cet endpoint. Utilisez [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) pour rechercher une fois vos ids d'entreprise et d'établissement et les mettre en cache.
+
+Champs requis : `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` et `createdBy` (le courriel du contact créateur).
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Walk-in cooler not holding temperature",
+    "description": "Temp reading 48F, product at risk.",
+    "locationId": 1204,
+    "assetId": 5511,
+    "problemTypeId": 17,
+    "woPriorityId": 3,
+    "nte": 500,
+    "buyerFacilityId": 88,
+    "buyerCompanyId": 12,
+    "createdBy": "ops@example.com",
+    "supplierFacilityId": 3021
+  }'
+```
+
+Comportement à connaître :
+
+- **Statut initial.** Si `status` est omis, le statut initial est calculé à partir de la configuration de votre entreprise. Les demandes de service commencent généralement en `PendingApproval`; les bons de travail sont par défaut `Unassigned`. Si vous passez un `status`, il est tout de même résolu par rapport à la configuration de l'entreprise, alors le statut effectif peut différer de ce que vous avez envoyé.
+- **Répartition à la création.** Passer `supplierFacilityId` affecte le fournisseur immédiatement. Un `supplierFacilityId`, `assetId` ou `problemTypeId` inconnu est rejeté avec `400`.
+- **Drapeau d'approbation.** Le champ est `needApproval`, pas `needsApproval`. L'objet de réponse utilise `needsApproval`; la requête de création utilise `needApproval`.
+- **Liaison à une visite d'inspection.** `walkThroughId` et `siteSurveyTaskTitleId` doivent être fournis ensemble ou pas du tout. Voir [Visites d'inspection de site](/buyer-api/site-survey-walkthroughs).
+- **Upserts.** Passer un `id` met à jour ce bon de travail existant au lieu d'en créer un nouveau.
+
+## Lister, filtrer et compter
+
+```bash
+# Bons de travail les plus récents pour un emplacement
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?locationId=1204&limit=25&sort_by=createdAt&order=desc"
+
+# Combien correspondent, sans les récupérer
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
+```
+
+Les endpoints de liste prennent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ contre les colonnes indexées de l'entité; séparez une valeur par une virgule pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la portée de locataire dérivée de votre clé, donc vous ne voyez jamais que les bons de travail de votre entreprise. Les lectures sont servies depuis un réplica de lecture, alors un bon de travail créé il y a quelques millisecondes peut mettre un instant à apparaître dans les résultats de liste.
+
+Récupérez un bon de travail avec `GET /v1/buyer/work_order/work_orders/{id}`.
+
+## Réaffecter un fournisseur
+
+`PATCH /v1/buyer/work_order/work_orders/{id}` est délibérément restreint : **seuls `supplierFacilityId` et `supplierPrimaryContactEmail` sont lus depuis le corps**. Tous les autres champs que vous envoyez sont silencieusement ignorés plutôt que rejetés.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 3055, "supplierPrimaryContactEmail": "dispatch@newsupplier.com" }'
+```
+
+Deux pièges :
+
+- `supplierPrimaryContactEmail` ne s'applique que dans le cadre d'une réaffectation. L'envoyer sans changement d'établissement fournisseur rend l'ensemble du patch inopérant : rien n'est enregistré et le bon de travail courant est retourné.
+- Un id inexistant et un refus de permission renvoient tous deux la même réponse `400` non autorisée, alors n'utilisez pas cet endpoint pour sonder l'existence d'un bon de travail.
+
+Pour choisir le bon fournisseur de manière programmatique, voir [Réseau de fournisseurs](/buyer-api/supplier-network), qui couvre l'endpoint classé du réseau privé.
+
+## Actions de statut acheteur
+
+Quatre endpoints dédiés font progresser un bon de travail à travers les parties du cycle de vie appartenant à l'acheteur. Chacun prend le même corps : l'`id` du bon de travail et une `note` optionnelle qui est ajoutée au fil en même temps que le changement de statut.
+
+| Endpoint | Statut résultant | Effets secondaires |
+| --- | --- | --- |
+| `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Peut publier le brouillon de facture du fournisseur (selon les paramètres du fournisseur) et remplir les demandes d'achat liées. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envoie la note jointe au fournisseur. |
+| `POST .../status_update/reopen` | Rouvert | Envoie la note jointe. |
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_and_completed" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Verified on site, closing out.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+Chaque action de statut retourne le bon de travail mis à jour dans l'enveloppe standard.
+
+## Le modèle de statut
+
+Valeurs de `status` que vous verrez et définirez via l'API :
+
+| Statut | Propriétaire | Signification |
+| --- | --- | --- |
+| `Unassigned` | Système | Créé, aucun fournisseur affecté pour l'instant. |
+| `PendingApproval` | Acheteur | En attente d'approbation interne, ou retourné ici après un refus de fournisseur. |
+| `ConfirmedByServiceProvider` | Fournisseur | Fournisseur a accepté le travail. |
+| `TechAssigned`, `TechScheduled`, `TechRescheduled` | Fournisseur | Appel de service créé ou (re)planifié. |
+| `TechWorkingOnSite` | Fournisseur | Technicien arrivé sur place. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Fournisseur | Approvisionnement de pièces en cours. |
+| `WaitingForReview` | Fournisseur | Travail terminé, en attente de votre révision. |
+| `WorkReviewedAndCompleted` | Acheteur | Vous avez révisé et clôturé le travail. |
+| `WorkUnsatisfactory` | Acheteur | Vous avez refusé le travail complété. |
+| `CancelledWithReason` | Acheteur | Annulé. |
+
+Les transitions appartenant au fournisseur arrivent via sa propre intégration ou les applications OpenWrench; votre côté les observe via le sondage (`statusChangedAt`, `statusChanges`) et agit sur celles qui vous appartiennent.
+
+## Notes
+
+Les bons de travail portent un fil de notes partagé entre acheteur et fournisseur.
+
+**Ajouter** avec `PATCH /v1/buyer/work_order/work_orders/append_notes`. Le corps est `{ "id": <woId>, "note": { ... } }` où la note a besoin de `text` et `noteAddedBy`. Le serveur écrase `noteAddedAt` avec sa propre horloge, et le courriel de l'auteur est ajouté à la liste des abonnés acheteur du bon de travail afin qu'il reçoive les notifications subséquentes.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+**Lire** avec `GET /v1/buyer/work_order/work_order_notes/{woId}`. Cela retourne uniquement le fil racine acheteur-fournisseur (les fils sous-traitant et interne sont séparés), et la lecture marque les notes comme lues pour votre contact. Une lecture refusée retourne une liste vide plutôt qu'une erreur.
+
+## Types de problèmes
+
+`GET /v1/buyer/work_order/problem_types` liste les types de problèmes configurés pour votre entreprise. Mettez-le en cache : vous avez besoin d'un `problemTypeId` valide pour chaque bon de travail que vous créez, et l'endpoint classé de fournisseurs en prend un aussi.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/problem_types"
+```
+
+## Assembler le tout
+
+Une intégration de répartition typique :
+
+1. Mettez en cache `me`, les types de problèmes et les emplacements au démarrage.
+2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez non assigné, puis classez les fournisseurs et effectuez l'assignation par `PATCH`).
+3. Sondez `GET /work_orders?statusChangedAt=...` ou récupérez à nouveau par id pour suivre la progression du fournisseur.
+4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Appels de service](/buyer-api/service-calls) pour les preuves de visite) et postez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
+5. Réconciliez le côté monétaire via [Soumissions et propositions](/buyer-api/quotes-and-proposals) et [Factures](/buyer-api/invoices).

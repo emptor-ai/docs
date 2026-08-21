@@ -1,0 +1,116 @@
+# Skicka in offerter och fakturor med Supplier API
+
+> Skapa förslag för köpargodkännande och fakturera avslutade arbetsordrar: fakturautkast, radsektioner, PDF-uppladdning-och-publicering och sidoeffekter för status.
+
+Pengar flödar genom två objekt: **förslag** (offerter som köparen godkänner innan arbetet fortsätter) och **fakturor** (räkningen för utfört arbete). Båda skapas av leverantörer genom det här API:et.
+
+<Note>
+Ingen av slutpunkterna är tillgänglig för interna serviceteams nycklar; offerering och fakturering är för tredjepartsleverantörer som fakturerar en köpare.
+</Note>
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Pengar är strängar, i sektioner
+
+Förslag och fakturor delar en radstruktur. Belopp är **strängar som måste parsas som tal** ("450.00", inte 450.00 som ett flyttal; avsändare bör formatera med två decimaler och parsa som decimaler). Sektionerna är arbete, material, resa, frakt och övrigt (förslag lägger till inkommen kostnad), var och en med sina egna rader, en skattesats och `...TotalBeforeTax`, som rullar upp till före-skatt, skatt och efter-skatt-totaler. Rader för resa, frakt och övrigt är enkla `{ "description", "amount" }`-objekt.
+
+## Förslag (offerter)
+
+`POST /v1/supplier/quote/proposals` skapar förslaget direkt i **`pending`**-status under din anläggning; det finns inget separat inlämningssteg. Krävs: `workOrderId` och `totalAfterTax`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "scope": "Replace condenser fan motor and recharge refrigerant.",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "totalBeforeTax": "850.00",
+    "taxRate": "8.5",
+    "tax": "72.25",
+    "totalAfterTax": "922.25"
+  }'
+```
+
+Beteende att känna till:
+
+- `locationId`, `buyerFacilityId` och `buyerCompanyId` härleds från arbetsordern; du kan inte sätta dem.
+- Osatta skattefält och sektionstotaler blir som standard `"0"`.
+- `requestForProposalId` blir som standard arbetsorderns RFP när det utelämnas.
+- `proposalPdfLink`, om skickad, måste vara en giltig URL. `attachments` tar `FileDetails` från [filuppladdningsslutpunkten](/supplier-api/files-and-users).
+- Att skicka ett `id` uppdaterar ett befintligt förslag.
+
+Följ utfallet genom att hämta om: `status` går från `pending` till `awarded` eller `declined` (avslagsskäl visas i `declineNotes`). Lista med `GET /v1/supplier/quote/proposals`, läs en med `GET /v1/supplier/quote/proposals/{id}`.
+
+## Fakturor
+
+### Livscykeln
+
+Fakturor börjar som **`draft`** (osynliga för köparen), **publiceras** in i `pending`, sedan flyttar köparen dem genom `approved` och `processing` till `paid` (eller bestrider dem). Din integration skapar utkastet och publicerar det; från `pending` och framåt läser du mestadels status.
+
+### Skapa utkastet
+
+`POST /v1/supplier/invoice/invoices` kräver `workOrderId`; `locationId`, `buyerFacilityId`, `buyerCompanyId`, `spendCategoryId` och `problemTypeId` härleds alla från det.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "invoiceNumber": "INV-2026-0451",
+    "dateOfInvoice": "2026-08-21T00:00:00.000-07:00",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "invoiceTotalBeforeTax": "850.00",
+    "invoiceTaxRate": "8.5",
+    "invoiceTax": "72.25",
+    "invoiceTotalAfterTax": "922.25"
+  }'
+```
+
+Detaljer som biter:
+
+- `poNumber` blir som standard arbetsorderns PO-nummer.
+- `serviceCallIds` blir som standard **alla** servicebesök på arbetsordern när det utelämnas eller är tomt; sätt det uttryckligen när du fakturerar en delmängd av besök.
+- `taxLineItems` valideras mot fakturavalutans tillåtna skattetyper (för närvarande stödjer endast CAD dem: GST/HST/PST); allt annat avvisas.
+- `invoicePDFLink` (en giltig URL) blir fakturans enda PDF-post om du är värd för PDF:en själv; de flesta integrationer använder uppladdningsslutpunkten nedan istället.
+- `autoPublishOnApproval` väljer denna faktura för auto-publicering när arbetsordern avslutas.
+- Att spara en faktura kan flytta den associerade arbetsorderns status enligt mappningen faktura-till-arbetsorder-status. Ett spar-nivåvalideringsfel returnerar `406`.
+- Att skicka ett `id` uppdaterar en befintlig faktura (i praktiken endast utkast; köpar-sidans statusar är inte dina att redigera).
+
+### Ladda upp PDF:en och publicera
+
+`POST /v1/supplier/invoice/file/upload_and_publish/{invoiceId}` gör båda stegen på en gång: den uppladdade PDF:en (multipart-del `file`, max 512 MB) blir fakturans enda PDF, och statusen flyttas till `pending`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@INV-2026-0451.pdf"
+```
+
+Varje förutsättning som misslyckas returnerar `400`: din anläggning måste äga fakturan, den associerade arbetsordern måste vara i visningsstatus **Completed**, och leverantörsfakturaredigering måste tillåtas av köparens konfiguration.
+
+### Läsa och stämma av
+
+`GET /v1/supplier/invoice/invoices` (filtrerbar, t.ex. `?status=pending`) och `GET /v1/supplier/invoice/invoices/{id}`. Tredjepartsleverantörer ser maskerade poster med köpar-privata fält bortrensade. Polla status för att driva ditt AR-huvudbok: `approvedAt`, `processedAt` och `markedPaidAt` tidsstämplar köparens framsteg.
+
+## End-to-end-faktureringsflöde
+
+1. Arbetsordern når offereringsfasen: skicka in ett förslag, vänta på `awarded`.
+2. Slutför arbetet via [utcheckning från servicebesök](/supplier-api/service-calls#3-checka-ut-och-sätt-utfallet).
+3. Skapa fakturautkastet; generera din PDF.
+4. När arbetsordern visar Completed, `upload_and_publish`.
+5. Polla fakturastatus tills `paid` och stäm av mot `markedPaidAt`.

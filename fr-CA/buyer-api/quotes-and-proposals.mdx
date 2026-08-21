@@ -1,0 +1,59 @@
+# Soumissions et propositions dans l'API Acheteur
+
+> Lisez les propositions de soumission des fournisseurs avec l'API Acheteur OpenWrench : statuts, sections de postes, règles de portée et intégration des propositions au flux d'approbation.
+
+Lorsqu'un travail doit être chiffré avant d'être exécuté, les fournisseurs soumettent des **propositions** (soumissions) contre le bon de travail. Via l'API Acheteur, les propositions sont **en lecture seule** : vous les listez, inspectez les postes et les réconciliez avec les factures. Approuver ou refuser une proposition se fait dans l'application OpenWrench.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Statuts de proposition
+
+| Statut | Signification |
+| --- | --- |
+| `draft` | Fournisseur encore en modification. Jamais visible pour les acheteurs. |
+| `pending` | Soumise, en attente de votre décision. |
+| `awarded` | Approuvée; le travail se poursuit au prix soumis. |
+| `declined` | Refusée (les raisons du refus sont dans `declineNotes`). |
+
+Les statuts sont conservés en minuscules.
+
+## Lire les propositions
+
+```bash
+# Propositions en attente à l'échelle de l'entreprise
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+
+# Propositions sur un bon de travail
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?workOrderId=9001"
+
+# Une proposition
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/quote/proposals/3320"
+```
+
+Règles de portée à connaître :
+
+- Les brouillons non soumis des fournisseurs sont toujours exclus des listes.
+- Si le contact associé à votre clé d'API est restreint par emplacement, vous ne voyez que les propositions pour les emplacements accessibles. Un contact avec un ensemble d'accès vide obtient une page vide, pas une erreur.
+- La lecture unique renvoie `404` pour les propositions supprimées de façon logique, les brouillons et les propositions hors de votre portée d'emplacement. Traitez `404` comme « non visible pour vous », pas nécessairement « n'existe pas ».
+
+## À l'intérieur d'une proposition
+
+L'argent est réparti dans les mêmes sections que les factures : `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` et `miscLineItems`, chaque section avec son propre taux de taxe et `...TotalBeforeTax`, se totalisant à `totalBeforeTax`, `tax` et `totalAfterTax`. **Les valeurs monétaires sont sérialisées en chaînes**; analysez-les comme décimales, non comme flottants, si vous faites de l'arithmétique.
+
+Autres champs utiles : `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (le montant à ne pas dépasser du bon de travail au moment de la soumission), `proposalPdfLink`, `attachments`, `submittedAt` et `approvedAt`.
+
+## Où les propositions s'inscrivent dans le flux
+
+1. Le fournisseur soumet une proposition; le bon de travail se met généralement en pause en attente d'approbation.
+2. Vos approbateurs l'accordent ou la refusent dans l'application. L'octroi relève le plafond de dépenses effectif du travail.
+3. Lorsque la [facture](/buyer-api/invoices) finale arrive, comparez `invoiceTotalAfterTax` au `totalAfterTax` de la proposition octroyée avant d'approuver le paiement. Signalez les écarts au-delà de votre tolérance pour révision humaine.
+
+Une boucle de sondage pratique pour un tableau de bord des achats : filtrez par `status=pending`, triez par `submittedAt` et paginez avec `limit=25`, en respectant la limite de débit de 10 requêtes par fenêtre de 20 secondes.

@@ -1,0 +1,62 @@
+# Leverantörsnätverk och rangordnat utskick i Buyer API
+
+> Sök i ditt leverantörsnätverk och rangordna privata nätverksleverantörer för en plats och problemtyp för att automatisera utskick med OpenWrench Buyer API.
+
+Två slutpunktsfamiljer besvarar "vem kan göra detta arbete": listningen av **leverantörsanläggningar** (hela ditt nätverk) och slutpunkten för **rangordnat privat nätverk** (den ordnade kortlistan för en plats och problemtyp). Tillsammans med [omtilldelningspatchen för arbetsordrar](/buyer-api/work-orders#tilldela-om-en-leverantör) låter de dig automatisera utskick.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ditt leverantörsnätverk
+
+`GET /v1/buyer/supplier_facilities` returnerar varje icke-borttagen leverantörsrelation för ditt företag. Till skillnad från de flesta list-slutpunkter stödjer den en dokumenterad uppsättning filter:
+
+| Filter | Matchar |
+| --- | --- |
+| `search` | Anläggningens namn, visningsnamn eller ditt alias för anläggningen. |
+| `name` | Anläggningens namn. |
+| `status` | Relationsstatus. |
+| `problemTypeId` | Leverantörer som täcker en problemtyp. |
+| `spendCategoryId` | Leverantörer som täcker en utgiftskategori. |
+| `locationId` | Leverantörer som servar en plats. |
+
+```bash
+# Leverantörer med kylkapacitet som servar plats 1204
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?problemTypeId=17&locationId=1204"
+
+# Fritextsökning
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?search=arctic"
+```
+
+Hämta en enskild anläggning med `GET /v1/buyer/supplier_facilities/{id}`.
+
+## Rangordnade leverantörer i privat nätverk
+
+För automatiserat utskick, fråga efter den rangordnade listan för ett `(plats, problemtyp)`-par:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/private_network/buyer_supplier_relationships/ranked/1204/17"
+```
+
+`GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` returnerar köpar–leverantör-relationer, var och en hydratiserad med dina relationsdetaljer (kontakter och routing-e-post).
+
+<Warning>
+**Rang uttrycks av arrayordning.** Varje `sort_by` du skickar släpps avsiktligt så att arrayordningen alltid är lika med rangen. Slutpunkten är paginerad (standard 10, max 25 per sida), så rangen fortsätter över sidor: den första posten på sida två är rang 11.
+</Warning>
+
+## Mönster för automatiserat utskick
+
+1. En arbetsorder kommer in (eller skapas otilldelad).
+2. Anropa den rangordnade slutpunkten för arbetsorderns `locationId` och `problemTypeId`.
+3. Ta den första relationens leverantörsanläggning och tilldela den, antingen vid skapande (`supplierFacilityId` i skapa-kroppen) eller efteråt med `PATCH /v1/buyer/work_order/work_orders/{id}`.
+4. Om leverantören tackar nej återgår arbetsordern till `PendingApproval` (eller så kan en privat nätverksleverantör auto-plockas, beroende på din konfiguration). Vid avslag, kör om rangordningen och tilldela nästa kandidat.
+
+Eskaleringsstegar, SLA för svarstid och antal avslag kan alla läggas ovanpå den här loopen; rangordningsslutpunkten ger dig de ordnade kandidaterna, och arbetsorderns `statusChanges` berättar hur varje försök gick.

@@ -1,0 +1,43 @@
+# Visites d'inspection de site dans l'API Acheteur
+
+> Lisez les visites d'inspection de site et générez des bons de travail de suivi à partir des constats d'inspection avec l'API Acheteur OpenWrench.
+
+Une **visite d'inspection** est une inspection de site complétée : un inspecteur parcourt un emplacement à partir d'une liste de tâches et enregistre des réponses, des photos et des problèmes. L'API Acheteur expose les visites en lecture seule et vous permet d'émettre des bons de travail de suivi qui restent liés au constat d'inspection dont ils proviennent.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Lire les visites d'inspection
+
+```bash
+# Visites récentes pour un emplacement
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+
+# Décompte par filtre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/count_by?locationId=1204"
+
+# Une visite d'inspection, avec ses réponses aux tâches
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/230"
+```
+
+La pagination et les filtres par champ standards s'appliquent, en plus des restrictions par emplacement et par marque de votre rôle. Les bons de travail référencés à partir des réponses aux tâches d'une visite d'inspection sont filtrés selon votre permission de lecture, alors des clés différentes peuvent voir des bons de travail liés différents pour la même visite.
+
+## Créer des bons de travail de suivi
+
+Lorsqu'un constat d'inspection nécessite une correction, créez le bon de travail avec les champs de liaison définis :
+
+- `walkThroughId` : la visite d'inspection d'où provient le constat.
+- `siteSurveyTaskTitleId` : la tâche précise à l'intérieur de celle-ci.
+- `includeWalkthroughTaskList` : copie optionnellement la liste de tâches de la visite d'inspection sur le bon de travail.
+
+`walkThroughId` et `siteSurveyTaskTitleId` **doivent être fournis ensemble ou pas du tout**; sinon la création est rejetée. Voir [Créer un bon de travail](/buyer-api/work-orders#create-a-work-order) pour le reste de la charge utile.
+
+Le lien est visible dans les deux sens : le bon de travail porte `walkThroughId`, et les réponses aux tâches de la visite d'inspection référencent les bons de travail qui en sont issus. Cela fait de « tous les constats ouverts des inspections du trimestre dernier, avec leur état de correction » un rapport à deux requêtes.

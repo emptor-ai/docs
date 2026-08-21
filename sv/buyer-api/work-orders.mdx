@@ -1,0 +1,188 @@
+# Arbetsordrar i Buyer API
+
+> Skapa, lista, filtrera, tilldela om och avsluta arbetsordrar med OpenWrench Buyer API, inklusive statusåtgärder, anteckningar och problemtyper.
+
+Arbetsordrar är i centrum för Buyer API. Den här guiden täcker hela ytan under `/v1/buyer/work_order/`: att skapa arbetsordrar, söka i dem, köparsidans statusåtgärder, anteckningstråden och problemtyperna.
+
+Alla exempel förutsätter dessa skalvariabler:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Arbetsorderobjektet
+
+En arbetsorder som returneras av API:et bär bland annat följande fält:
+
+| Fält | Anmärkningar |
+| --- | --- |
+| `id` | Numeriskt id som används av alla andra slutpunkter. |
+| `title`, `description` | Vad som ska göras. `descriptionNonFormatted` är varianten i ren text. |
+| `status`, `displayStatus` | `status` är den finkorniga maskinstatusen (se [statusmodellen](#statusmodellen)); `displayStatus` är den grövre etiketten som visas i användargränssnittet. |
+| `locationId`, `assetId`, `subAssetIds`, `areaId` | Var arbetet utförs och vad det gäller. |
+| `problemTypeId`, `workCategoryId`, `spendCategoryId`, `woPriorityId` | Klassificering. |
+| `supplierFacilityId`, `supplierPrimaryContactEmail` | Tilldelad leverantör, när den väl har skickats ut. |
+| `nte`, `price`, `currencyId` | Ej-överskridande-belopp och prissättning. |
+| `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Viktiga datum. |
+| `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | Köpar–leverantör-anteckningstråden. `lastNoteAddedAt` är epokmillisekunder. |
+| `associatedServiceCalls`, `lastServiceCall` | Besök loggade av leverantören. Se [Servicebesök](/buyer-api/service-calls). |
+| `statusChanges` | Fullständig statushistorik. |
+| `buyerAttachments`, `supplierAttachments` | Filreferenser. Se [Filer och bilagor](/buyer-api/files-and-attachments). |
+| `isPM`, `plannedMaintenanceScheduleId` | Sätts när arbetsordern har genererats från ett PM-schema. |
+| `walkThroughId` | Sätts när arbetsordern kom från en genomgång vid en platsbesiktning. |
+
+## Skapa en arbetsorder
+
+`POST /v1/buyer/work_order/work_orders` kräver mer än de uppenbara fälten. Till skillnad från de flesta köparslutpunkter måste **`buyerFacilityId`, `buyerCompanyId` och `createdBy` anges i kroppen**; de härleds inte från din API-nyckel på den här slutpunkten. Använd [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) för att slå upp ditt företags- och anläggnings-id en gång och cacha dem.
+
+Obligatoriska fält: `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` och `createdBy` (e-postadressen till kontakten som skapar).
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Walk-in cooler not holding temperature",
+    "description": "Temp reading 48F, product at risk.",
+    "locationId": 1204,
+    "assetId": 5511,
+    "problemTypeId": 17,
+    "woPriorityId": 3,
+    "nte": 500,
+    "buyerFacilityId": 88,
+    "buyerCompanyId": 12,
+    "createdBy": "ops@example.com",
+    "supplierFacilityId": 3021
+  }'
+```
+
+Beteende att känna till:
+
+- **Initial status.** Om `status` utelämnas beräknas den initiala statusen från ditt företags konfiguration. Serviceförfrågningar börjar oftast i `PendingApproval`; arbetsordrar utgår från `Unassigned`. Om du skickar en `status` löses den fortfarande mot företagets konfiguration, så den effektiva statusen kan skilja sig från vad du skickade.
+- **Utskick vid skapande.** Att skicka `supplierFacilityId` tilldelar leverantören omedelbart. Ett okänt `supplierFacilityId`, `assetId` eller `problemTypeId` avvisas med `400`.
+- **Godkännandeflagga.** Fältet heter `needApproval`, inte `needsApproval`. Svarsobjektet använder `needsApproval`; själva skapa-förfrågan gör det inte.
+- **Koppling till genomgång.** `walkThroughId` och `siteSurveyTaskTitleId` måste anges tillsammans eller inte alls. Se [Platsbesiktningar](/buyer-api/site-survey-walkthroughs).
+- **Upserts.** Att skicka ett `id` uppdaterar den befintliga arbetsordern istället för att skapa en ny.
+
+## Lista, filtrera och räkna
+
+```bash
+# De senaste arbetsordrarna för en plats
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?locationId=1204&limit=25&sort_by=createdAt&order=desc"
+
+# Hur många som matchar, utan att hämta dem
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
+```
+
+List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`. Varje annan frågeparameter behandlas som ett fältfilter mot entitetens indexerade kolumner; kommaseparera ett värde för att matcha något av flera (`status=Unassigned,PendingApproval`). Filter kombineras alltid med tenant-avgränsningen som härleds från din nyckel, så du ser bara ditt företags arbetsordrar. Läsningar serveras från en läs-replika, så en arbetsorder som skapades för millisekunder sedan kan dröja innan den dyker upp i listresultat.
+
+Hämta en enskild arbetsorder med `GET /v1/buyer/work_order/work_orders/{id}`.
+
+## Tilldela om en leverantör
+
+`PATCH /v1/buyer/work_order/work_orders/{id}` är avsiktligt smal: **endast `supplierFacilityId` och `supplierPrimaryContactEmail` läses från kroppen**. Alla andra fält du skickar ignoreras tyst istället för att avvisas.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 3055, "supplierPrimaryContactEmail": "dispatch@newsupplier.com" }'
+```
+
+Två fallgropar:
+
+- `supplierPrimaryContactEmail` gäller endast som en del av en omtilldelning. Att skicka den utan en leverantörsanläggningsändring gör att hela patchen blir en no-op: inget sparas och den aktuella arbetsordern returneras.
+- Ett icke-existerande id och ett behörighetsavslag returnerar båda samma `400`-svar (unauthorized), så använd inte den här slutpunkten för att avgöra om en arbetsorder finns.
+
+För att välja rätt leverantör programmatiskt, se [Leverantörsnätverk](/buyer-api/supplier-network), som täcker den rangordnade slutpunkten för det privata nätverket.
+
+## Köparens statusåtgärder
+
+Fyra dedikerade slutpunkter flyttar en arbetsorder genom de köparägda delarna av livscykeln. Var och en tar samma kropp: arbetsorderns `id` och en valfri `note` som läggs till i tråden tillsammans med statusändringen.
+
+| Slutpunkt | Resulterande status | Sidoeffekter |
+| --- | --- | --- |
+| `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Kan publicera leverantörens fakturautkast (enligt leverantörsinställningar) och uppfylla länkade inköpsförfrågningar. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Skickar den bifogade anteckningen till leverantören. |
+| `POST .../status_update/reopen` | Återöppnad | Skickar den bifogade anteckningen. |
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_and_completed" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Verified on site, closing out.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+Varje statusåtgärd returnerar den uppdaterade arbetsordern i standardhöljet.
+
+## Statusmodellen
+
+`status`-värden du kommer att se och sätta via API:et:
+
+| Status | Ägs av | Betydelse |
+| --- | --- | --- |
+| `Unassigned` | Systemet | Skapad, ingen leverantör tilldelad ännu. |
+| `PendingApproval` | Köparen | Väntar på internt godkännande, eller återförd hit efter att en leverantör tackat nej. |
+| `ConfirmedByServiceProvider` | Leverantören | Leverantören har accepterat jobbet. |
+| `TechAssigned`, `TechScheduled`, `TechRescheduled` | Leverantören | Servicebesök skapat eller (om)schemalagt. |
+| `TechWorkingOnSite` | Leverantören | Teknikern har checkat in. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Leverantören | Reservdelsanskaffning pågår. |
+| `WaitingForReview` | Leverantören | Arbetet är klart, väntar på din granskning. |
+| `WorkReviewedAndCompleted` | Köparen | Du har granskat och stängt jobbet. |
+| `WorkUnsatisfactory` | Köparen | Du har avvisat det utförda arbetet. |
+| `CancelledWithReason` | Köparen | Avbrutet. |
+
+De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via polling (`statusChangedAt`, `statusChanges`) och agerar på de köparägda.
+
+## Anteckningar
+
+Arbetsordrar har en delad köpar–leverantör-anteckningstråd.
+
+**Lägg till** med `PATCH /v1/buyer/work_order/work_orders/append_notes`. Kroppen är `{ "id": <woId>, "note": { ... } }` där anteckningen behöver `text` och `noteAddedBy`. Servern skriver över `noteAddedAt` med sin egen klocka, och författarens e-post läggs till i arbetsorderns lista över köparprenumeranter så att de får efterföljande aviseringar.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+**Läs** med `GET /v1/buyer/work_order/work_order_notes/{woId}`. Detta returnerar bara den grundläggande köpar–leverantör-tråden (entreprenörs- och interna trådar är separata), och läsningen markerar anteckningarna som lästa för din kontakt. En nekad läsning returnerar en tom lista istället för ett fel.
+
+## Problemtyper
+
+`GET /v1/buyer/work_order/problem_types` listar de problemtyper som är konfigurerade för ditt företag. Cacha detta: du behöver ett giltigt `problemTypeId` för varje arbetsorder du skapar, och den rangordnade leverantörsslutpunkten tar också ett.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/problem_types"
+```
+
+## Sätta ihop det hela
+
+En typisk utskicksintegration:
+
+1. Cacha `me`, problemtyper och platser vid start.
+2. Skapa arbetsordern med `supplierFacilityId` satt (eller skapa otilldelad, rangordna sedan leverantörer och `PATCH` tilldelningen).
+3. Polla `GET /work_orders?statusChangedAt=...` eller hämta om via id för att följa leverantörens framsteg.
+4. När leverantören når `WaitingForReview`, verifiera arbetet (se [Servicebesök](/buyer-api/service-calls) för besöksbevis) och posta `work_reviewed_and_completed`, eller `work_unsatisfactory` med en anteckning.
+5. Stäm av pengasidan genom [Offerter och förslag](/buyer-api/quotes-and-proposals) och [Fakturor](/buyer-api/invoices).

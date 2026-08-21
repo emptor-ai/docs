@@ -1,0 +1,90 @@
+# Supplier API
+
+> Programmatisk åtkomst för serviceleverantörer: arbetsordrar, servicebesök, offerter, fakturor, WrenchMode och lager
+
+OpenWrench Supplier API ger serviceleverantörer programmatisk åtkomst till sin sida av plattformen: ta emot och uppdatera arbetsordrar, schemalägga och dokumentera servicebesök, skicka in offerter och fakturor, hämta WrenchMode-tekniktid och hantera inköp och lager.
+
+## Bas-URL
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Alla leverantörsslutpunkter ligger under `/v1/supplier/`.
+
+## Autentisering
+
+Varje förfrågan måste innehålla **två rubriker**: `X-API-KEY` (din API-nyckel, utfärdad per leverantörskontakt) och `OW-KEY` (den delade hemligheten från OpenWrench som utfärdas tillsammans med den). Nyckeln avgränsar automatiskt varje förfrågan till din anläggning. Du ser bara arbetsordrar, fakturor och data som tillhör dig. Förfrågningar som saknar någon av rubrikerna returnerar `401`.
+
+```bash
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/ping"
+```
+
+För att få en API-nyckel och en delad hemlighet, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Hastighetsgränser
+
+10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`. Backa av och försök igen.
+
+## Svarshöljet
+
+Svar för enskilda entiteter:
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Listsvar lägger till ett totalt `count`:
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Fel:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` betyder att uppgifter saknas eller är ogiltiga; `400` täcker felaktig indata, felaktiga filter och behörighetsavslag; `429` är hastighetsgränsen.
+
+## Paginering och filtrering
+
+List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som fältfilter. Skicka ett fältnamn med ett värde (kommaseparera flera värden) för att filtrera resultatuppsättningen. Referensens sida för varje slutpunkt listar dess viktigare filter.
+
+## Datumformat
+
+De flesta tidsstämplar är ISO 8601-strängar med offset (t.ex. `2026-08-14T13:05:22.000-07:00`); vissa databastidsstämpelfält serialiseras som `yyyy-MM-dd HH:mm:ss.S`. Rena datum är `yyyy-MM-dd`. När du skickar datum-tider, använd ISO 8601.
+
+## Teknikertid
+
+WrenchMode-slutpunkterna exponerar per-tekniker arbets- och körtid: `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` returnerar en per-tekniker sammanställning av körning/arbete/totalt (fönster max 1 månad), och `GET /v1/supplier/wrench_mode/events` returnerar den råa händelseloggen bakom det. Servicebesöks-utökningarna (`/with_work_logs`, `/with_tech_details`) ger den per-besök-historien.
+
+## Detaljerade guider
+
+Guiderna i den här fliken går igenom varje del av API:et i detalj, med payloads, statussemantik och integrationsmönster:
+
+<CardGroup cols={2}>
+  <Card title="Arbetsordrar" href="/supplier-api/work-orders" icon="clipboard-list">
+    Ta emot, acceptera eller avvisa, reservdelsstatusar, ECD, bilagor och anteckningar.
+  </Card>
+  <Card title="Servicebesök" href="/supplier-api/service-calls" icon="truck">
+    Schemalägg, checka in, checka ut och sätt slutstatus.
+  </Card>
+  <Card title="WrenchMode" href="/supplier-api/wrenchmode" icon="stopwatch">
+    Analyser per tekniker och den råa händelseloggen för körning/arbete.
+  </Card>
+  <Card title="Offerter och fakturering" href="/supplier-api/quotes-and-invoicing" icon="file-invoice-dollar">
+    Skicka in förslag, fakturautkast och publicera med en PDF.
+  </Card>
+  <Card title="Inköp och lager" href="/supplier-api/purchasing-and-inventory" icon="boxes-stacked">
+    Från inköpsförfrågan till order till mottagning, kataloger och lager.
+  </Card>
+  <Card title="Referensdata" href="/supplier-api/reference-data" icon="map-location-dot">
+    Köparföretag, platser, tillgångar och hur datamaskering fungerar.
+  </Card>
+  <Card title="Filer och användare" href="/supplier-api/files-and-users" icon="paperclip">
+    Fillagringen bakom bilagor och teknikerprovisionering.
+  </Card>
+</CardGroup>

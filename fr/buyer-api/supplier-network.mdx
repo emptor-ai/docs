@@ -1,0 +1,62 @@
+# Réseau de fournisseurs et répartition classée dans l'API Acheteur
+
+> Interrogez votre réseau de fournisseurs et classez les fournisseurs du réseau privé pour un emplacement et un type de problème afin d'automatiser la répartition avec l'API Acheteur OpenWrench.
+
+Deux familles d'endpoints répondent à la question « qui peut effectuer ces travaux ? » : le listing des **établissements fournisseurs** (l'ensemble de votre réseau) et l'endpoint du **réseau privé classé** (la liste restreinte ordonnée pour un emplacement et un type de problème). Combinés au [PATCH de réaffectation](/buyer-api/work-orders#reassign-a-supplier) du bon de travail, ils vous permettent d'automatiser la répartition.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Votre réseau de fournisseurs
+
+`GET /v1/buyer/supplier_facilities` retourne chaque relation avec un fournisseur non supprimée pour votre entreprise. Contrairement à la plupart des endpoints de liste, il prend en charge un ensemble de filtres documentés :
+
+| Filtre | Correspond à |
+| --- | --- |
+| `search` | Nom d'établissement, nom d'affichage ou votre alias pour l'établissement. |
+| `name` | Nom d'établissement. |
+| `status` | Statut de la relation. |
+| `problemTypeId` | Fournisseurs couvrant un type de problème. |
+| `spendCategoryId` | Fournisseurs couvrant une catégorie de dépenses. |
+| `locationId` | Fournisseurs desservant un emplacement. |
+
+```bash
+# Fournisseurs capables de gérer la réfrigération desservant l'emplacement 1204
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?problemTypeId=17&locationId=1204"
+
+# Recherche en texte libre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?search=arctic"
+```
+
+Récupérez un établissement avec `GET /v1/buyer/supplier_facilities/{id}`.
+
+## Fournisseurs du réseau privé classés
+
+Pour une répartition automatisée, demandez la liste classée pour une paire `(emplacement, type de problème)` :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/private_network/buyer_supplier_relationships/ranked/1204/17"
+```
+
+`GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` retourne des relations acheteur–fournisseur, chacune enrichie de vos détails de relation (contacts et adresses courriel de routage).
+
+<Warning>
+**Le rang est transmis par l'ordre du tableau.** Tout `sort_by` que vous passez est délibérément ignoré afin que l'ordre du tableau soit toujours égal au rang. L'endpoint est paginé (par défaut 10, max 25 par page), le rang se poursuit donc à travers les pages : le premier élément de la page deux est de rang 11.
+</Warning>
+
+## Modèle de répartition automatisée
+
+1. Un bon de travail arrive (ou est créé non assigné).
+2. Appelez l'endpoint classé pour le `locationId` et le `problemTypeId` du bon de travail.
+3. Prenez l'établissement fournisseur de la première relation et assignez-le, soit au moment de la création (`supplierFacilityId` dans le corps de création), soit ensuite avec `PATCH /v1/buyer/work_order/work_orders/{id}`.
+4. Si le fournisseur refuse, le bon de travail revient à `PendingApproval` (ou un fournisseur du réseau privé peut être choisi automatiquement, selon votre configuration). En cas de refus, relancez le classement et assignez le candidat suivant.
+
+Les échelles d'escalade, les SLA de temps de réponse et les compteurs de refus peuvent tous être superposés à cette boucle ; l'endpoint de classement vous donne les candidats ordonnés, et le `statusChanges` du bon de travail vous indique comment chaque tentative s'est déroulée.
