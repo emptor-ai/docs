@@ -19,13 +19,6 @@
       }
     ]
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://www.linkedin.com/company/mintsearch"
-    }
-  },
   "navigation": {
     "tabs": [
       {
@@ -49,20 +42,33 @@
           {
             "group": "Approvals & Spend",
             "pages": [
-              "buyers/spend/nte-approvals"
+              "buyers/spend/nte-approvals",
+              "buyers/spend/quotes",
+              "buyers/spend/invoices",
+              "buyers/spend/budgets"
             ]
           },
           {
             "group": "Maintenance & Assets",
-            "pages": []
+            "pages": [
+              "buyers/maintenance/preventive-maintenance",
+              "buyers/maintenance/assets",
+              "buyers/maintenance/locations"
+            ]
           },
           {
             "group": "Suppliers & Reporting",
-            "pages": []
+            "pages": [
+              "buyers/suppliers/managing-suppliers",
+              "buyers/suppliers/performance",
+              "buyers/reporting/dashboards"
+            ]
           },
           {
             "group": "AI & Automation",
-            "pages": []
+            "pages": [
+              "buyers/vfa"
+            ]
           }
         ]
       },
@@ -71,19 +77,32 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": []
+            "pages": [
+              "suppliers/overview",
+              "suppliers/getting-started"
+            ]
           },
           {
             "group": "Doing the Work",
-            "pages": []
+            "pages": [
+              "suppliers/work-orders",
+              "suppliers/inventory",
+              "suppliers/on-site"
+            ]
           },
           {
             "group": "Getting Paid",
-            "pages": []
+            "pages": [
+              "suppliers/quotes",
+              "suppliers/invoicing"
+            ]
           },
           {
             "group": "Growing Your Business",
-            "pages": []
+            "pages": [
+              "suppliers/performance",
+              "suppliers/compliance"
+            ]
           }
         ]
       },
@@ -92,19 +111,30 @@
         "groups": [
           {
             "group": "Getting Started",
-            "pages": []
+            "pages": [
+              "internal-teams/overview"
+            ]
           },
           {
             "group": "Field Work",
-            "pages": []
+            "pages": [
+              "internal-teams/work-orders",
+              "internal-teams/wrenchmode"
+            ]
           },
           {
             "group": "Purchasing & Parts",
-            "pages": []
+            "pages": [
+              "internal-teams/purchase-requests",
+              "internal-teams/parts-inventory"
+            ]
           },
           {
             "group": "Planning & Projects",
-            "pages": []
+            "pages": [
+              "internal-teams/preventive-maintenance",
+              "internal-teams/projects-site-surveys"
+            ]
           }
         ]
       }
