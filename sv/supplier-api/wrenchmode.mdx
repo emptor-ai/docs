@@ -1,0 +1,72 @@
+# WrenchMode-tidsdata i Supplier API
+
+> Hämta per-tekniker körning och arbetstid från WrenchMode: analyssammanställningen, den råa händelseloggen med sina filter och integrationsmönster för lönesystem.
+
+WrenchMode fångar vad tekniker faktiskt gör med sin tid: kör, arbetar, pausar. Supplier API exponerar den på två sätt: en **per-tekniker analyssammanställning** för rapportering, och den **råa händelseloggen** för granskning och per-besök-rekonstruktion.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Analys per tekniker
+
+`GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` returnerar en rad per tekniker med deras körtid, arbetstid och totalt över fönstret.
+
+```bash
+# En veckas teknikertid
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-08-10/2026-08-16"
+
+# Endast teknikerna under en handledare
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-08-10/2026-08-16?supervisorEmail=lead@supplier.com"
+```
+
+Begränsningar:
+
+- Båda datumen är `yyyy-MM-dd`, och fönstret får spänna **högst en månad**. Dela längre intervall i månadsstora anrop.
+- Sammanställningen täcker din API-nyckels leverantörsanläggning. En nyckel vars kontakt inte är kopplad till en leverantörsanläggning får `401`.
+
+## Den råa händelseloggen
+
+`GET /v1/supplier/wrench_mode/events` returnerar de underliggande händelserna, tenant-avgränsade till din leverantör. Filter:
+
+| Parameter | Anmärkningar |
+| --- | --- |
+| `workOrderId`, `serviceCallId`, `locationId` | Begränsa till ett jobb, besök eller anläggning. |
+| `scheduleId` | Ett WrenchMode-schema. **Inaktiverar paginering**: schemats fullständiga händelsetidslinje returneras i ett svar. |
+| `eventTypes` | Kommaseparerad. Giltiga värden: `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Okända värden avvisas med `400`. |
+| `supplierEmails` | Kommaseparerade teknikere-postadresser, matchas skiftlägesokänsligt. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; felaktiga datum ger `400`. |
+
+Standardpaginering (`offset`, `limit` max 25, `sort_by`, `order`) gäller förutom under `scheduleId`. En formatfälla: ett närvarande men tomt CSV-filter (till exempel `eventTypes=,`) avvisas som felaktigt istället för att ignoreras.
+
+```bash
+# Alla arbetshändelser för en arbetsorder
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?workOrderId=9001&eventTypes=started_work,ended_work"
+
+# En teknikers dag
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
+```
+
+Händelsevokabulären delas i resehändelser (`began_trip` genom `trip_cancelled`, plus `drive_note`) och arbetshändelser (`started_work`, `ended_work` och `location_*`-tidshändelserna som markerar pauser och återupptaganden på plats).
+
+## Att välja mellan dem
+
+- **Analys** för dashboards, löner och utnyttjanderapporter: en siffra per tekniker per period, pausberäkningen redan gjord.
+- **Rå händelser** för att granska ett misstänkt total, rekonstruera ett besök minut för minut eller mata ditt eget analyslager.
+- **Per-besök**-frågor besvaras oftast bättre av servicebesöks-utökningen `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, som returnerar exakt de händelser som ligger i besökets in-/utcheckningsfönster plus paus-exkluderade `trueWorkTimeMillis`. Se [Servicebesök](/supplier-api/service-calls#läsa-tillbaka-ett-servicebesök).
+
+## Beprövade mönster
+
+**Veckovis lönehämtning.** Varje måndag, anropa analys för föregående vecka, matcha på teknikere-post mot ditt lönesystem och använd arbete + körtid som betald-timmar-underlag. Ett anrop per vecka per anläggning håller dig långt under hastighetsgränsen.
+
+**Månadsvis utnyttjanderapport.** Analys med månadsgränser (`2026-08-01` till `2026-08-31` ligger inom en-månads-taket); dividera arbetstid med schemalagd tid från ditt bemanningssystem.
+
+**Arbetskostnadsavstämning på en faktura.** För varje servicebesök på den fakturerade arbetsordern, hämta `/with_work_logs`, summera `trueWorkTimeMillis` och jämför mot arbetsraderna innan köparen ens ser en tvist.

@@ -1,0 +1,72 @@
+# Datos de seguimiento de tiempo de WrenchMode en la Supplier API
+
+> Extrae tiempos de conducción y trabajo por técnico desde WrenchMode: el resumen analítico, el registro bruto de eventos con sus filtros y patrones de integración con nómina.
+
+WrenchMode captura qué hacen realmente los técnicos con su tiempo: conducir, trabajar, pausar. La Supplier API lo expone de dos maneras: un **resumen analítico por técnico** para reportería, y el **registro bruto de eventos** para auditoría y reconstrucción por visita.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Analítica por técnico
+
+`GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` devuelve una fila por técnico con su tiempo de conducción, tiempo de trabajo y total en la ventana.
+
+```bash
+# Una semana de tiempo del técnico
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-08-10/2026-08-16"
+
+# Solo los técnicos bajo un supervisor
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-08-10/2026-08-16?supervisorEmail=lead@supplier.com"
+```
+
+Restricciones:
+
+- Ambas fechas son `yyyy-MM-dd`, y la ventana puede abarcar **como máximo un mes**. Divide rangos más largos en llamadas del tamaño de un mes.
+- El resumen cubre la instalación de proveedor de tu clave de API. Una clave cuyo contacto no esté adjunto a una facility de proveedor obtiene `401`.
+
+## El registro bruto de eventos
+
+`GET /v1/supplier/wrench_mode/events` devuelve los eventos subyacentes, limitados por inquilino a tu proveedor. Filtros:
+
+| Parámetro | Notas |
+| --- | --- |
+| `workOrderId`, `serviceCallId`, `locationId` | Limita a un trabajo, visita o sitio. |
+| `scheduleId` | Un cronograma de WrenchMode. **Desactiva la paginación**: la línea de tiempo completa de eventos del cronograma se devuelve en una sola respuesta. |
+| `eventTypes` | Separados por coma. Valores válidos: `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Los valores desconocidos se rechazan con `400`. |
+| `supplierEmails` | Correos de técnicos separados por coma, comparados sin distinguir mayúsculas. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; las fechas mal formadas son `400`. |
+
+Aplica la paginación estándar (`offset`, `limit` máx. 25, `sort_by`, `order`) excepto bajo `scheduleId`. Una trampa de formato: un filtro CSV presente pero vacío (por ejemplo `eventTypes=,`) se rechaza como mal formado en lugar de ignorarse.
+
+```bash
+# Todos los eventos de trabajo para una orden de trabajo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?workOrderId=9001&eventTypes=started_work,ended_work"
+
+# El día de un técnico
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
+```
+
+El vocabulario de eventos se divide en eventos de viaje (`began_trip` hasta `trip_cancelled`, más `drive_note`) y eventos de trabajo (`started_work`, `ended_work` y los eventos de temporizador `location_*` que marcan pausas y reanudaciones en sitio).
+
+## Cuándo elegir cada uno
+
+- **Analítica** para tableros, nómina y reportes de utilización: un número por técnico por período, con la matemática de pausas ya hecha.
+- **Eventos brutos** para auditar un total sospechoso, reconstruir una visita minuto a minuto o alimentar tu propio warehouse analítico.
+- Las preguntas **por visita** suelen atenderse mejor con la expansión de llamada de servicio `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, que devuelve exactamente los eventos en la ventana de check-in/check-out de la visita más `trueWorkTimeMillis` sin pausas. Ver [Llamadas de servicio](/supplier-api/service-calls#reading-a-service-call-back).
+
+## Patrones aplicados
+
+**Extracción semanal de nómina.** Cada lunes, llama a analítica para la semana anterior, cruza por correo del técnico contra tu sistema de nómina y usa el tiempo de trabajo + conducción como la entrada de horas pagadas. Una llamada por semana por facility te mantiene muy por debajo del límite de tasa.
+
+**Reporte mensual de utilización.** Analítica con límites de mes (`2026-08-01` a `2026-08-31` está dentro del tope de un mes); divide el tiempo de trabajo entre el tiempo programado desde tu sistema de rostering.
+
+**Conciliación de costo de labor en una factura.** Para cada llamada de servicio en la orden de trabajo facturada, obtén `/with_work_logs`, suma `trueWorkTimeMillis` y compara contra las líneas de labor antes de que el comprador vea una disputa.

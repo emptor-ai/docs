@@ -1,0 +1,90 @@
+# API Fournisseur
+
+> Accès programmatique pour les prestataires de services — bons de travail, appels de service, soumissions, factures, WrenchMode et inventaire
+
+L'API Fournisseur d'OpenWrench donne aux prestataires de services un accès programmatique à leur côté de la plateforme : réception et mise à jour des bons de travail, planification et documentation des appels de service, soumission de soumissions et de factures, extraction des données de temps des techniciens WrenchMode et gestion des achats et de l'inventaire.
+
+## URL de base
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Tous les endpoints fournisseur sont sous `/v1/supplier/`.
+
+## Authentification
+
+Chaque requête doit comporter **deux en-têtes** : `X-API-KEY` (votre clé d'API, émise par contact fournisseur) et `OW-KEY` (le secret partagé OpenWrench émis avec la clé). La clé restreint automatiquement chaque requête à votre établissement. Vous ne voyez que les bons de travail, factures et données qui vous appartiennent. Les requêtes auxquelles il manque l'un des en-têtes renvoient `401`.
+
+```bash
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/ping"
+```
+
+Pour obtenir une clé d'API et un secret partagé, communiquez avec [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Limites de débit
+
+10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests`. Espacez vos appels et réessayez.
+
+## Enveloppe de réponse
+
+Réponses à entité unique :
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Les réponses de liste ajoutent un `count` total :
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Erreurs :
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` signifie des identifiants manquants ou invalides; `400` couvre les entrées incorrectes, les filtres invalides et les refus de permission; `429` correspond à la limite de débit.
+
+## Pagination et filtrage
+
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order` (`asc` | `desc`). Les autres paramètres de requête sont traités comme des filtres de champ. Passez un nom de champ avec une valeur (séparez plusieurs valeurs par des virgules) pour filtrer l'ensemble de résultats. La page de référence de chaque endpoint liste ses filtres notables.
+
+## Formats de date
+
+La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601.
+
+## Données de temps des techniciens
+
+Les endpoints WrenchMode exposent le temps de travail et de conduite par technicien : `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` retourne un rollup conduite/travail/total par technicien (fenêtre limitée à 1 mois), et `GET /v1/supplier/wrench_mode/events` retourne le journal d'événements brut derrière celui-ci. Les expansions d'appel de service (`/with_work_logs`, `/with_tech_details`) donnent l'histoire par visite.
+
+## Guides détaillés
+
+Les guides de cet onglet parcourent chaque partie de l'API en profondeur, avec des charges utiles, de la sémantique de statut et des modèles d'intégration :
+
+<CardGroup cols={2}>
+  <Card title="Bons de travail" href="/supplier-api/work-orders" icon="clipboard-list">
+    Recevoir, accepter ou refuser, statuts de pièces, ECD, pièces jointes et notes.
+  </Card>
+  <Card title="Appels de service" href="/supplier-api/service-calls" icon="truck">
+    Planifier, s'enregistrer, quitter et définir le statut de fin.
+  </Card>
+  <Card title="WrenchMode" href="/supplier-api/wrenchmode" icon="stopwatch">
+    Analyses par technicien et journal d'événements bruts conduite/travail.
+  </Card>
+  <Card title="Soumissions et facturation" href="/supplier-api/quotes-and-invoicing" icon="file-invoice-dollar">
+    Soumettre des propositions, préparer des factures et publier avec un PDF.
+  </Card>
+  <Card title="Achats et inventaire" href="/supplier-api/purchasing-and-inventory" icon="boxes-stacked">
+    Des demandes d'achat aux commandes puis aux réceptions, catalogues et stock.
+  </Card>
+  <Card title="Données de référence" href="/supplier-api/reference-data" icon="map-location-dot">
+    Entreprises acheteuses, emplacements, actifs et fonctionnement du masquage de données.
+  </Card>
+  <Card title="Fichiers et utilisateurs" href="/supplier-api/files-and-users" icon="paperclip">
+    Le magasin de fichiers derrière les pièces jointes et l'approvisionnement de techniciens.
+  </Card>
+</CardGroup>

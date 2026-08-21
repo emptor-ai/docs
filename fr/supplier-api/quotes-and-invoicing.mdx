@@ -1,0 +1,116 @@
+# Soumettre des soumissions et des factures avec l'API Fournisseur
+
+> Créez des propositions pour approbation par l'acheteur et facturez les bons de travail complétés : factures brouillon, sections de postes, téléversement et publication de PDF, et effets secondaires sur les statuts.
+
+L'argent circule à travers deux objets : les **propositions** (soumissions que l'acheteur approuve avant que les travaux ne commencent) et les **factures** (la note pour les travaux complétés). Les deux sont créés par les fournisseurs via cette API.
+
+<Note>
+Aucun de ces endpoints n'est disponible pour les clés d'équipe de service interne ; la soumission de propositions et la facturation sont réservées aux fournisseurs tiers facturant un acheteur.
+</Note>
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Les montants sont des chaînes, en sections
+
+Les propositions et les factures partagent une structure de postes. Les montants sont des **chaînes qui doivent s'analyser comme des nombres** (« 450.00 », pas 450.00 en flottant ; les émetteurs doivent formater avec deux décimales et analyser en décimales). Les sections sont main-d'œuvre, matériel, déplacement, fret et divers (les propositions ajoutent le coût encouru), chacune portant ses propres postes, taux de taxe et `...TotalBeforeTax`, cumulés en totaux avant taxe, taxe et après taxe. Les lignes de déplacement, fret et divers sont de simples objets `{ "description", "amount" }`.
+
+## Propositions (soumissions)
+
+`POST /v1/supplier/quote/proposals` crée la proposition directement au statut **`pending`** sous votre établissement ; il n'y a pas d'étape de soumission distincte. Requis : `workOrderId` et `totalAfterTax`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "scope": "Replace condenser fan motor and recharge refrigerant.",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "totalBeforeTax": "850.00",
+    "taxRate": "8.5",
+    "tax": "72.25",
+    "totalAfterTax": "922.25"
+  }'
+```
+
+Comportements à connaître :
+
+- `locationId`, `buyerFacilityId` et `buyerCompanyId` sont dérivés du bon de travail ; vous ne pouvez pas les définir.
+- Les champs de taxe et les totaux de section non définis prennent par défaut la valeur `"0"`.
+- `requestForProposalId` prend par défaut le RFP du bon de travail lorsqu'il est omis.
+- `proposalPdfLink`, s'il est envoyé, doit être une URL valide. `attachments` prend des `FileDetails` de l'[endpoint de téléversement de fichiers](/supplier-api/files-and-users).
+- Passer un `id` met à jour une proposition existante.
+
+Suivez le résultat en récupérant à nouveau : `status` passe de `pending` à `awarded` ou `declined` (les raisons de refus apparaissent dans `declineNotes`). Listez avec `GET /v1/supplier/quote/proposals`, lisez une avec `GET /v1/supplier/quote/proposals/{id}`.
+
+## Factures
+
+### Le cycle de vie
+
+Les factures commencent au statut **`draft`** (invisibles pour l'acheteur), sont **publiées** en `pending`, puis l'acheteur les fait passer par `approved` et `processing` jusqu'à `paid` (ou les conteste). Votre intégration crée le brouillon et le publie ; à partir de `pending`, vous êtes principalement en lecture de statut.
+
+### Créer le brouillon
+
+`POST /v1/supplier/invoice/invoices` requiert `workOrderId` ; `locationId`, `buyerFacilityId`, `buyerCompanyId`, `spendCategoryId` et `problemTypeId` en sont tous dérivés.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "invoiceNumber": "INV-2026-0451",
+    "dateOfInvoice": "2026-08-21T00:00:00.000-07:00",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "invoiceTotalBeforeTax": "850.00",
+    "invoiceTaxRate": "8.5",
+    "invoiceTax": "72.25",
+    "invoiceTotalAfterTax": "922.25"
+  }'
+```
+
+Détails qui piègent :
+
+- `poNumber` prend par défaut le numéro de bon de commande du bon de travail.
+- `serviceCallIds` prend par défaut **toutes** les visites de service du bon de travail lorsqu'il est omis ou vide ; définissez-le explicitement lorsque vous facturez un sous-ensemble de visites.
+- `taxLineItems` sont validés par rapport aux types de taxe autorisés de la devise de la facture (actuellement, seul CAD les prend en charge : GST/HST/PST) ; tout le reste est rejeté.
+- `invoicePDFLink` (une URL valide) devient l'unique entrée PDF de la facture si vous hébergez le PDF vous-même ; la plupart des intégrations utilisent plutôt l'endpoint de téléversement ci-dessous.
+- `autoPublishOnApproval` inscrit cette facture à la publication automatique à la complétion du bon de travail.
+- Sauvegarder une facture peut faire transitionner le statut du bon de travail associé selon la correspondance statut facture vers bon de travail. Un échec de validation au niveau de la sauvegarde retourne `406`.
+- Passer un `id` met à jour une facture existante (brouillons uniquement, en pratique ; les statuts côté acheteur ne sont pas à vous à modifier).
+
+### Téléverser le PDF et publier
+
+`POST /v1/supplier/invoice/file/upload_and_publish/{invoiceId}` effectue les deux étapes à la fois : le PDF téléversé (partie multipart `file`, max 512 Mo) devient l'unique PDF de la facture, et le statut passe à `pending`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@INV-2026-0451.pdf"
+```
+
+Chaque précondition non satisfaite retourne `400` : votre établissement doit être propriétaire de la facture, le bon de travail associé doit être au statut d'affichage **Completed**, et l'édition de facture par le fournisseur doit être autorisée par la configuration de l'acheteur.
+
+### Lire et rapprocher
+
+`GET /v1/supplier/invoice/invoices` (filtrable, par exemple `?status=pending`) et `GET /v1/supplier/invoice/invoices/{id}`. Les fournisseurs tiers voient des enregistrements masqués avec les champs privés à l'acheteur vidés. Interrogez le statut pour piloter votre livre AR : `approvedAt`, `processedAt` et `markedPaidAt` horodatent la progression de l'acheteur.
+
+## Flux de facturation de bout en bout
+
+1. Le bon de travail atteint la phase de soumission : soumettez une proposition, attendez `awarded`.
+2. Complétez le travail via le [pointage de sortie de visite de service](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+3. Créez la facture brouillon ; générez votre PDF.
+4. Une fois que le bon de travail affiche Completed, `upload_and_publish`.
+5. Interrogez le statut de la facture jusqu'à `paid`, et rapprochez avec `markedPaidAt`.

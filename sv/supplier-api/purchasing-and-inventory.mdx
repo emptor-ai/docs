@@ -1,0 +1,167 @@
+# Inköp och lager med Supplier API
+
+> Kör hela inköpscykeln: inköpsförfrågningar, inköpsordrar och rader, mottagningar och returer, kataloger, lagernivåer och Order.co-webhooken.
+
+Lagerslutpunkterna under `/v1/supplier/inventory/` täcker hela inköpscykeln: tekniker skapar **inköpsförfrågningar** (PR:er), inköp omvandlar dem till **inköpsordrar** (PO:er) mot leverantörer, varor kommer in som **mottagningar**, och lagernivåer uppdateras per **lagerplats**. Samma yta speglas för köparnas interna team i [Internal Teams API](/partners-api/introduction).
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Inköpsförfrågningar
+
+PR-statusar: `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`.
+
+```bash
+# Godkända PR:er som väntar på att beställas
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_requests?status=approved&limit=25"
+
+# En PR med sina rader
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_requests/601"
+```
+
+Två statusskrivningar:
+
+- `PATCH /v1/supplier/inventory/purchase_requests/{id}/cancelled` avbryter, och fungerar bara från en avbrytbar status (`requested` eller `approved`); allt annat är `400`.
+- `PATCH /v1/supplier/inventory/purchase_requests/{id}/{status}` sätter valfri status från listan ovan. Okända namn avvisas.
+
+I normal drift sätter du sällan PR-statusar direkt: de **beräknas om från rader** allteftersom du associerar dem till PO:er, och uppfyllelse sker vid arbetsorderns slutförande.
+
+### PR-rader
+
+Rader frågas separat, vilket är hur du bygger en beställningsarbetslista över många PR:er:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_request_line_items?status=approved&partId=210"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_request_line_items/count_by?status=approved"
+```
+
+De här två slutpunkterna är inte hastighetsbegränsade och använder interna pagineringsstandarder snarare än det externa 10/25-taket.
+
+Bryggan mellan PR:er och PO:er är `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}`: den tar kommaseparerade PR-rad-id:n, sätter var och en till `orderInProgress` med sitt `associatedPurchaseOrderLineItemId` och räknar om varje förälder-PR:s status. Id:n du saknar behörighet för släpps tyst, så jämför den returnerade listan mot vad du skickade.
+
+## Inköpsordrar
+
+PO-statusar: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
+
+### Skapa
+
+`POST /v1/supplier/inventory/purchase_orders` kräver `status` (vanligtvis `new`), `partEquipmentVendorId`, `currencyId` och `createdByEmail`. `totalCost` krävs också om inte ditt företags lagerinställningar markerar PO-kostnad som icke-obligatorisk.
+
+```bash
+curl -X POST "$BASE/v1/supplier/inventory/purchase_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "new",
+    "partEquipmentVendorId": 44,
+    "currencyId": "USD",
+    "createdByEmail": "purchasing@supplier.com",
+    "stockLocationId": 7,
+    "totalBeforeTax": 620.00,
+    "tax": 52.70,
+    "totalCost": 672.70,
+    "incomingLineItems": [
+      {
+        "isEquipmentLine": false,
+        "partId": 210,
+        "partQuantity": 2,
+        "partUomId": 1,
+        "partCost": 310.00,
+        "partCurrencyId": "USD",
+        "prLineItemIds": [8801, 8802]
+      }
+    ]
+  }'
+```
+
+Rader skiljer del-rader från utrustnings-rader via `isEquipmentLine`; del-rader bär `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, utrustnings-rader `equipment*`-motsvarigheterna. `prLineItemIds` knyter raden tillbaka till inköpsförfrågningarna den uppfyller. Att skicka ett `id` på översta nivån uppdaterar en befintlig PO.
+
+### Ersätt rader i massa
+
+`POST /v1/supplier/inventory/purchase_order_line_items/bulk` tar en **JSON-array** av rad-payloads och har ersättningssemantik:
+
+<Warning>
+Alla **ej mottagna** rader på mål-inköpsordern raderas först, sedan skapas de skickade posterna. Skicka alltid den fullständiga avsedda uppsättningen öppna rader, aldrig bara skillnaden. Poster du saknar skrivbehörighet för hoppas över tyst.
+</Warning>
+
+`supplierFacilityId` och `supplierCompanyId` på varje post skrivs över från din nyckel, PO:s del-/utrustnings-/PR-id-listor räknas om och inköpsorder-aviseringen skickas igen. Inte hastighetsbegränsad.
+
+### Markera som beställd
+
+`PATCH /v1/supplier/inventory/purchase_orders/{id}/ordered` sätter statusen till `ordered` och mejlar ordern till leverantören.
+
+<Note>
+Framgångssvaret är ett stränghölje (`"type": "Email"`, `"data": "Email has been sent"`), **inte** inköpsordern. Hämta om PO:n om du behöver dess uppdaterade tillstånd.
+</Note>
+
+`PATCH /v1/supplier/inventory/purchase_orders/{id}/cancel` avbryter och returnerar den uppdaterade PO:n.
+
+## Mottagningar och returer
+
+Mottagning är en `PUT` nycklad efter PO-raden:
+
+```bash
+curl -X PUT "$BASE/v1/supplier/inventory/purchase_order_receipts" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptNumber": "RCPT-1042",
+    "purchaseOrderId": 350,
+    "purchaseOrderLineItemId": 9902,
+    "receivedQuantity": 2,
+    "pricePerQuantity": 310.00,
+    "updatedBy": "warehouse@supplier.com",
+    "supplierFacilityId": 12
+  }'
+```
+
+Krävs: `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy`, `supplierFacilityId`. Regler:
+
+- `receivedQuantity` måste vara skilt från noll. **En negativ kvantitet registrerar en retur.**
+- Mottagning uppdaterar PO-radens mottagna kvantiteter/kostnader och lagerposterna vid destinations-lagerplatsen; PO-status rullar upp till `partially_received`/`received` därefter.
+- För serialiserad utrustning bär `equipmentPerStockLocationReceiptValues` (eller `assetReceiptValues`/`receiptValuesWithoutId`) en `{ serialNumber, assetNumber }`-post per enhet. Listlängden måste vara lika med `receivedQuantity`, dessa arrayer är inte tillåtna vid returer, och serie- eller tillgångsnummer som redan används avvisas.
+- Leverantörsfakturametadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) kan registreras på mottagningen.
+
+Läs tillbaka en med `GET /v1/supplier/inventory/purchase_order_receipts/{id}`.
+
+## Katalog: delar, utrustning, leverantörer och lager
+
+Skrivskyddad referensdata, alla med standardpaginering och fältfilter:
+
+| Slutpunkt | Innehåll |
+| --- | --- |
+| `GET /v1/supplier/inventory/parts` (+`/{id}`) | Din delkatalog. |
+| `GET /v1/supplier/inventory/equipments` (+`/{id}`) | Utrustningstyper (modeller). |
+| `GET /v1/supplier/inventory/part_equipment_vendors` (+`/{id}`) | Leverantörer du beställer från. |
+| `GET /v1/supplier/inventory/parts_per_stock_locations` (+`/{id}`) | Per-lagerplats-delinventering: kvantiteter och binärlagerlägen. |
+| `GET /v1/supplier/inventory/equipment_per_stock_locations` (+`/{id}`) | Serialiserade utrustningsenheter som hålls vid lagerplatser. |
+
+`parts_per_stock_locations?partId=210` besvarar "var har vi den här delen och hur många"; filtrera efter `stockLocationId` för en plats hela lagerlista.
+
+## Order.co-webhook
+
+`POST /v1/supplier/inventory/webhook/purchase_order` är en **inkommande** webhook för tredjeparts inköpssystem, för närvarande Order.co, och endast för leverantörsföretag som är registrerade för den (andra får `400`). Payloaden bär `order_id` (tredjepartsid), `purchase_order_number` (OpenWrench-PO:s id som en sträng), en `status` och ett statusspecifikt `message`-objekt. Effekter per status:
+
+- `approved` / `error` — lägg till en anteckning på PO:n.
+- `rejected` — avbryt PO:n.
+- `completed` — markera PO:n som beställd.
+- `shipping_update` — lägg till en fraktnotering; när `message.shipment_delivery_date` finns, skapa automatiskt mottagningar för alla ej mottagna rader.
+
+Varje förfrågan och svar granskas, och svarsformen varierar per gren.
+
+## Hela flödet i korthet
+
+1. Lista `approved` PR-rader för att bygga beställningsarbetslistan.
+2. Skapa PO:n med `incomingLineItems` som refererar till `prLineItemIds` (eller associera PR-rader uttryckligen efteråt).
+3. Markera PO:n `ordered` (leverantören får mejlet).
+4. Ta emot leveranser med mottagningar; registrera returer som negativa kvantiteter; serialiserade enheter får per-enhet serie- och tillgångsnummer.
+5. PR-statusar rullar framåt automatiskt (`orderInProgress` → `ordered` → `fulfilled`) allteftersom rader associeras och arbetsordrar avslutas.

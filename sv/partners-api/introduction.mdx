@@ -1,0 +1,71 @@
+# Internal Teams API
+
+> Åtkomst till inköp och lager för dina interna serviceteam: inköpsförfrågningar, inköpsordrar, mottagningar, delar och lager
+
+Internal Teams API är integrationsytan för systemen bakom dina interna serviceteams inköp och lager: inköpsförfrågningar och deras rader, inköpsordrar genom mottagning, kataloger för delar och utrustning, lagerplatser och delarna som förbrukas på arbetsordrar.
+
+## Bas-URL
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Interna-team-slutpunkter serveras under prefixet `/v1/partners/`.
+
+## Autentisering
+
+De här slutpunkterna kräver en **partner-API-nyckel**, en separat referens från köpar- och leverantörs-API-nycklar. En köpar-API-nyckel fungerar inte mot slutpunkter under `/v1/partners/`, även om den här sektionen ligger under Buyer API-dokumentationen.
+
+Varje förfrågan måste innehålla **två rubriker**: `X-API-KEY` (partner-nyckeln) och `OW-KEY` (den delade hemligheten från OpenWrench som utfärdas tillsammans med den). Nyckeln avgränsar automatiskt varje förfrågan till ditt företags data. Förfrågningar som saknar någon av rubrikerna returnerar `401`.
+
+```bash
+curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/partners/ping"
+```
+
+För att få en partner-API-nyckel och delad hemlighet utfärdad, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Hastighetsgränser
+
+10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`. Backa av och försök igen.
+
+## Svarshöljet
+
+Svar för enskilda entiteter:
+
+```json
+{ "type": "SupplierPurchaseOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Listsvar lägger till ett totalt `count`:
+
+```json
+{ "type": "SupplierPurchaseRequest", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Fel:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` betyder att en nyckel saknas eller är ogiltig; `400` täcker felaktig indata, felaktiga filter och behörighetsavslag; `429` är hastighetsgränsen.
+
+## Paginering och filtrering
+
+List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som fältfilter. Skicka ett fältnamn med ett värde (kommaseparera flera värden) för att filtrera resultatuppsättningen.
+
+## Inköpsflödet
+
+En typisk integration följer inköpscykeln: läs godkända **inköpsförfrågningar** och deras rader, skapa en **inköpsorder** mot en leverantör, associera PR-rader till PO-rader, markera PO:n **ordered** och registrera **mottagningar** när artiklar anländer (negativa mottagna kvantiteter registrerar returer). Delar, utrustningstyper, leverantörer och lagerplatser avrundar referensdatan.
+
+## Detaljerade guider
+
+<CardGroup cols={2}>
+  <Card title="Inköpsflöde" href="/partners-api/purchasing-flow" icon="cart-flatbed">
+    Livscykeln från början till slut: förfrågningar, ordrar, rader och mottagningar.
+  </Card>
+  <Card title="Katalog och lager" href="/partners-api/catalog-and-stock" icon="boxes-stacked">
+    Delar, utrustning, leverantörer, lagerplatser och förbrukning på arbetsordrar.
+  </Card>
+</CardGroup>

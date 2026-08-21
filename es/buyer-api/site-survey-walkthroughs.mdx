@@ -1,0 +1,43 @@
+# Recorridos de encuesta de sitio en la Buyer API
+
+> Lee los recorridos de encuestas de sitio y genera órdenes de trabajo de seguimiento a partir de los hallazgos con la Buyer API de OpenWrench.
+
+Un **recorrido** es una encuesta de sitio completada: un inspector recorre una ubicación siguiendo una lista de tareas y registra respuestas, fotos e incidencias. La Buyer API expone los recorridos en solo lectura y te permite crear órdenes de trabajo de seguimiento que quedan enlazadas al hallazgo de encuesta del que provienen.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Leer recorridos
+
+```bash
+# Recorridos recientes de una ubicación
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+
+# Conteo por filtro
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/count_by?locationId=1204"
+
+# Un recorrido, con respuestas de tareas
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/230"
+```
+
+Aplican la paginación estándar y los filtros por campo, además del alcance por ubicación y marca de tu rol. Las órdenes de trabajo referenciadas desde las respuestas de tareas de un recorrido se filtran por tu permiso de lectura, por lo que claves distintas pueden ver órdenes de trabajo enlazadas distintas en el mismo recorrido.
+
+## Crear órdenes de trabajo de seguimiento
+
+Cuando un hallazgo de encuesta requiere remediación, crea la orden de trabajo con los campos de enlace establecidos:
+
+- `walkThroughId` — el recorrido del que proviene el hallazgo.
+- `siteSurveyTaskTitleId` — la tarea específica dentro de él.
+- `includeWalkthroughTaskList` — opcionalmente copia la lista de tareas del recorrido en la orden de trabajo.
+
+`walkThroughId` y `siteSurveyTaskTitleId` **deben suministrarse juntos o no suministrarse**; en caso contrario, la creación se rechaza. Consulta [Crear una orden de trabajo](/buyer-api/work-orders#create-a-work-order) para el resto del payload.
+
+El enlace es visible en ambos sentidos: la orden de trabajo lleva `walkThroughId`, y las respuestas de tareas del recorrido referencian las órdenes de trabajo generadas a partir de ellas. Eso hace que "todos los hallazgos abiertos de las encuestas del último trimestre, con estado de remediación" sea un informe de dos consultas.

@@ -1,0 +1,36 @@
+# Accepter et compléter un bon de travail
+
+> Flux complet pour transformer un bon de travail entrant en un travail complété et facturé
+
+<Info>
+  Ce guide est un canevas. Complétez-le avec les appels d'endpoints et les charges utiles exacts de votre intégration.
+</Info>
+
+## Prérequis
+
+- Une clé d'API Fournisseur (voir [Authentification](/supplier-guides/authentication)).
+- Un bon de travail entrant dans votre file d'attente.
+
+## 1. Réviser le bon de travail entrant
+
+Récupérez le bon de travail pour examiner l'emplacement, les actifs, le métier et toute instruction de l'acheteur.
+
+## 2. Accepter le bon de travail
+
+Mettez à jour le statut du bon de travail pour signaler son acceptation.
+
+## 3. Planifier une visite de service
+
+Créez une visite de service liée au bon de travail avec l'heure planifiée et le technicien assigné.
+
+## 4. Documenter la visite
+
+Pendant que le technicien travaille, consignez les notes de travail, les pièces utilisées et (si activés) les événements de temps WrenchMode.
+
+## 5. Soumettre une soumission, si nécessaire
+
+Si le travail requiert l'approbation de l'acheteur avant sa réalisation, soumettez une soumission et attendez l'approbation.
+
+## 6. Compléter et facturer
+
+Fermez le bon de travail et soumettez une facture.

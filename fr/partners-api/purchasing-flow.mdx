@@ -1,0 +1,142 @@
+# Le flux d'achats : des demandes aux commandes aux réceptions
+
+> Parcourez de bout en bout le cycle de vie des achats de l'API Internal Teams : lisez les demandes d'achat approuvées, créez des bons de commande, associez les postes et enregistrez les réceptions.
+
+Ce guide parcourt le cycle de vie des achats de bout en bout avec l'API Internal Teams : les techniciens créent des **demandes d'achat** (PR), votre système d'achats les transforme en **bons de commande** (PO) auprès d'un fournisseur, et les marchandises arrivent sous forme de **réceptions** qui mettent à jour le stock. Il suppose que vous disposez d'une clé d'API partenaire (voir l'[introduction](/partners-api/introduction)).
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"      # en-tête X-API-KEY
+export SECRET="<shared-secret>"     # en-tête OW-KEY
+```
+
+## Vocabulaire des statuts
+
+**Demandes d'achat** : `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`. Le statut d'une PR est recalculé à partir de ses postes au fur et à mesure qu'ils sont associés à des PO, donc la majeure partie du mouvement se fait automatiquement.
+
+**Bons de commande** : `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
+
+## 1. Lire les demandes d'achat approuvées
+
+```bash
+# Le carnet de commande
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_requests?status=approved"
+
+# Une PR avec ses postes de pièces et d'équipement
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_requests/601"
+```
+
+Tout paramètre de requête autre que les paramètres de pagination agit comme un filtre d'égalité sur les colonnes de l'entité (`status=approved`, `stockLocationId=42`), toujours à l'intérieur du périmètre de votre entreprise.
+
+Pour une liste de travaux transversale aux PR, interrogez directement les postes :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items?status=approved"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items/count_by?status=approved"
+```
+
+Les statuts de PR peuvent également être définis directement lorsque votre flux d'approbation vit en dehors d'OpenWrench : `PATCH .../purchase_requests/{id}/{status}` pour tout statut du vocabulaire, et `PATCH .../purchase_requests/{id}/cancelled` pour annuler (uniquement depuis `requested` ou `approved` ; sinon `400`).
+
+## 2. Créer le bon de commande
+
+`POST /v1/partners/inventory/purchase_orders` crée le PO avec ses postes en un seul appel. Requis : `status` (généralement `new`), `partEquipmentVendorId`, `currencyId` et `createdByEmail`. `totalCost` est requis à moins que les paramètres d'inventaire de votre entreprise ne marquent le coût du PO comme non obligatoire (il est obligatoire par défaut). `supplierCompanyId` et `supplierFacilityId` sont dérivés de votre clé.
+
+```bash
+curl -X POST "$BASE/v1/partners/inventory/purchase_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "new",
+    "partEquipmentVendorId": 44,
+    "currencyId": "USD",
+    "createdByEmail": "purchasing@example.com",
+    "stockLocationId": 7,
+    "totalBeforeTax": 620.00,
+    "tax": 52.70,
+    "totalCost": 672.70,
+    "incomingLineItems": [
+      {
+        "isEquipmentLine": false,
+        "partId": 210,
+        "partQuantity": 2,
+        "partUomId": 1,
+        "partCost": 310.00,
+        "partCurrencyId": "USD",
+        "prLineItemIds": [8801, 8802]
+      }
+    ]
+  }'
+```
+
+Chaque poste définit `isEquipmentLine` puis soit les champs `part*`, soit les champs `equipment*`. `prLineItemIds` enregistre quelles lignes de PR le poste du PO satisfait. Passer un `id` de premier niveau remplace les champs modifiables d'un PO existant au lieu d'en créer un nouveau.
+
+### Associer les postes de PR
+
+Si vous n'avez pas lié les PR via `prLineItemIds` au moment de la création, associez-les explicitement :
+
+```bash
+curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items/associate_po_line_item/8801,8802/9902"
+```
+
+Chaque poste de PR listé passe à `orderInProgress` avec son `associatedPurchaseOrderLineItemId` défini, et le statut de chaque PR parente est recalculé. Les identifiants que votre clé ne peut pas lire sont **silencieusement ignorés** (l'appel peut retourner une liste vide), vérifiez donc les articles retournés par rapport à ce que vous avez envoyé.
+
+### Réviser les postes
+
+`POST /v1/partners/inventory/purchase_order_line_items/bulk` prend un **tableau JSON** de postes, tous référençant le même `supplierPurchaseOrderId`, et a des sémantiques de remplacement :
+
+<Warning>
+Tous les postes **non reçus** existants du PO sont d'abord supprimés, puis les postes soumis sont créés. Envoyez à chaque fois l'ensemble complet des lignes ouvertes prévues. Le statut de ligne n'est pas définissable ici : les nouvelles lignes commencent en `new`, et une ligne resoumise avec son `id` conserve son statut.
+</Warning>
+
+Les listes d'identifiants de pièces/équipements/demandes d'achat du PO sont recalculées et la notification de bon de commande est renvoyée. `supplierFacilityId`/`supplierCompanyId` par article proviennent de votre clé ; les articles sans permission d'écriture sont silencieusement ignorés.
+
+## 3. Marquer la commande passée
+
+```bash
+curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_orders/350/ordered"
+```
+
+Cela définit le PO à `ordered` et envoie la commande par courriel au fournisseur. La réponse de succès est l'enveloppe de chaîne de confirmation (`"type": "Email"`, `"data": "Email has been sent"`), **pas** le PO ; récupérez à nouveau le PO pour son nouvel état. Pour abandonner à la place, `PATCH .../purchase_orders/{id}/cancel` (qui retourne le PO mis à jour).
+
+## 4. Enregistrer les réceptions à l'arrivée des marchandises
+
+`PUT /v1/partners/inventory/purchase_order_receipts` enregistre la réception par rapport à un poste du PO. Sur cet endpoint, `updatedBy` et `supplierFacilityId` **doivent être fournis dans le corps** ; ils ne sont pas dérivés de la clé.
+
+```bash
+curl -X PUT "$BASE/v1/partners/inventory/purchase_order_receipts" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptNumber": "RCPT-1042",
+    "purchaseOrderId": 350,
+    "purchaseOrderLineItemId": 9902,
+    "receivedQuantity": 2,
+    "pricePerQuantity": 310.00,
+    "updatedBy": "warehouse@example.com",
+    "supplierFacilityId": 12
+  }'
+```
+
+Règles :
+
+- `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy` et `supplierFacilityId` sont requis.
+- `receivedQuantity` doit être non nul ; **une valeur négative enregistre un retour**.
+- La mise à jour d'une réception ajuste les quantités et coûts reçus sur le poste du PO et les enregistrements de stock à l'emplacement de stock de destination.
+- Pour l'équipement sérialisé, envoyez une entrée par unité dans `equipmentPerStockLocationReceiptValues`, `assetReceiptValues` ou `receiptValuesWithoutId`. La longueur du tableau doit être égale à `receivedQuantity`, ces tableaux ne peuvent pas accompagner un retour, et les numéros de série ou d'actif déjà utilisés sont rejetés.
+- Les métadonnées de facture fournisseur (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) peuvent être capturées sur la réception.
+
+Relisez une réception avec `GET /v1/partners/inventory/purchase_order_receipts/{id}`.
+
+## Idempotence et gestion des erreurs
+
+- Les créations ne sont pas idempotentes : réessayer une création de PO qui a expiré peut dupliquer la commande. Utilisez l'endpoint de liste avec un filtre (par exemple sur vos références externes de type `receiptNumber`) pour vérifier avant de réessayer.
+- Les problèmes de permission apparaissent sous forme de `400` (avec l'enveloppe d'erreur standard), et les identifiants silencieusement ignorés sur les endpoints en masse et d'association signifient qu'un appel « réussi » peut avoir fait moins que ce que vous avez demandé. Rapprochez toujours le payload de la réponse de votre requête.
+- Les [endpoints du catalogue](/partners-api/catalog-and-stock) fournissent les valeurs `partId`, `equipmentTypeId`, `partEquipmentVendorId` et `stockLocationId` dont ce flux a besoin.

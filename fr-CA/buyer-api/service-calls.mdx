@@ -1,0 +1,53 @@
+# Appels de service et preuves de visite dans l'API Acheteur
+
+> Lisez les appels de service avec les journaux de travail et les détails des techniciens depuis l'API Acheteur OpenWrench pour vérifier les visites, auditer le temps de main-d'œuvre et réconcilier les factures.
+
+Un **appel de service** est une visite de fournisseur sur un bon de travail : qui était prévu, quand ils sont arrivés et repartis, ce qu'ils ont documenté. Les bons de travail incorporent leurs appels dans `associatedServiceCalls` (avec `lastServiceCall` comme raccourci), et l'API Acheteur ajoute trois endpoints de lecture qui étendent un appel unique avec des preuves plus riches.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ce que contient un appel de service
+
+À partir des objets embarqués dans un bon de travail, vous obtenez, par appel : `leadTechnicianEmail` et `additionalTechnicianEmails`, `numberOfTechs`, `serviceScheduledAt`, ainsi que les paires arrivée/départ (`checkInTime`, `checkInNotes`, `checkInImages`, `checkInGeoLocation` et leurs équivalents `checkOut*`). Les coordonnées géographiques et les photos vous permettent de vérifier que le technicien était bel et bien sur place.
+
+## Les endpoints d'expansion
+
+Chaque segment de chemin `/with_*` élève une section supplémentaire dans la réponse. Combinez-les en enchaînant les segments :
+
+| Endpoint | Ajoute |
+| --- | --- |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs` | Les événements WrenchMode de l'appel plus `trueWorkTimeMillis`. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_tech_details` | Les techniciens de l'appel comme fiches de contact complètes. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs/with_tech_details` | Les deux. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+L'`{id}` est l'id de l'appel de service, que vous lisez sur les `associatedServiceCalls` du bon de travail.
+
+## Journaux de travail et temps de travail réel
+
+`with_work_logs` retourne la trace d'événements WrenchMode enregistrée pendant la visite (travail commencé, en pause, repris, terminé) avec **`trueWorkTimeMillis`** : la durée de travail sur place, pauses exclues. C'est le nombre à utiliser pour la vérification de la main-d'œuvre, puisque les intervalles bruts entre arrivée et départ incluent les pauses et interruptions.
+
+## Détails des techniciens et visibilité des tarifs
+
+`with_tech_details` retourne les techniciens de l'appel sous forme de fiches de contact. **`hourlyRate` n'est renseigné que lorsque l'appel a été effectué par votre propre équipe de service interne.** Les tarifs des fournisseurs tiers ne sont jamais exposés aux acheteurs, donc attendez-vous à ce que `hourlyRate` soit absent des visites de sous-traitants.
+
+## Modèle de vérification
+
+Avant d'approuver un bon de travail terminé ou sa facture :
+
+1. Récupérez le bon de travail et lisez `associatedServiceCalls`.
+2. Pour chaque appel, demandez `/with_work_logs/with_tech_details`.
+3. Vérifiez `checkInGeoLocation` par rapport à l'emplacement, comparez `trueWorkTimeMillis` aux heures de main-d'œuvre facturées et révisez les notes et images de départ.
+4. Approuvez via les [actions de statut de bon de travail](/buyer-api/work-orders#buyer-status-actions) ou contestez via `work_unsatisfactory`, en citant ce que vous avez constaté dans la note.
+
+Les erreurs suivent l'enveloppe standard : `404` pour un appel inconnu, `400` pour un appel hors de votre portée.

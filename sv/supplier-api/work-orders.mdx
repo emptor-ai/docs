@@ -1,0 +1,119 @@
+# Arbeta med arbetsordrar via Supplier API
+
+> Ta emot, acceptera, avvisa och driva arbetsordrar som leverantör: statusuppdateringar, reservdelsspårning, uppskattade slutdatum, bilagor och anteckningar.
+
+För en leverantörsintegration är arbetsorderkön inkorgen. Den här guiden täcker slutpunkterna under `/v1/supplier/work_order/` för att ta emot jobb, svara på dem och hålla köpare informerade medan arbetet pågår. Att schemalägga besök och slutföra arbete sker via [servicebesök](/supplier-api/service-calls).
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Läsa din kö
+
+```bash
+# Nytilldelat arbete, äldst först
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=assignedAt&order=asc"
+
+# Räkna per filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+
+# En arbetsorder
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter filtrerar på entitetens indexerade kolumner. Allt är tenant-avgränsat till din anläggning. Två saker att komma ihåg:
+
+- **Läsningar kommer från en läs-replika**, så en ändring du just skrivit kan släpa efter ett ögonblick i listresultat.
+- **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/supplier-api/reference-data#datamaskering) för detaljer.
+
+## Acceptera eller avvisa
+
+**Acceptera** med `POST /v1/supplier/work_order/work_orders/status_update/confirm`, som sätter statusen till `ConfirmedByServiceProvider`. En arbetsorder som redan är i en avslutad eller stängd visningsstatus kan inte accepteras (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Avvisa** med `POST .../status_update/decline`. Endast kontakter tillhörande arbetsorderns tilldelade leverantörsanläggning får avvisa. Arbetsordern lämnar din kö via leverantörsbytesflödet: dess status återgår till `PendingApproval`, eller så plockas en privat nätverksleverantör automatiskt, beroende på köparens konfiguration. Anteckningens `text` registreras som avslagsskäl och återspeglas i vad köparen ser, så var specifik.
+
+Båda anropen tar `{ "id": ..., "note": { ... } }` och returnerar den uppdaterade arbetsordern.
+
+## Håll köparen informerad
+
+Tre lätta signaler medan jobbet pågår:
+
+**Reservdelsspårning.** Tre statusslutpunkter, med samma `{ id, note }`-kroppsform som ovan:
+
+| Slutpunkt | Resulterande status |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Uppskattat slutdatum.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` läser endast `estimatedCompletionDate` (ISO 8601) från kroppen:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Bilagor.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` lägger till filreferenser till `supplierAttachments` och bevarar det som redan finns. Ladda upp filen först (se [Filer och användare](/supplier-api/files-and-users)), sedan:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Anteckningar
+
+Lägg till i den delade köpar–leverantör-tråden med `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), och läs en arbetsorders tråd med `GET /v1/supplier/work_order/work_order_notes/{woId}`. Läsning uppdaterar läskvitton för din kontakt, och en nekad läsning returnerar en tom lista istället för ett fel.
+
+## Skapa en leverantörsinitierad arbetsorder
+
+Leverantörer kan öppna arbetsordrar själva (en tekniker upptäcker en trasig dörr medan han är på plats för något annat). `POST /v1/supplier/work_order/work_orders` kräver `title` och `locationId`; platsen avgör köparanläggningen och företaget.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "isSupplierInitiated": true,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den första löv-problemtypen för platsens köparföretag, och `woPriorityId` till en standardprioritet för det företaget. `status` härleds från köparföretagets konfiguration (vanligtvis `Unassigned` eller `PendingApproval`). Ett `assetId`, om det anges, måste existera, och dess område ärvs när `areaId` inte är satt. Fältet heter `needApproval` (utan "s") i den här skapa-kroppen.
+
+## Problemtyper
+
+`GET /v1/supplier/work_order/problem_types` listar problemtyper över dina relaterade köparföretag (inte hastighetsbegränsad). Använd den för att klassificera leverantörsinitierade arbetsordrar korrekt per köpare.
+
+## Typisk integrationsloop
+
+1. Polla kön för nytilldelat arbete (`sort_by=assignedAt`), eller jämför på `statusChangedAt`.
+2. `confirm` eller `decline` inom din SLA.
+3. Schemalägg besöket via [servicebesök](/supplier-api/service-calls); posta reservdelsstatusar och ett ECD när saker utvecklas.
+4. Slutför via utcheckning och fakturera sedan via [offerter och fakturering](/supplier-api/quotes-and-invoicing).

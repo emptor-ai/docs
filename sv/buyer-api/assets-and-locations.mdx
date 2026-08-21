@@ -1,0 +1,155 @@
+# Tillgångar, tillgångstyper, modeller, mätare och platser
+
+> Hantera Buyer API:s fysiska värld: platser och regioner, tillgångstyper och modeller, skapa tillgångar med köldmediespårning och registrera mätaravläsningar.
+
+Allt som en arbetsorder pekar på bor här: **platser** (dina fysiska anläggningar, grupperade i **regioner**) och **tillgångar** (utrustning på en plats, klassificerade efter **tillgångstyp**, valfritt standardiserade av en **tillgångsmodell**, och instrumenterade med **mätare**).
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Platser
+
+Platser är mestadels läsbara via API:et:
+
+```bash
+# Lista (sidstorleken på den här slutpunkten begränsas till 10 även om du ber om mer)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations?limit=10"
+
+# Räkna som matchar ett filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/count_by?regionId=4"
+
+# En plats, eller flera i en tur/retur
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/multiple/1204,1205,1210"
+```
+
+Anmärkningar:
+
+- List-slutpunkten begränsar `limit` till **10** (de flesta list-slutpunkter tillåter 25). Planera pagineringsloopar därefter.
+- `multiple/{ids}` tar kommaseparerade id:n och **utelämnar tyst** varje id du saknar läsbehörighet för; kontrollera vilka id:n som kom tillbaka istället för att anta att alla gjorde det.
+- Den enda skrivningen är `PATCH /v1/buyer/location/locations/{id}`, och den läser **endast `locationTypeDetails`** från kroppen (anpassade fältvärden för platsens typ). Alla andra fält ignoreras.
+
+Regioner grupperar platser: `GET /v1/buyer/location/regions` och `GET /v1/buyer/location/regions/{id}`.
+
+## Tillgångstyper
+
+Tillgångstyper klassificerar utrustning ("Walk-in cooler", "Rooftop unit") och bär klassnivåns standardvärden, inklusive köldmedieinställningar.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/asset_types" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Walk-in cooler",
+    "usesRefrigerant": true,
+    "refrigerantTypeCode": "R-448A",
+    "fullChargeLb": 12.5
+  }'
+```
+
+- `name` är det enda obligatoriska fältet. `buyerCompanyId` härleds från din nyckel och kan inte sättas.
+- `applianceCategory`, `refrigerantTypeCode` och `fullChargeLb` accepterar ett **explicit `null` för att rensa** klassnivåns standardvärde. `fullChargeLb` måste vara positivt när det anges.
+- Att skicka ett `id` uppdaterar en befintlig typ.
+
+Läs med `GET /v1/buyer/asset/asset_types` och `GET /v1/buyer/asset/asset_types/{id}`.
+
+## Tillgångar
+
+Skapa en tillgång med `POST /v1/buyer/asset/assets`. Krävs: `name`, `assetTypeId`, `locationId`, `isActive`, `isLeased`.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/assets" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Cooler #2 - back of house",
+    "assetTypeId": 301,
+    "locationId": 1204,
+    "isActive": true,
+    "isLeased": false,
+    "serialNumber": "WC2-99841",
+    "manufacturer": "Arctic Air",
+    "assetModelId": 77,
+    "installDate": "2024-05-01"
+  }'
+```
+
+Beteende att känna till:
+
+- `buyerFacilityId` och `buyerCompanyId` **härleds från platsen**, aldrig från kroppen.
+- **Köldmedieöverstyrningar kan rensas.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` och `refrigerantRequiresProcessShutdown` är per-enhet-överstyrningar av tillgångstypens standardvärden. Att utelämna nyckeln behåller det lagrade värdet; ett explicit `null` (eller tom sträng) rensar tillbaka till att ärva från typen. `isRefrigerantTracked` beter sig liknande: utelämnat eller `null` behåller det lagrade värdet, och inskrivningen stängs endast av med ett explicit `false`.
+- **Underliggande tillgångar.** `parentId` gör detta till en underliggande tillgång. Det kräver att underliggande tillgångar är aktiverade för ditt företag, och barnet måste vara på samma plats som föräldern.
+- Att skicka ett `id` uppdaterar en befintlig tillgång.
+
+Läsningar:
+
+```bash
+# Fullständig listning med filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets?locationId=1204&limit=25"
+
+# Lite-projektion: id, namn, typ, serie, plats, garantier
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asset_lite?locationId=1204"
+
+# En tillgång, hydratiserad med sina mätare
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
+```
+
+`asset_lite` är det billiga sättet att synka en tillgångsväljare: när du inte skickar några pagineringsparametrar returnerar den den **opaginerade fulla mängden**, med `count` lika med antalet returnerade poster. Den enskilda tillgångsläsningen hydratiserar mätare (höljets `type` läser `ApiAssetWithMeter`).
+
+## Tillgångsmodeller
+
+Modeller standardiserar specifikationer och manualer per typ. `POST /v1/buyer/asset/asset_models` kräver `modelName` och `assetTypeId`, med valfria `manuals`- och `specs`-bilagor.
+
+Den ungefärliga matchningen är praktisk vid importer, när dina källdata har fritextmodellnamn:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_models/fuzzy/Arctic%20Air%20WC-200/301"
+```
+
+`GET /v1/buyer/asset/asset_models/fuzzy/{name}/{assetTypeId}` returnerar den närmaste modellen inom tillgångstypen, eller `404` när inget är tillräckligt nära. Fall tillbaka på att skapa modellen vid `404`.
+
+## Mätare och avläsningar
+
+Mätare fäster en mätbar serie till en tillgång (temperatur, drifttimmar, cykelantal). Skapa mätaren en gång och registrera sedan avläsningar mot den:
+
+```bash
+# 1. Skapa mätaren
+curl -X POST "$BASE/v1/buyer/asset/meters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Box temperature",
+    "assetId": 5511,
+    "locationId": 1204,
+    "meterTypeId": 2,
+    "seriesType": "continuous",
+    "valueType": "number",
+    "valueUnit": "F"
+  }'
+
+# 2. Registrera avläsningar (t.ex. från en IoT-brygga)
+curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meterId": 9310,
+    "value": "38.2",
+    "expectedValue": "36",
+    "recordedAt": "2026-08-21T09:00:00.000-07:00",
+    "recordedBy": "iot-bridge@example.com"
+  }'
+```
+
+<Note>
+Mätar- och avläsningspayloads tolkas av en delad serverhjälpare, och det dokumenterade schemat är förkortat. Fälten som visas ovan är den pålitliga kärnan; verifiera allt utöver dem mot API-referenssidorna eller med support.
+</Note>
+
+## Synkroniseringsstrategi
+
+För en nattlig tillgångssynkronisering: paginera `asset_lite` för id-uppsättningen, jämför mot ditt system och hämta sedan fullständiga poster via id endast för ändrade tillgångar. Det håller dig inom hastighetsgränsen (10 förfrågningar per 20-sekundersfönster) betydligt mer bekvämt än att paginera hela listningen med 25 per anrop.

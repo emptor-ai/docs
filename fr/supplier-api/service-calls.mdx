@@ -1,0 +1,124 @@
+# Visites de service : planification, pointage d'entrée et complétion
+
+> Pilotez le cycle de vie des visites avec l'API Fournisseur : planifiez et replanifiez les techniciens, pointez à l'entrée et à la sortie, définissez les statuts de complétion et lisez les journaux de travail.
+
+Une **visite de service** est une visite de technicien pour un bon de travail. L'API Fournisseur pilote l'ensemble du cycle de vie de la visite à travers cinq endpoints de mise à jour de statut plus des extensions de lecture. C'est la partie la plus nuancée de l'API ; les détails ci-dessous méritent d'être lus avant d'écrire du code.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Fonctionnement des endpoints de mise à jour de statut
+
+Les cinq partagent une forme de requête (un payload de visite de service) et un comportement crucial :
+
+<Warning>
+**La réponse est le bon de travail associé, pas la visite de service.** Chaque appel crée ou met à jour une visite de service, fait évoluer le statut du bon de travail et retourne le bon de travail mis à jour dans l'enveloppe. Lisez le nouvel état de la visite de service dans `associatedServiceCalls` / `lastServiceCall` du bon de travail.
+</Warning>
+
+Champs de requête partagés : `workOrderId` et `numberOfTechs` sont toujours requis. `id` cible une visite de service existante (omettez-le à la première création, puis réutilisez l'identifiant pour chaque mise à jour ultérieure de la même visite). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, les groupes `checkIn*`/`checkOut*`, `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` se remplissent au fil de la visite.
+
+`supplierFacilityId` est requis pour les clés d'équipe de service interne ; pour les clés de fournisseur tiers, il est remplacé par votre propre identifiant d'établissement quel que soit ce que vous envoyez.
+
+| Endpoint | Le statut du bon de travail devient |
+| --- | --- |
+| `POST .../service_calls/status_update/tech_scheduled` | `TechScheduled` lorsque `serviceScheduledAt` est présent, sinon `TechAssigned` |
+| `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` lorsque `serviceScheduledAt` est présent, sinon `TechAssigned` |
+| `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
+| `POST .../service_calls/status_update/check_out` | Le `checkOutStatus` que vous envoyez (requis) |
+| `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Identique à leurs équivalents sur site, pour le travail à distance |
+
+Tous les chemins sont sous `/v1/supplier/work_order/`.
+
+## 1. Planifier la visite
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_scheduled" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "leadTechnicianEmail": "tech@supplier.com",
+    "serviceScheduledAt": "2026-08-22T09:00:00.000-07:00"
+  }'
+```
+
+Pour reporter le rendez-vous, appelez `tech_rescheduled` avec l'`id` de la visite de service et le nouveau `serviceScheduledAt`.
+
+## 2. Pointer l'entrée
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkInByEmail": "tech@supplier.com",
+    "checkInStatus": "TechWorkingOnSite",
+    "checkInNotes": "On site, starting diagnosis.",
+    "checkInGeoLocation": { "lat": "37.7749", "long": "-122.4194" }
+  }'
+```
+
+`checkInTime` prend par défaut l'heure actuelle du serveur lorsque vous définissez un `checkInStatus` sans heure, les intégrations en direct peuvent donc l'omettre ; les rattrapages doivent le passer explicitement. `checkInImages` prend des références de photos, et les coordonnées géographiques donnent à l'acheteur la preuve de la présence sur site.
+
+## 3. Pointer la sortie et définir le résultat
+
+Le pointage de sortie est le moment où le statut suivant du bon de travail est décidé. **`checkOutStatus` est requis et doit être un nom de statut de bon de travail valide** ; il devient le nouveau statut du bon de travail.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkOutByEmail": "tech@supplier.com",
+    "checkOutStatus": "WaitingForReview",
+    "checkOutNotes": "Replaced condenser fan motor. Unit holding 36F.",
+    "checkOutImages": ["<uploaded-file-id>"]
+  }'
+```
+
+Choix courants de `checkOutStatus` :
+
+- `WaitingForReview` — travail terminé, remettez à l'acheteur pour examen.
+- `TechScheduled` ou `PartsRequested` et similaires — la visite s'est terminée mais le travail continue (visite de suivi, en attente de pièces).
+
+Les pièces et le stock consommés lors de la visite sont enregistrés via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` sur le même payload ; les identifiants proviennent de votre [catalogue d'inventaire](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+
+Deux comportements d'automatisation se déclenchent à ce moment :
+
+- **Approbation automatique.** Pour les fournisseurs tiers dont l'entreprise acheteur a activé `autoApproveWorkOrdersCompletedByThirdParty`, un résultat `WaitingForReview` est automatiquement promu en `WorkReviewedAndCompleted`.
+- **Publication automatique des factures.** Lorsque le statut résultant est `WorkReviewedAndCompleted`, les règles de publication automatique des factures peuvent s'exécuter et publier votre facture brouillon. Voir [Soumissions et facturation](/supplier-api/quotes-and-invoicing).
+
+`remote_check_in` et `remote_check_out` se comportent de manière identique pour les travaux effectués hors site.
+
+## Relire une visite de service
+
+Trois extensions sur `GET /v1/supplier/work_order/service_calls/{id}` :
+
+| Endpoint | Ajoute |
+| --- | --- |
+| `.../{id}/with_work_logs` | Événements WrenchMode dans la fenêtre pointage d'entrée/sortie plus `trueWorkTimeMillis` (durée de travail hors pauses). |
+| `.../{id}/with_tech_details` | Enregistrements de contact des techniciens. `hourlyRate` n'apparaît que pour les techniciens de votre propre établissement. |
+| `.../{id}/with_work_logs/with_tech_details` | Les deux. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+Pour un reporting de temps au niveau de la flotte à travers tous les techniciens, utilisez [WrenchMode](/supplier-api/wrenchmode) au lieu d'itérer sur les visites.
+
+## Travaux à visites multiples
+
+Un bon de travail peut porter plusieurs visites de service (diagnostic, réparation, suivi). Créez chaque visite avec son propre appel `tech_scheduled` (sans `id`), et gardez les mises à jour ultérieures de chaque visite associées à son `id` de visite de service. Pointez la sortie des visites intermédiaires avec un statut de continuation tel que `PartsRequested` ou `TechScheduled`, et uniquement la visite finale avec `WaitingForReview`.

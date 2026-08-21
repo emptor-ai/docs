@@ -1,0 +1,71 @@
+# Köparföretag, platser, tillgångar och datamaskering
+
+> Läs den köpar-sidiga referensdatan som leverantörer kan se: relaterade köparföretag, platser och regioner, tillgångar och tillgångstyper, och hur maskering fungerar.
+
+Arbetsordrar refererar till en värld ägd av dina köpare: deras företag, platser, regioner och tillgångar. Supplier API exponerar skrivskyddade vyer av dem alla, filtrerade till vad dina relationer berättigar dig att se.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Datamaskering
+
+Hur mycket du ser beror på vilken typ av leverantör din nyckel tillhör:
+
+- **Nycklar för interna serviceteam** (ditt leverantörsföretag är köparens eget interna team) får fullständiga poster.
+- **Tredjepartsleverantörsnycklar** får maskerade poster på arbetsordrar, platser och fakturor: köpar-privata fält tas bort innan svaret returneras.
+
+Om ett fält du förväntar dig är genomgående tomt är maskering det första att kontrollera. Själva avgränsningen kan inte breddas via filter; tenant-säkerhetsfilter som härleds från din nyckel gäller alltid.
+
+## Köparföretag
+
+`GET /v1/supplier/buyer_company/buyer_companies` returnerar varje köparföretag som har en relation med din leverantör. Ingen paginering eller filter respekteras: hela den tenant-avgränsade uppsättningen kommer tillbaka i ett svar (varje företags `buyerCompanySettings` tas bort).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/buyer_company/buyer_companies"
+```
+
+Använd den för att styra beteende per köpare i din integration (vilka problemtyper att använda, vilka köpare som auto-godkänner tredjepartsslutföranden, och så vidare).
+
+## Platser och regioner
+
+```bash
+# Lista: sidstorleken är begränsad till 10 på den här slutpunkten (större gränser reduceras tyst)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/location/locations?limit=10"
+
+# Räkna, en, eller flera samtidigt
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/count_by"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/multiple/1204,1205"
+```
+
+- Platslistan begränsar `limit` till **10**; de flesta andra listor tillåter 25.
+- `multiple/{ids}` släpper tyst id:n du inte kan läsa; svarets `count` är lika med vad som faktiskt returnerades.
+- Regioner (köparföretags-gruppering av platser) finns på `GET /v1/supplier/location/regions` och `/regions/{id}` med standardpaginering.
+
+## Tillgångar och tillgångstyper
+
+Tillgångar är utrustningen dina tekniker servar; tillgångstyper klassificerar dem.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/assets?locationId=1204&limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/assets/5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_types?limit=25"
+```
+
+Den enskilda tillgångsläsningen hydratiserar tillgångens mätare (höljestyp `ApiAssetWithMeter`), vilket ger dina tekniker mätarhistorikkontext före ett besök. Alla fyra slutpunkter (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) är skrivskyddade med standardpaginering och fältfilter.
+
+## Cachingstrategi
+
+Referensdata ändras långsamt. En praktisk uppsättning:
+
+- Uppdatera köparföretag dagligen (ett anrop).
+- Synka platser och tillgångar för aktiva arbetsordrar vid behov, cacha efter id.
+- Behandla `400` på en enskild läsning som "utanför ditt omfång" och `404` som "existerar inte", och räkna med att id:n försvinner från din vy när en köparrelation avslutas.

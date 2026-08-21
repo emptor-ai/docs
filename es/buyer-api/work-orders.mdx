@@ -1,0 +1,188 @@
+# Órdenes de trabajo en la Buyer API
+
+> Crea, lista, filtra, reasigna y cierra órdenes de trabajo con la Buyer API de OpenWrench, incluidas acciones de estado, notas y tipos de problema.
+
+Las órdenes de trabajo son el centro de la Buyer API. Esta guía cubre la superficie completa bajo `/v1/buyer/work_order/`: creación de órdenes de trabajo, consulta, acciones de estado del lado del comprador, el hilo de notas y los tipos de problema.
+
+Todos los ejemplos asumen estas variables de shell:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## El objeto orden de trabajo
+
+Una orden de trabajo devuelta por la API lleva, entre otros campos:
+
+| Campo | Notas |
+| --- | --- |
+| `id` | Id numérico usado por todos los demás endpoints. |
+| `title`, `description` | Qué hay que hacer. `descriptionNonFormatted` es la variante en texto plano. |
+| `status`, `displayStatus` | `status` es el estado fino de máquina (ver [el modelo de estados](#the-status-model)); `displayStatus` es la etiqueta más gruesa que se muestra en la UI. |
+| `locationId`, `assetId`, `subAssetIds`, `areaId` | Dónde ocurre el trabajo y sobre qué. |
+| `problemTypeId`, `workCategoryId`, `spendCategoryId`, `woPriorityId` | Clasificación. |
+| `supplierFacilityId`, `supplierPrimaryContactEmail` | El proveedor asignado, una vez despachada. |
+| `nte`, `price`, `currencyId` | Monto not-to-exceed y precios. |
+| `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Fechas clave. |
+| `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | El hilo de notas comprador-proveedor. `lastNoteAddedAt` está en milisegundos desde epoch. |
+| `associatedServiceCalls`, `lastServiceCall` | Visitas registradas por el proveedor. Ver [Llamadas de servicio](/buyer-api/service-calls). |
+| `statusChanges` | Historial completo de estados. |
+| `buyerAttachments`, `supplierAttachments` | Referencias a archivos. Ver [Archivos y adjuntos](/buyer-api/files-and-attachments). |
+| `isPM`, `plannedMaintenanceScheduleId` | Se establecen cuando la orden de trabajo fue generada desde un cronograma de PM. |
+| `walkThroughId` | Se establece cuando la orden de trabajo salió de un recorrido de encuesta de sitio. |
+
+## Crear una orden de trabajo
+
+`POST /v1/buyer/work_order/work_orders` requiere más que los campos obvios. A diferencia de la mayoría de endpoints del comprador, **`buyerFacilityId`, `buyerCompanyId` y `createdBy` deben suministrarse en el cuerpo**; no se derivan de tu clave de API en este endpoint. Usa [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) para consultar tus ids de empresa e instalación una vez y cachéalos.
+
+Campos requeridos: `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` y `createdBy` (el correo del contacto que crea).
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Walk-in cooler not holding temperature",
+    "description": "Temp reading 48F, product at risk.",
+    "locationId": 1204,
+    "assetId": 5511,
+    "problemTypeId": 17,
+    "woPriorityId": 3,
+    "nte": 500,
+    "buyerFacilityId": 88,
+    "buyerCompanyId": 12,
+    "createdBy": "ops@example.com",
+    "supplierFacilityId": 3021
+  }'
+```
+
+Comportamiento a conocer:
+
+- **Estado inicial.** Si se omite `status`, el estado inicial se calcula a partir de la configuración de tu empresa. Las solicitudes de servicio típicamente empiezan en `PendingApproval`; las órdenes de trabajo por defecto en `Unassigned`. Si pasas un `status`, aún se resuelve contra la configuración de la empresa, así que el estado efectivo puede diferir del que enviaste.
+- **Despachar al crear.** Pasar `supplierFacilityId` asigna el proveedor de inmediato. Un `supplierFacilityId`, `assetId` o `problemTypeId` desconocido se rechaza con `400`.
+- **Flag de aprobación.** El campo es `needApproval`, no `needsApproval`. El objeto de respuesta usa `needsApproval`; la solicitud de creación no.
+- **Enlace a recorrido.** `walkThroughId` y `siteSurveyTaskTitleId` deben suministrarse juntos o no suministrarse. Ver [Recorridos de encuesta de sitio](/buyer-api/site-survey-walkthroughs).
+- **Upserts.** Pasar un `id` actualiza esa orden de trabajo existente en lugar de crear una nueva.
+
+## Listar, filtrar y contar
+
+```bash
+# Órdenes de trabajo más recientes de una ubicación
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?locationId=1204&limit=25&sort_by=createdAt&order=desc"
+
+# Cuántas coinciden, sin traerlas
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
+```
+
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`. Cualquier otro parámetro de consulta se trata como un filtro de campo contra las columnas indexadas de la entidad; separa un valor por coma para coincidir con cualquiera de varios (`status=Unassigned,PendingApproval`). Los filtros siempre se combinan con el alcance por inquilino derivado de tu clave, así que solo verás las órdenes de trabajo de tu empresa. Las lecturas se sirven desde una réplica de lectura, así que una orden de trabajo creada hace milisegundos puede tardar un momento en aparecer en los resultados de listado.
+
+Obtén una orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.
+
+## Reasignar un proveedor
+
+`PATCH /v1/buyer/work_order/work_orders/{id}` es deliberadamente estrecho: **solo `supplierFacilityId` y `supplierPrimaryContactEmail` se leen del cuerpo**. Cualquier otro campo que envíes se ignora silenciosamente en lugar de rechazarse.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 3055, "supplierPrimaryContactEmail": "dispatch@newsupplier.com" }'
+```
+
+Dos trampas:
+
+- `supplierPrimaryContactEmail` solo aplica como parte de una reasignación. Enviarlo sin un cambio de facility de proveedor hace que todo el patch sea un no-op: nada se persiste y se devuelve la orden de trabajo actual.
+- Un id inexistente y una denegación de permiso devuelven la misma respuesta `400` unauthorized, así que no uses este endpoint para sondear si una orden de trabajo existe.
+
+Para elegir el proveedor correcto de forma programática, consulta [Red de proveedores](/buyer-api/supplier-network), que cubre el endpoint jerarquizado de red privada.
+
+## Acciones de estado del comprador
+
+Cuatro endpoints dedicados mueven una orden de trabajo por las partes del ciclo de vida que son propiedad del comprador. Cada uno toma el mismo cuerpo: el `id` de la orden de trabajo y una `note` opcional que se añade al hilo junto con el cambio de estado.
+
+| Endpoint | Estado resultante | Efectos secundarios |
+| --- | --- | --- |
+| `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Puede publicar la factura en borrador del proveedor (según la configuración del proveedor) y cumplir las solicitudes de compra enlazadas. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envía la nota adjunta al proveedor. |
+| `POST .../status_update/reopen` | Reabierta | Envía la nota adjunta. |
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_and_completed" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Verified on site, closing out.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+Cada acción de estado devuelve la orden de trabajo actualizada en la envoltura estándar.
+
+## El modelo de estados
+
+Valores de `status` que verás y que establecerás a través de la API:
+
+| Estado | Propiedad de | Significado |
+| --- | --- | --- |
+| `Unassigned` | Sistema | Creada, sin proveedor asignado aún. |
+| `PendingApproval` | Comprador | En espera de aprobación interna, o retornada aquí tras un rechazo del proveedor. |
+| `ConfirmedByServiceProvider` | Proveedor | El proveedor aceptó el trabajo. |
+| `TechAssigned`, `TechScheduled`, `TechRescheduled` | Proveedor | Llamada de servicio creada o (re)programada. |
+| `TechWorkingOnSite` | Proveedor | Técnico hizo check-in. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Proveedor | Adquisición de partes en curso. |
+| `WaitingForReview` | Proveedor | Trabajo terminado, en espera de tu revisión. |
+| `WorkReviewedAndCompleted` | Comprador | Revisaste y cerraste el trabajo. |
+| `WorkUnsatisfactory` | Comprador | Rechazaste el trabajo completado. |
+| `CancelledWithReason` | Comprador | Cancelada. |
+
+Las transiciones propiedad del proveedor llegan a través de la integración del propio proveedor o de las apps de OpenWrench; tu lado las observa mediante sondeo (`statusChangedAt`, `statusChanges`) y actúa sobre las que son propiedad del comprador.
+
+## Notas
+
+Las órdenes de trabajo llevan un hilo de notas comprador-proveedor compartido.
+
+**Añade** con `PATCH /v1/buyer/work_order/work_orders/append_notes`. El cuerpo es `{ "id": <woId>, "note": { ... } }` donde la nota necesita `text` y `noteAddedBy`. El servidor sobrescribe `noteAddedAt` con su propio reloj, y el correo del autor se añade a la lista de suscriptores del comprador de la orden de trabajo para que reciba notificaciones posteriores.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+**Lee** con `GET /v1/buyer/work_order/work_order_notes/{woId}`. Esto devuelve solo el hilo raíz comprador-proveedor (los hilos de contratista e internos son separados), y la lectura marca las notas como leídas para tu contacto. Una lectura denegada devuelve una lista vacía en lugar de un error.
+
+## Tipos de problema
+
+`GET /v1/buyer/work_order/problem_types` lista los tipos de problema configurados para tu empresa. Cachea esto: necesitas un `problemTypeId` válido para cada orden de trabajo que crees, y el endpoint jerarquizado de proveedores también toma uno.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/problem_types"
+```
+
+## Juntándolo todo
+
+Una integración de despacho típica:
+
+1. Cachea `me`, tipos de problema y ubicaciones al arrancar.
+2. Crea la orden de trabajo con `supplierFacilityId` establecido (o créala sin asignar, luego jerarquiza proveedores y haz `PATCH` de la asignación).
+3. Consulta `GET /work_orders?statusChangedAt=...` o vuelve a obtenerla por id para hacer seguimiento del progreso del proveedor.
+4. Cuando el proveedor alcance `WaitingForReview`, verifica el trabajo (ver [Llamadas de servicio](/buyer-api/service-calls) para la evidencia de la visita) y publica `work_reviewed_and_completed`, o `work_unsatisfactory` con una nota.
+5. Concilia el lado monetario mediante [Cotizaciones y propuestas](/buyer-api/quotes-and-proposals) y [Facturas](/buyer-api/invoices).

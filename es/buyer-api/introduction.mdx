@@ -1,0 +1,99 @@
+# Buyer API
+
+> Acceso programático a tu cuenta de comprador en OpenWrench: órdenes de trabajo, activos, ubicaciones, facturas, mantenimiento preventivo y más
+
+La Buyer API de OpenWrench da a los operadores de instalaciones acceso programático a todo lo que hay del lado del comprador en la plataforma: crear y hacer seguimiento de órdenes de trabajo, gestionar activos y ubicaciones, revisar cotizaciones y facturas, monitorear el mantenimiento preventivo y consultar tu red de proveedores.
+
+## URL base
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Todos los endpoints del comprador están bajo `/v1/buyer/`.
+
+## Autenticación
+
+Cada solicitud debe llevar **dos cabeceras**: `X-API-KEY` (tu clave de API, emitida por contacto de comprador) y `OW-KEY` (el secreto compartido de OpenWrench emitido junto a ella). La clave delimita automáticamente cada solicitud a tu empresa: solo verás tus propios datos. Las solicitudes a las que les falte cualquiera de las cabeceras devuelven `401`.
+
+```bash
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+Para obtener una clave de API y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com). Usa `GET /v1/buyer/me` para inspeccionar la identidad (contacto, instalación, empresa) detrás de tu clave.
+
+<Note>
+La sección **Internal Teams API**, más abajo en esta pestaña, usa una **clave de API de partner distinta**: tu clave de comprador no autenticará contra esos endpoints `/v1/partners/`. Consulta la [introducción a la Internal Teams API](/partners-api/introduction) para más detalles.
+</Note>
+
+## Límites de tasa
+
+10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`. Aplica back off y reintenta.
+
+## Envoltura de respuesta
+
+Respuestas de una sola entidad:
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Las respuestas de listado añaden un `count` total:
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Errores:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` significa clave faltante o inválida; `400` cubre entrada inválida, filtros incorrectos y denegaciones de permisos; `429` es el límite de tasa.
+
+## Paginación y filtrado
+
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order` (`asc` | `desc`). Los parámetros de consulta adicionales se tratan como filtros de campo: pasa un nombre de campo con un valor (separa varios valores por coma) para filtrar el conjunto de resultados. Cada página de referencia lista sus filtros más destacados.
+
+## Formatos de fecha
+
+La mayoría de las marcas de tiempo son cadenas ISO 8601 con offset (por ejemplo `2026-08-14T13:05:22.000-07:00`); algunos campos de marca de tiempo de base de datos se serializan como `yyyy-MM-dd HH:mm:ss.S`. Las fechas simples son `yyyy-MM-dd`. Cuando envíes fecha-hora, usa ISO 8601.
+
+## Guías detalladas
+
+Las guías de esta pestaña recorren cada parte de la API en profundidad, con payloads, modelos de estado y patrones de integración:
+
+<CardGroup cols={2}>
+  <Card title="Órdenes de trabajo" href="/buyer-api/work-orders" icon="clipboard-list">
+    Crear, filtrar, reasignar, cerrar. Modelo de estados, notas y tipos de problema.
+  </Card>
+  <Card title="Llamadas de servicio" href="/buyer-api/service-calls" icon="user-check">
+    Evidencia de la visita: registros de trabajo, tiempo real trabajado y detalles del técnico.
+  </Card>
+  <Card title="Activos y ubicaciones" href="/buyer-api/assets-and-locations" icon="warehouse">
+    Ubicaciones, regiones, tipos de activos, modelos, medidores y seguimiento de refrigerante.
+  </Card>
+  <Card title="Facturas" href="/buyer-api/invoices" icon="file-invoice-dollar">
+    El flujo de aprobación, sincronización con AP, exportaciones aplanadas y actualizaciones masivas.
+  </Card>
+  <Card title="Cotizaciones y propuestas" href="/buyer-api/quotes-and-proposals" icon="file-signature">
+    Lee las cotizaciones del proveedor y concíllalas con las facturas.
+  </Card>
+  <Card title="Mantenimiento preventivo" href="/buyer-api/planned-maintenance" icon="calendar-check">
+    Lee cronogramas, omite ejecuciones y controla el PM desde un planificador externo.
+  </Card>
+  <Card title="Red de proveedores" href="/buyer-api/supplier-network" icon="network-wired">
+    Consulta tu red y prioriza a los proveedores de red privada para el despacho.
+  </Card>
+  <Card title="Encuestas de sitio" href="/buyer-api/site-survey-walkthroughs" icon="clipboard-check">
+    Recorridos y las órdenes de trabajo que salen de sus hallazgos.
+  </Card>
+  <Card title="Archivos y adjuntos" href="/buyer-api/files-and-attachments" icon="paperclip">
+    Sube una vez, referencia en todas partes, descarga la evidencia.
+  </Card>
+  <Card title="Cuenta y utilidades" href="/buyer-api/account-and-utilities" icon="id-badge">
+    Ping, identidad de la clave, aprovisionamiento de usuarios y tipos de cambio.
+  </Card>
+</CardGroup>

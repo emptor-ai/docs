@@ -1,0 +1,74 @@
+# Scheman för planerat underhåll i Buyer API
+
+> Läs PM-scheman, hoppa över kommande körningar och integrera en extern schemaläggare med körloggar med hjälp av OpenWrench Buyer API.
+
+Scheman för planerat underhåll (PM) genererar återkommande arbetsordrar på tillgångar med en definierad takt. Buyer API låter dig läsa scheman, hoppa över en körning och registrera körloggar när ett externt system driver schemaläggningen.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Läsa scheman
+
+```bash
+# Alla scheman och en filtrerad räkning
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules/count_by?locationId=1204"
+
+# Ett schema
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules/512"
+```
+
+Standardpaginering och fältfiltrering gäller. Arbetsordrar som genereras av ett schema bär `isPM: true` och `plannedMaintenanceScheduleId`, så du kan lista ett schemas historik från arbetsordersidan:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?plannedMaintenanceScheduleId=512&sort_by=createdAt&order=desc"
+```
+
+## Hoppa över en körning
+
+`PATCH /v1/buyer/pm/planned_maintenance_schedules/skip_schedule` flyttar ett schema förbi dess nästa schemalagda körning (till exempel när en plats är stängd för renovering). Schemats `id` är det enda obligatoriska fältet:
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/pm/planned_maintenance_schedules/skip_schedule" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 512 }'
+```
+
+Det uppdaterade schemat returneras. Den här slutpunkten är inte hastighetsbegränsad.
+
+## Driva PM från en extern schemaläggare
+
+Om ditt eget system bestämmer när PM-arbetsordrar ska skapas, stäng loopen genom att registrera varje körning med `POST /v1/buyer/pm/scheduler_run_logs`:
+
+```bash
+curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scheduleId": 512,
+    "status": "success",
+    "lastRunAt": "2026-08-21T06:00:05.000-07:00",
+    "lastRunDueAt": "2026-08-21T06:00:00.000-07:00",
+    "woId": 9105,
+    "log": "Created WO 9105 for August PM."
+  }'
+```
+
+`scheduleId`, `status`, `lastRunAt` och `lastRunDueAt` är obligatoriska; `woId` länkar den arbetsorder som körningen skapade (skapa den först via [work orders](/buyer-api/work-orders#skapa-en-arbetsorder)-slutpunkten, med `isPM: true` och `plannedMaintenanceScheduleId` satta), och `log` innehåller fri diagnostik.
+
+Hela slingan för extern schemaläggare:
+
+1. Läs scheman och deras takt från API:et.
+2. När en körning blir aktuell, skapa PM-arbetsordern.
+3. Registrera körningen med `scheduler_run_logs` och länka `woId`.
+4. Om en körning istället måste hoppas över, anropa `skip_schedule` så att nästa förfallodatum flyttas fram.
