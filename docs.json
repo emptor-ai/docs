@@ -22,37 +22,13 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Buyer API",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "buyer-api/introduction"
-            ]
-          }
-        ]
+        "tab": "Buyer API"
       },
       {
-        "tab": "Supplier API",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "supplier-api/introduction"
-            ]
-          }
-        ]
+        "tab": "Supplier API"
       },
       {
-        "tab": "Partners API",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "partners-api/introduction"
-            ]
-          }
-        ]
+        "tab": "Partners API"
       }
     ]
   },
