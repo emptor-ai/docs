@@ -45,7 +45,9 @@
           },
           {
             "group": "Work Orders",
-            "pages": []
+            "pages": [
+              "buyers/work-orders/creating-work-orders"
+            ]
           },
           {
             "group": "Approvals & Spend",
