@@ -1,0 +1,32 @@
+# Guía rápida
+
+> Haz tu primera solicitud autenticada a la Supplier API en menos de cinco minutos
+
+## Requisitos previos
+
+- Una clave de la Supplier API y un secreto compartido de OpenWrench. Solicítalos a [support@useopenwrench.com](mailto:support@useopenwrench.com).
+- Una shell con `curl`, o cualquier cliente HTTP.
+
+## 1. Verifica tus credenciales
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/ping"
+```
+
+Una respuesta `200` confirma que ambas cabeceras son válidas. Un `401` significa que falta una o es incorrecta.
+
+## 2. Lista las órdenes de trabajo entrantes
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/work_orders?limit=5"
+```
+
+La respuesta sigue la envoltura estándar: `type`, `data` (un array), `count` y `status`.
+
+## Siguientes pasos
+
+- Lee [Autenticación](/supplier-guides/authentication) para conocer los detalles de las cabeceras y la gestión de claves.
+- Consulta [Conceptos básicos](/supplier-guides/concepts) para conocer el modelo de datos.
+- Sigue [Aceptar y completar una orden de trabajo](/supplier-guides/accept-and-complete-a-work-order) para ver un flujo completo de extremo a extremo.

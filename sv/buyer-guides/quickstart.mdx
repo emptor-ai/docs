@@ -1,0 +1,43 @@
+# Snabbstart
+
+> Gör din första autentiserade förfrågan mot Buyer API på under fem minuter
+
+## Förutsättningar
+
+- En Buyer API-nyckel och en delad hemlighet från OpenWrench. Begär dem från [support@useopenwrench.com](mailto:support@useopenwrench.com).
+- Ett skal med `curl`, eller vilken HTTP-klient som helst.
+
+## 1. Verifiera dina uppgifter
+
+Anropa `GET /v1/buyer/ping` för att bekräfta att din nyckel och delade hemlighet fungerar:
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+Ett `200`-svar bekräftar att båda rubrikerna är giltiga. En `401` betyder att en av dem saknas eller är fel.
+
+## 2. Inspektera identiteten bakom din nyckel
+
+`GET /v1/buyer/me` returnerar kontakten, anläggningen och företaget som din nyckel är avgränsad till. Varje list-slutpunkt filtrerar automatiskt till den avgränsningen.
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/me"
+```
+
+## 3. Lista dina första arbetsordrar
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=5"
+```
+
+Svaret följer standardhöljet: `type`, `data` (en array), `count` och `status`.
+
+## Nästa steg
+
+- Läs [Autentisering](/buyer-guides/authentication) för rubrikdetaljer och nyckelrotation.
+- Se [Grundläggande begrepp](/buyer-guides/concepts) för datamodellen.
+- Följ [Skapa och skicka ut en arbetsorder](/buyer-guides/create-and-dispatch-a-work-order) för ett komplett flöde från början till slut.

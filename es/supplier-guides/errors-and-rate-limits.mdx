@@ -1,0 +1,33 @@
+# Errores y límites de tasa
+
+> Cómo señala la API los fallos y la limitación, y cómo gestionar ambos
+
+## Envoltura de respuesta de error
+
+```json theme={null}
+{
+  "message": "Human-readable message",
+  "type": "NotFoundException",
+  "status": "error",
+  "traceId": "abc123def45"
+}
+```
+
+Incluye el `traceId` cuando contactes con soporte: nos permite localizar la solicitud exacta en nuestros registros.
+
+## Códigos de estado
+
+- `400`: entrada incorrecta, filtro incorrecto o permiso denegado.
+- `401`: `X-API-KEY` / `OW-KEY` faltantes o inválidos.
+- `429`: se superó el límite de tasa.
+- `5xx`: error del servidor; reintenta con retroceso.
+
+## Límites de tasa
+
+Cada clave está limitada a **10 solicitudes cada 20 segundos**. Más allá de eso recibirás `429 Too Many Requests`.
+
+Gestión recomendada:
+
+1. Captura el `429`.
+2. Espera al menos 20 segundos antes de reintentar.
+3. Espacia los trabajos en segundo plano (por ejemplo, exportaciones paginadas completas) para mantenerte bajo el límite.

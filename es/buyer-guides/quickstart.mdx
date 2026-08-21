@@ -1,0 +1,43 @@
+# Guía rápida
+
+> Haz tu primera solicitud autenticada a la Buyer API en menos de cinco minutos
+
+## Requisitos previos
+
+- Una clave de la Buyer API y un secreto compartido de OpenWrench. Solicítalos a [support@useopenwrench.com](mailto:support@useopenwrench.com).
+- Una shell con `curl`, o cualquier cliente HTTP.
+
+## 1. Verifica tus credenciales
+
+Llama a `GET /v1/buyer/ping` para confirmar que tu clave y tu secreto compartido funcionan:
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+Una respuesta `200` confirma que ambas cabeceras son válidas. Un `401` significa que falta una o es incorrecta.
+
+## 2. Inspecciona la identidad detrás de tu clave
+
+`GET /v1/buyer/me` devuelve el contacto, la instalación y la empresa a los que está limitada tu clave. Cada endpoint de listado filtra automáticamente a este alcance.
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/me"
+```
+
+## 3. Lista tus primeras órdenes de trabajo
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=5"
+```
+
+La respuesta sigue la envoltura estándar: `type`, `data` (un array), `count` y `status`.
+
+## Siguientes pasos
+
+- Lee [Autenticación](/buyer-guides/authentication) para conocer los detalles de las cabeceras y la rotación de claves.
+- Consulta [Conceptos básicos](/buyer-guides/concepts) para conocer el modelo de datos.
+- Sigue [Crear y despachar una orden de trabajo](/buyer-guides/create-and-dispatch-a-work-order) para ver un flujo completo de extremo a extremo.

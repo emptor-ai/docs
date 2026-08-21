@@ -1,0 +1,48 @@
+# Pagination et filtrage
+
+> Parcourir de grands ensembles de résultats et les restreindre à l'aide de filtres de champs
+
+Les endpoints de liste acceptent quatre paramètres de requête standard :
+
+- `offset` : nombre d'enregistrements à sauter (par défaut `0`).
+- `limit` : taille de page (par défaut `10`, maximum `25`).
+- `sort_by` : nom du champ sur lequel trier.
+- `order` : `asc` ou `desc`.
+
+Tout autre paramètre de requête est traité comme un **filtre de champ** : passez le nom du champ avec une valeur, ou une liste de valeurs séparées par des virgules, pour restreindre l'ensemble de résultats. La page de référence de chaque endpoint liste ses filtres notables.
+
+## Paginer un ensemble complet de résultats
+
+Bouclez jusqu'à avoir récupéré `count` enregistrements :
+
+```bash theme={null}
+# Page 1
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=0"
+
+# Page 2
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=25"
+```
+
+Le champ `count` de l'enveloppe de réponse représente le total, et non le nombre d'éléments sur la page courante.
+
+## Filtrage
+
+Filtrez sur tout champ documenté. Séparez les valeurs par des virgules pour en faire correspondre n'importe laquelle :
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?status=open,in_progress&limit=25"
+```
+
+## Tri
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?sort_by=created_at&order=desc"
+```
+
+## Limites de débit et pagination
+
+Les boucles de pagination peuvent déclencher la limite de débit (10 requêtes par fenêtre de 20 secondes par clé). Attendez entre les pages, ou interceptez les réponses `429` et temporisez. Voir [Erreurs et limites de débit](/buyer-guides/errors-and-rate-limits).

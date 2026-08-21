@@ -1,0 +1,33 @@
+# Skapa och skicka ut en arbetsorder
+
+> Fullständigt flöde för att omvandla ett underhållsbehov till en tilldelad arbetsorder
+
+<Info>
+  Den här guiden är ett skelett. Fyll i de exakta slutpunktsanropen och nyttolasterna för din integration.
+</Info>
+
+## Förutsättningar
+
+- En Buyer API-nyckel (se [Autentisering](/buyer-guides/authentication)).
+- En känd plats och, valfritt, en eller flera tillgångar att koppla till.
+- En leverantör från ditt nätverk (eller kriterierna för att välja en).
+
+## 1. Bekräfta platsen och tillgången
+
+Hämta platsen och de tillgångar du planerar att koppla på, så att du har deras id:n och aktuella tillstånd.
+
+## 2. Skapa arbetsordern
+
+Posta arbetsordern med dess plats, tillgångar, fackområde och beskrivning. Notera det returnerade id:t för arbetsordern.
+
+## 3. Tilldela en leverantör
+
+Skicka arbetsordern till en leverantör från ditt nätverk.
+
+## 4. Följ status
+
+Poll:a arbetsordern (eller ta emot webhooks, om det är konfigurerat) medan leverantören accepterar, schemalägger och slutför jobbet.
+
+## 5. Granska offert och faktura
+
+Godkänn eventuell inlämnad offert och stäm sedan av slutfakturan mot förväntade kostnader.

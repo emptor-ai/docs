@@ -1,0 +1,23 @@
+# Autentisering
+
+> Rubrikkrav, avgränsning och nyckelhantering för Supplier API
+
+Varje förfrågan till Supplier API måste innehålla två rubriker:
+
+- `X-API-KEY`: din Supplier API-nyckel, utfärdad per leverantörskontakt.
+- `OW-KEY`: den delade hemlighet från OpenWrench som utfärdas tillsammans med nyckeln.
+
+Förfrågningar som saknar någon av rubrikerna returnerar `401`.
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/ping"
+```
+
+## Avgränsning
+
+Din nyckel är avgränsad till en enda leverantörskontakt, som i sin tur hör till en anläggning. Varje list-slutpunkt filtrerar automatiskt resultaten till denna avgränsning. Du ser bara arbetsordrar, servicebesök, offerter och fakturor som tillhör din anläggning.
+
+## Nyckelrotation
+
+Begär ett nytt par av nyckel och delad hemlighet från [support@useopenwrench.com](mailto:support@useopenwrench.com), distribuera det nya paret och be sedan supporten att återkalla det gamla. Nycklar går inte ut av sig själva.
