@@ -34,7 +34,10 @@
           },
           {
             "group": "API Reference",
-            "openapi": "openapi/buyer.json"
+            "openapi": {
+              "source": "openapi/buyer.json",
+              "directory": "buyer-reference"
+            }
           },
           {
             "group": "Internal Teams API",
@@ -42,7 +45,10 @@
               "partners-api/introduction",
               {
                 "group": "Endpoints",
-                "openapi": "openapi/partners.json"
+                "openapi": {
+                  "source": "openapi/partners.json",
+                  "directory": "internal-teams-reference"
+                }
               }
             ]
           }
@@ -59,7 +65,10 @@
           },
           {
             "group": "API Reference",
-            "openapi": "openapi/supplier.json"
+            "openapi": {
+              "source": "openapi/supplier.json",
+              "directory": "supplier-reference"
+            }
           }
         ]
       }
