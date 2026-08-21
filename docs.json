@@ -86,8 +86,8 @@
             "group": "Doing the Work",
             "pages": [
               "suppliers/work-orders",
-              "suppliers/inventory",
-              "suppliers/on-site"
+              "suppliers/on-site",
+              "suppliers/inventory"
             ]
           },
           {
