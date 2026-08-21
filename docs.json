@@ -129,7 +129,9 @@
           },
           {
             "group": "Field Work",
-            "pages": []
+            "pages": [
+              "internal-teams/work-orders"
+            ]
           },
           {
             "group": "Purchasing & Parts",
