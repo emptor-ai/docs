@@ -1,0 +1,61 @@
+---
+title: "Partners API"
+sidebarTitle: "Introduction"
+description: "Purchasing and inventory integration for partner systems — purchase requests, purchase orders, receipts, parts, and stock"
+icon: "boxes-stacked"
+---
+
+The OpenWrench Partners API is the integration surface for partner systems that handle purchasing and inventory — typically the tooling behind internal service teams: purchase requests and their line items, purchase orders through receipt, parts and equipment catalogs, stock locations, and the parts consumed on work orders.
+
+## Base URL
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+All partner endpoints are under `/v1/partners/`.
+
+## Authentication
+
+Send your API key in the `X-API-KEY` header on every request. The key automatically scopes every request to your company's data.
+
+```bash
+curl -H "X-API-KEY: <your-key>" \
+  "https://api.useopenwrench.com/api/external/v1/partners/ping"
+```
+
+To get an API key, contact [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Rate limits
+
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — back off and retry.
+
+## Response envelope
+
+Single-entity responses:
+
+```json
+{ "type": "SupplierPurchaseOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+List responses add a total `count`:
+
+```json
+{ "type": "SupplierPurchaseRequest", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Errors:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` means a missing or invalid key; `400` covers bad input, bad filters, and permission denials; `429` is the rate limit.
+
+## Pagination and filtering
+
+List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters — pass a field name with a value (comma-separate multiple values) to filter the result set.
+
+## The purchasing flow
+
+A typical integration follows the purchasing lifecycle: read approved **purchase requests** and their line items, create a **purchase order** against a vendor, associate PR line items to PO line items, mark the PO **ordered**, and record **receipts** as items arrive (negative received quantities record returns). Parts, equipment types, vendors, and stock locations round out the reference data.

@@ -22,118 +22,34 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Buyers",
+        "tab": "Buyer API",
         "groups": [
           {
             "group": "Getting Started",
             "pages": [
-              "buyers/overview",
-              "buyers/key-concepts"
-            ]
-          },
-          {
-            "group": "Work Orders",
-            "pages": [
-              "buyers/work-orders/creating-work-orders",
-              "buyers/work-orders/lifecycle",
-              "buyers/work-orders/dispatch"
-            ]
-          },
-          {
-            "group": "Approvals & Spend",
-            "pages": [
-              "buyers/spend/nte-approvals",
-              "buyers/spend/quotes",
-              "buyers/spend/invoices",
-              "buyers/spend/budgets"
-            ]
-          },
-          {
-            "group": "Maintenance & Assets",
-            "pages": [
-              "buyers/maintenance/preventive-maintenance",
-              "buyers/maintenance/assets",
-              "buyers/maintenance/locations"
-            ]
-          },
-          {
-            "group": "Suppliers & Reporting",
-            "pages": [
-              "buyers/suppliers/managing-suppliers",
-              "buyers/suppliers/performance",
-              "buyers/reporting/dashboards"
-            ]
-          },
-          {
-            "group": "AI & Automation",
-            "pages": [
-              "buyers/vfa"
+              "buyer-api/introduction"
             ]
           }
         ]
       },
       {
-        "tab": "Suppliers",
+        "tab": "Supplier API",
         "groups": [
           {
             "group": "Getting Started",
             "pages": [
-              "suppliers/overview",
-              "suppliers/getting-started"
-            ]
-          },
-          {
-            "group": "Doing the Work",
-            "pages": [
-              "suppliers/work-orders",
-              "suppliers/on-site",
-              "suppliers/inventory"
-            ]
-          },
-          {
-            "group": "Getting Paid",
-            "pages": [
-              "suppliers/quotes",
-              "suppliers/invoicing"
-            ]
-          },
-          {
-            "group": "Growing Your Business",
-            "pages": [
-              "suppliers/performance",
-              "suppliers/compliance"
+              "supplier-api/introduction"
             ]
           }
         ]
       },
       {
-        "tab": "Internal Teams",
+        "tab": "Partners API",
         "groups": [
           {
             "group": "Getting Started",
             "pages": [
-              "internal-teams/overview"
-            ]
-          },
-          {
-            "group": "Field Work",
-            "pages": [
-              "internal-teams/work-orders",
-              "internal-teams/wrenchmode"
-            ]
-          },
-          {
-            "group": "Purchasing & Parts",
-            "pages": [
-              "internal-teams/purchase-requests",
-              "internal-teams/parts-inventory"
-            ]
-          },
-          {
-            "group": "Planning & Projects",
-            "pages": [
-              "internal-teams/preventive-maintenance",
-              "internal-teams/projects-site-surveys"
+              "partners-api/introduction"
             ]
           }
         ]
