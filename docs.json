@@ -90,12 +90,15 @@
           {
             "group": "Getting Started",
             "pages": [
-              "suppliers/overview"
+              "suppliers/overview",
+              "suppliers/getting-started"
             ]
           },
           {
             "group": "Doing the Work",
-            "pages": []
+            "pages": [
+              "suppliers/work-orders"
+            ]
           },
           {
             "group": "Getting Paid",
