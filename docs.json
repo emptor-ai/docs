@@ -15,14 +15,9 @@
     "links": [
       {
         "label": "Support",
-        "href": "mailto:hi@mintlify.com"
+        "href": "mailto:support@useopenwrench.com"
       }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
+    ]
   },
   "footer": {
     "socials": {
@@ -112,5 +107,6 @@
         ]
       }
     ]
-  }
+  },
+  "description": "Documentation for OpenWrench — the all-in-one facilities management platform for buyers, suppliers, and internal teams."
 }
