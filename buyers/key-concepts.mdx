@@ -1,0 +1,45 @@
+---
+title: "Key Concepts"
+description: "The building blocks of OpenWrench — work orders, locations, assets, suppliers, and spend controls"
+icon: "shapes"
+---
+
+A quick reference for the terms you'll see throughout OpenWrench.
+
+## Work orders and service calls
+
+A **work order** is the central record for any maintenance or repair need — reactive (something broke) or planned (preventive maintenance). Everything related to the job attaches to it: messages, photos, ETAs, quotes, approvals, work logs, and invoices.
+
+A **service call** is a supplier's (or internal technician's) visit against a work order. A single work order can have multiple service calls — an initial diagnostic visit, then a return visit with parts, for example. Each service call carries its own schedule, ETA, and work logs.
+
+## Locations, regions, and areas
+
+Your portfolio is organized as **locations** (individual sites), grouped into **regions** (and sub-regions) for rollup reporting and permissions. Within a location, **areas** describe where work happens — dining room, kitchen, roof — and can be nested. Location documents, audits, and site details live on each location record.
+
+## Assets
+
+**Assets** are the pieces of equipment you maintain — HVAC units, kitchen equipment, treadmills, refrigeration. Work orders can be tied to specific assets, building a service history that informs repair-vs-replace decisions. Assets can be provisioned in bulk from brand-level asset groups when you open new locations.
+
+## Problem types and trades
+
+When a work order is created, its **problem type** describes what's wrong (e.g., walk-in cooler not cooling). Problem types map to **trades** — the skill category needed to fix them (plumbing, electrical, refrigeration, and so on). Trades drive supplier matching: suppliers declare which trades and sub-trades they cover, so the right vendors surface for each job.
+
+## Suppliers and your private network
+
+**Suppliers** are the service providers who perform work. Your **private network** is the set of suppliers you've onboarded and approved for your locations, organized by trade and coverage area. Suppliers use OpenWrench at no charge — there is no supplier fee to participate in your network.
+
+## NTE (Not-To-Exceed)
+
+Every dispatch can carry an **NTE limit** — the maximum amount the supplier may spend without further approval. If the job will exceed the NTE, the supplier requests an increase, which routes through your **approval hierarchy**. NTEs are the primary guardrail between "just fix it" speed and cost control.
+
+## Quotes, proposals, and invoices
+
+For larger work, suppliers submit **quotes** (proposals) for approval before work begins. After work completes, suppliers submit **invoices** against the work order, which you review and approve. Because quotes, NTEs, and invoices all live on the work order, you always have the full cost story in one place.
+
+## Preventive maintenance (PM)
+
+**PM programs** generate recurring work orders on a schedule — quarterly HVAC service, monthly equipment checks. **PM compliance** tracking shows which locations are on schedule and which are slipping.
+
+## Roles and internal teams
+
+Users in your organization have **roles** that control what they can see and approve. Your own in-house technicians — **internal teams** — work inside your account too, with their own field workflows like WrenchMode check-in/check-out and purchase requests. See the [Internal Teams docs](/internal-teams/overview) for that side of the platform.

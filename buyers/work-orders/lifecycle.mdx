@@ -1,0 +1,36 @@
+---
+title: "Work Order Lifecycle"
+description: "How a work order moves from open to completed — service calls, ETAs, and communication along the way"
+icon: "arrows-spin"
+---
+
+Every work order moves through a lifecycle you can see at a glance: created, dispatched, scheduled, in progress, completed, and closed out through invoicing. At each stage, the work order record shows who did what, when, and what happens next.
+
+## Service calls
+
+Work happens through **service calls** — individual visits against the work order. A straightforward repair may be one service call; a complex one may involve a diagnostic visit, a parts order, and a return visit. Each service call has:
+
+- A **scheduled window** the supplier commits to
+- An **ETA** as the visit approaches
+- **Work logs** recording time on site (and for internal techs, WrenchMode check-in/check-out events with true work time)
+- **Notes and photos** from the technician
+
+## ETAs and staying informed
+
+Suppliers provide ETAs for each visit, and updates land on the work order — not in someone's inbox. If an ETA slips or a supplier goes quiet, that's visible immediately, and [VFA ETA oversight](/buyers/vfa) can chase it down without your team lifting a finger.
+
+## Communication in context
+
+The defining habit OpenWrench replaces is chasing status over email and phone. All communication about a work order — messages with the supplier, internal notes, approval requests, schedule changes — threads directly on the work order. Anyone with access can open it and understand the full story without asking anyone.
+
+<Note>
+  This matters most at handoffs: when a facilities manager is out, when a job escalates, or when finance reviews an invoice months later, the complete history is right there.
+</Note>
+
+## Completion and verification
+
+When work finishes, the supplier marks the service call complete with closing notes and photos. Depending on your configuration, completion can require verification by location staff before the work order closes. From there, the work order flows into [invoicing](/buyers/spend/invoices).
+
+## Reopening and follow-ups
+
+If a problem recurs, you can reopen or link work orders rather than starting from zero — preserving the service history on the asset. Repeat issues on the same asset are a signal worth watching in [reporting](/buyers/reporting/dashboards): they often mean it's time for a repair-vs-replace decision.

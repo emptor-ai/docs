@@ -34,7 +34,82 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Buyers"
+        "tab": "Buyers",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "buyers/overview",
+              "buyers/key-concepts"
+            ]
+          },
+          {
+            "group": "Work Orders",
+            "pages": [
+              "buyers/work-orders/creating-work-orders",
+              "buyers/work-orders/lifecycle",
+              "buyers/work-orders/dispatch"
+            ]
+          },
+          {
+            "group": "Approvals & Spend",
+            "pages": []
+          },
+          {
+            "group": "Maintenance & Assets",
+            "pages": []
+          },
+          {
+            "group": "Suppliers & Reporting",
+            "pages": []
+          },
+          {
+            "group": "AI & Automation",
+            "pages": []
+          }
+        ]
+      },
+      {
+        "tab": "Suppliers",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": []
+          },
+          {
+            "group": "Doing the Work",
+            "pages": []
+          },
+          {
+            "group": "Getting Paid",
+            "pages": []
+          },
+          {
+            "group": "Growing Your Business",
+            "pages": []
+          }
+        ]
+      },
+      {
+        "tab": "Internal Teams",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": []
+          },
+          {
+            "group": "Field Work",
+            "pages": []
+          },
+          {
+            "group": "Purchasing & Parts",
+            "pages": []
+          },
+          {
+            "group": "Planning & Projects",
+            "pages": []
+          }
+        ]
       }
     ]
   }
