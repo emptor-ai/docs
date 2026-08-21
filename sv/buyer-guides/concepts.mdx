@@ -1,0 +1,35 @@
+# Grundläggande begrepp
+
+> Så förhåller sig Buyer API:s huvudresurser till varandra
+
+<Info>
+  Fyll den här sidan med de begrepp som är mest relevanta för dina integratörer. Dispositionen nedan är en utgångspunkt.
+</Info>
+
+## Företag, anläggningar och kontakter
+
+Din API-nyckel utfärdas till en **kontakt**, som tillhör en **anläggning**, som i sin tur ingår i ett **företag**. Varje förfrågan avgränsas till det företaget.
+
+## Platser och tillgångar
+
+- **Platser** är de fysiska ställen du bedriver verksamhet på.
+- **Tillgångar** är utrustning som är kopplad till en plats.
+
+Arbetsordrar refererar till båda.
+
+## Arbetsordrar
+
+En **arbetsorder** är en förfrågan om service. Den har en plats, en eller flera tillgångar, ett fackområde, en status och en tilldelad leverantör (när den väl har skickats ut). Arbetsordrar går igenom olika statusar när leverantörer accepterar, schemalägger, utför och fakturerar arbete.
+
+## Leverantörer
+
+Leverantörer är de serviceleverantörer som utför arbetsordrarna. Ditt leverantörsnätverk är tillgängligt via leverantörsslutpunkterna; när du skickar ut en arbetsorder tilldelas den till en av dem.
+
+## Offerter och fakturor
+
+- **Offerter** är leverantörsuppskattningar som du godkänner innan arbetet fortsätter.
+- **Fakturor** är slutfakturan för utfört arbete.
+
+## Förebyggande underhåll (PM)
+
+PM-scheman genererar återkommande arbetsordrar på tillgångar med en definierad frekvens.

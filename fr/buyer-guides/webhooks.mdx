@@ -1,0 +1,31 @@
+# Webhooks
+
+> Recevez des mises à jour en temps réel plutôt que d'interroger l'API
+
+<Info>
+  Cette page est un canevas. Complétez-la avec l'interface de configuration réelle des webhooks, les types d'événements, le schéma de signature et la politique de tentatives.
+</Info>
+
+## Configurer les webhooks
+
+Décrivez ici comment un acheteur configure les endpoints de webhooks (URL du tableau de bord, activation par type d'événement, préproduction vs production, etc.).
+
+## Types d'événements
+
+Listez les événements que vous émettez, par exemple les changements de statut des bons de travail, la soumission d'une soumission ou la soumission d'une facture.
+
+## Forme de la charge utile
+
+Montrez une charge utile représentative avec les en-têtes, la signature et le corps.
+
+## Vérifier les signatures
+
+Expliquez le schéma de signature HMAC et la façon dont les consommateurs devraient vérifier qu'une charge utile provient bien d'OpenWrench.
+
+## Nouvelles tentatives et idempotence
+
+Documentez la cadence des nouvelles tentatives, le nombre maximal de tentatives et la clé d'idempotence que les consommateurs peuvent utiliser pour dédupliquer.
+
+## Gérer les échecs
+
+Recommandez un contrat de réponse (retourner `2xx` rapidement, effectuer le travail de manière asynchrone) et la façon de récupérer les événements manqués.

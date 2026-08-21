@@ -1,0 +1,29 @@
+# Autentisering
+
+> Rubrikkrav, avgränsning och nyckelhantering för Buyer API
+
+Varje förfrågan till Buyer API måste innehålla två rubriker:
+
+- `X-API-KEY`: din Buyer API-nyckel, utfärdad per köparkontakt.
+- `OW-KEY`: den delade hemlighet från OpenWrench som utfärdas tillsammans med nyckeln.
+
+Förfrågningar som saknar någon av rubrikerna returnerar `401`.
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+## Avgränsning
+
+Din nyckel är avgränsad till en enda köparkontakt, som i sin tur hör till ett företag. Varje list-slutpunkt filtrerar automatiskt resultaten till denna avgränsning. Du kan inte se ett annat företags arbetsordrar, tillgångar eller fakturor med din nyckel.
+
+Använd `GET /v1/buyer/me` för att inspektera kontakten, anläggningen och företaget som ligger bakom en nyckel.
+
+## Nyckelrotation
+
+För att rotera en nyckel, begär ett nytt par av nyckel och delad hemlighet från [support@useopenwrench.com](mailto:support@useopenwrench.com), distribuera det nya paret och be sedan supporten att återkalla det gamla. Nycklar går inte ut av sig själva.
+
+## API-nycklar för Internal Teams
+
+[Internal Teams API](/partners-api/introduction) använder en separat partner-API-nyckel. En Buyer-nyckel autentiserar inte mot `/v1/partners/`-slutpunkter, och vice versa.

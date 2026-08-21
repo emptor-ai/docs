@@ -1,0 +1,41 @@
+# Erreurs et limites de débit
+
+> Comment l'API signale les échecs et l'étranglement, et comment les gérer
+
+## Enveloppe d'erreur
+
+Les erreurs suivent l'enveloppe standard :
+
+```json theme={null}
+{
+  "message": "Human-readable message",
+  "type": "NotFoundException",
+  "status": "error",
+  "traceId": "abc123def45"
+}
+```
+
+Incluez le `traceId` lorsque vous communiquez avec le soutien : il nous permet de retrouver la requête exacte dans nos journaux.
+
+## Codes de statut
+
+- `400` : entrée invalide, filtre invalide ou permission refusée.
+- `401` : `X-API-KEY` / `OW-KEY` manquants ou invalides.
+- `429` : limite de débit dépassée.
+- `5xx` : erreur serveur ; réessayez avec une temporisation.
+
+## Limites de débit
+
+Chaque clé est plafonnée à **10 requêtes par fenêtre de 20 secondes**. Au-delà, vous recevez `429 Too Many Requests`.
+
+Gestion recommandée :
+
+1. Interceptez `429`.
+2. Attendez au moins 20 secondes avant de réessayer.
+3. Espacez les tâches d'arrière-plan (par exemple les exports paginés complets) pour qu'elles restent sous le plafond.
+
+## Modes d'échec courants
+
+- **Filtrer sur un champ inconnu** retourne `400`, et non une liste vide. Vérifiez le nom du champ dans la page de référence de l'endpoint.
+- **Demander une ressource hors de votre portée** retourne `400` avec un message de permission, et non `404`.
+- **Envoyer une date simple là où une date-heure ISO 8601 est attendue** retourne `400`. Voir les notes sur le format de date dans l'[introduction de la référence](/buyer-api/introduction).

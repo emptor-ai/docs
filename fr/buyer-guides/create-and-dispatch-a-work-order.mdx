@@ -1,0 +1,33 @@
+# Créer et répartir un bon de travail
+
+> Flux complet pour transformer un besoin d'entretien en un bon de travail assigné
+
+<Info>
+  Ce guide est un canevas. Complétez-le avec les appels d'endpoints et les charges utiles exacts de votre intégration.
+</Info>
+
+## Prérequis
+
+- Une clé d'API Acheteur (voir [Authentification](/buyer-guides/authentication)).
+- Un emplacement connu et, éventuellement, un ou plusieurs actifs à rattacher.
+- Un fournisseur de votre réseau (ou les critères pour en choisir un).
+
+## 1. Confirmer l'emplacement et l'actif
+
+Récupérez l'emplacement et tout actif que vous prévoyez rattacher afin d'avoir leurs identifiants et leur état actuel.
+
+## 2. Créer le bon de travail
+
+Soumettez le bon de travail avec son emplacement, ses actifs, son métier et sa description. Notez l'identifiant du bon de travail retourné.
+
+## 3. Assigner un fournisseur
+
+Répartissez le bon de travail à un fournisseur de votre réseau.
+
+## 4. Suivre le statut
+
+Interrogez le bon de travail (ou recevez des webhooks, s'ils sont configurés) au fur et à mesure que le fournisseur accepte, planifie et termine le travail.
+
+## 5. Réviser la soumission et la facture
+
+Approuvez toute soumission reçue, puis rapprochez la facture finale avec les frais attendus.

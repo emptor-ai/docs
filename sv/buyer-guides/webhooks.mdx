@@ -1,0 +1,31 @@
+# Webhooks
+
+> Ta emot uppdateringar i realtid i stället för att polla
+
+<Info>
+  Den här sidan är ett skelett. Fyll i din faktiska konfigurations-UI för webhooks, händelsetyper, signeringsschema och återförsökspolicy.
+</Info>
+
+## Konfigurera webhooks
+
+Beskriv här hur en köpare konfigurerar webhook-slutpunkter (URL i instrumentpanelen, opt-in per händelsetyp, staging jämfört med produktion m.m.).
+
+## Händelsetyper
+
+Lista de händelser du sänder ut, till exempel statusändringar av arbetsordrar, inlämnad offert eller inlämnad faktura.
+
+## Nyttolastens form
+
+Visa en representativ nyttolast med rubriker, signatur och kropp.
+
+## Verifiera signaturer
+
+Förklara HMAC-signeringsschemat och hur konsumenter ska verifiera att en nyttolast kommer från OpenWrench.
+
+## Återförsök och idempotens
+
+Dokumentera återförsöksfrekvens, maximalt antal försök och den idempotensnyckel som konsumenter kan använda för att deduplicera.
+
+## Hantera fel
+
+Rekommendera ett svarskontrakt (returnera `2xx` snabbt, utför arbetet asynkront) och hur man återhämtar sig från missade händelser.

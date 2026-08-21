@@ -1,0 +1,23 @@
+# Autenticación
+
+> Requisitos de cabeceras, alcance y gestión de claves para la Supplier API
+
+Cada solicitud a la Supplier API debe llevar dos cabeceras:
+
+- `X-API-KEY`: tu clave de la Supplier API, emitida por cada contacto proveedor.
+- `OW-KEY`: el secreto compartido de OpenWrench emitido junto con la clave.
+
+Las solicitudes que no incluyan alguna de las dos cabeceras devuelven `401`.
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/supplier/ping"
+```
+
+## Alcance
+
+Tu clave está limitada a un único contacto proveedor, que se resuelve en una instalación. Cada endpoint de listado filtra los resultados automáticamente a ese alcance. Solo verás órdenes de trabajo, visitas de servicio, cotizaciones y facturas que pertenezcan a tu instalación.
+
+## Rotación de claves
+
+Solicita un nuevo par clave/secreto compartido a [support@useopenwrench.com](mailto:support@useopenwrench.com), despliega el nuevo par y luego pide a soporte que revoque el anterior. Las claves no caducan por sí solas.

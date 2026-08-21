@@ -1,0 +1,31 @@
+# Conceptos básicos
+
+> Cómo se relacionan los principales recursos de la Supplier API
+
+<Info>
+  Completa esta página con los conceptos más relevantes para quienes integran contigo como proveedor. El esquema siguiente es un punto de partida.
+</Info>
+
+## Órdenes de trabajo
+
+Una **orden de trabajo** es una solicitud de servicio despachada a tu instalación. Tiene un comprador, una ubicación, uno o más activos, un oficio y un estado. Tú la aceptas, programas visitas de servicio contra ella y, finalmente, la facturas.
+
+## Visitas de servicio
+
+Una **visita de servicio** es una visita programada contra una orden de trabajo. Una orden de trabajo puede tener muchas visitas de servicio (por ejemplo, diagnóstico, reparación, seguimiento). Cada visita de servicio registra quién asistió, cuándo y qué ocurrió.
+
+## Cotizaciones
+
+Las **cotizaciones** son tus estimaciones para una orden de trabajo, enviadas para su aprobación por parte del comprador antes de que se realice el trabajo.
+
+## Facturas
+
+Las **facturas** son la factura final del trabajo completado, normalmente una por orden de trabajo.
+
+## WrenchMode
+
+**WrenchMode** captura el tiempo de trabajo y de conducción por técnico. El endpoint de analíticas lo resume por técnico en una ventana de tiempo (limitada a un mes); el endpoint de eventos en bruto devuelve el registro de eventos subyacente.
+
+## Compras e inventario
+
+Los endpoints de compras hacen seguimiento de las solicitudes de compra, órdenes de compra, recepciones y las piezas que consumes en las órdenes de trabajo.

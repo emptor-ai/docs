@@ -1,0 +1,35 @@
+# Conceptos básicos
+
+> Cómo se relacionan los principales recursos de la Buyer API
+
+<Info>
+  Completa esta página con los conceptos más relevantes para quienes integran contigo. El esquema siguiente es un punto de partida.
+</Info>
+
+## Empresas, instalaciones y contactos
+
+Tu clave de API se emite a un **contacto**, que pertenece a una **instalación**, que a su vez pertenece a una **empresa**. Cada solicitud está limitada a esa empresa.
+
+## Ubicaciones y activos
+
+- Las **ubicaciones** son los sitios físicos que operas.
+- Los **activos** son piezas de equipamiento asociadas a una ubicación.
+
+Las órdenes de trabajo hacen referencia a ambos.
+
+## Órdenes de trabajo
+
+Una **orden de trabajo** es una solicitud de servicio. Tiene una ubicación, uno o más activos, un oficio, un estado y un proveedor asignado (una vez despachada). Las órdenes de trabajo avanzan a través de distintos estados a medida que los proveedores aceptan, programan, ejecutan y facturan el trabajo.
+
+## Proveedores
+
+Los proveedores son las empresas de servicio que cumplen las órdenes de trabajo. Tu red de proveedores está disponible mediante los endpoints de proveedores; al despachar una orden de trabajo se asigna a uno de ellos.
+
+## Cotizaciones y facturas
+
+- Las **cotizaciones** son estimaciones del proveedor que apruebas antes de que se realice el trabajo.
+- Las **facturas** son la factura final del trabajo completado.
+
+## Mantenimiento preventivo (PM)
+
+Los planes de PM generan órdenes de trabajo recurrentes sobre activos con una cadencia definida.

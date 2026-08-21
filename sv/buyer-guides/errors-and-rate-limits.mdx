@@ -1,0 +1,41 @@
+# Fel och hastighetsgränser
+
+> Så signalerar API:et fel och strypning, och hur du hanterar båda
+
+## Svarshölje för fel
+
+Fel följer standardhöljet:
+
+```json theme={null}
+{
+  "message": "Human-readable message",
+  "type": "NotFoundException",
+  "status": "error",
+  "traceId": "abc123def45"
+}
+```
+
+Inkludera `traceId` när du kontaktar supporten. Då kan vi hitta exakt den förfrågan i våra loggar.
+
+## Statuskoder
+
+- `400`: ogiltig indata, ogiltigt filter eller nekad behörighet.
+- `401`: saknad eller ogiltig `X-API-KEY` / `OW-KEY`.
+- `429`: hastighetsgränsen överskriden.
+- `5xx`: serverfel, försök igen med backoff.
+
+## Hastighetsgränser
+
+Varje nyckel är begränsad till **10 förfrågningar per 20-sekundersfönster**. Utöver det får du `429 Too Many Requests`.
+
+Rekommenderad hantering:
+
+1. Fånga `429`.
+2. Vänta minst 20 sekunder innan du försöker igen.
+3. Sprid ut bakgrundsjobb (t.ex. fullständiga paginerade exporter) så att de håller sig under gränsen.
+
+## Vanliga felsituationer
+
+- **Filtrering på ett okänt fält** returnerar `400`, inte en tom lista. Dubbelkolla fältnamnet mot slutpunktens referenssida.
+- **Begäran om en resurs utanför din avgränsning** returnerar `400` med ett behörighetsmeddelande, inte `404`.
+- **Att skicka ett vanligt datum där ett ISO 8601-datumtidsvärde förväntas** returnerar `400`. Se anteckningarna om datumformat i [referensintroduktionen](/buyer-api/introduction).

@@ -1,0 +1,48 @@
+# Paginación y filtrado
+
+> Recorre grandes conjuntos de resultados y acótalos con filtros por campo
+
+Los endpoints de listado aceptan cuatro parámetros de consulta estándar:
+
+- `offset`: número de registros a omitir (por defecto `0`).
+- `limit`: tamaño de página (por defecto `10`, máximo `25`).
+- `sort_by`: nombre del campo por el que ordenar.
+- `order`: `asc` o `desc`.
+
+Cualquier parámetro de consulta adicional se trata como un **filtro por campo**: pasa el nombre del campo con un valor, o una lista de valores separados por comas, para acotar el conjunto de resultados. La página de referencia de cada endpoint enumera sus filtros más destacados.
+
+## Paginar un conjunto de resultados completo
+
+Repite el bucle hasta que hayas recuperado `count` registros:
+
+```bash theme={null}
+# Page 1
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=0"
+
+# Page 2
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=25"
+```
+
+El `count` de la envoltura de respuesta es el total, no el número de registros en esta página.
+
+## Filtrado
+
+Filtra por cualquier campo documentado. Separa los valores con comas para hacer coincidir cualquiera de ellos:
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?status=open,in_progress&limit=25"
+```
+
+## Ordenación
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?sort_by=created_at&order=desc"
+```
+
+## Límites de tasa y paginación
+
+Los bucles de paginación pueden activar el límite de tasa (10 solicitudes cada 20 segundos por clave). Introduce pausas entre páginas, o captura las respuestas `429` y aplica retroceso. Consulta [Errores y límites de tasa](/buyer-guides/errors-and-rate-limits).
