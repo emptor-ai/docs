@@ -46,7 +46,8 @@
           {
             "group": "Work Orders",
             "pages": [
-              "buyers/work-orders/creating-work-orders"
+              "buyers/work-orders/creating-work-orders",
+              "buyers/work-orders/lifecycle"
             ]
           },
           {
