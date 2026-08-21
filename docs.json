@@ -130,12 +130,15 @@
           {
             "group": "Field Work",
             "pages": [
-              "internal-teams/work-orders"
+              "internal-teams/work-orders",
+              "internal-teams/wrenchmode"
             ]
           },
           {
             "group": "Purchasing & Parts",
-            "pages": []
+            "pages": [
+              "internal-teams/purchase-requests"
+            ]
           },
           {
             "group": "Planning & Projects",
