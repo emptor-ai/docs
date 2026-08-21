@@ -71,8 +71,14 @@
           {
             "group": "Suppliers & Reporting",
             "pages": [
-              "buyers/suppliers/managing-suppliers"
+              "buyers/suppliers/managing-suppliers",
+              "buyers/suppliers/performance",
+              "buyers/reporting/dashboards"
             ]
+          },
+          {
+            "group": "AI & Automation",
+            "pages": []
           }
         ]
       },
