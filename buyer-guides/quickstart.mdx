@@ -1,0 +1,43 @@
+# Quickstart
+
+> Make your first authenticated request to the Buyer API in under five minutes
+
+## Prerequisites
+
+- A Buyer API key and OpenWrench shared secret. Request them from [support@useopenwrench.com](mailto:support@useopenwrench.com).
+- A shell with `curl`, or any HTTP client.
+
+## 1. Verify your credentials
+
+Call `GET /v1/buyer/ping` to confirm your key and shared secret work:
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+A `200` response confirms both headers are valid. A `401` means one of them is missing or wrong.
+
+## 2. Inspect the identity behind your key
+
+`GET /v1/buyer/me` returns the contact, facility, and company your key is scoped to. Every list endpoint automatically filters to this scope.
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/me"
+```
+
+## 3. List your first work orders
+
+```bash theme={null}
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=5"
+```
+
+The response follows the standard envelope: `type`, `data` (an array), `count`, and `status`.
+
+## Next steps
+
+- Read [Authentication](/buyer-guides/authentication) for header details and key rotation.
+- See [Core concepts](/buyer-guides/concepts) for the data model.
+- Follow [Create and dispatch a work order](/buyer-guides/create-and-dispatch-a-work-order) for a full end-to-end flow.

@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "OpenWrench Docs",
-  "description": "Reference documentation for the OpenWrench External API \u2014 buyer, supplier, and partner surfaces.",
+  "description": "Reference documentation and integration guides for the OpenWrench External API \u2014 buyer, supplier, and partner surfaces.",
   "colors": {
     "primary": "#0D9373",
     "light": "#07C983",
@@ -23,6 +23,39 @@
   },
   "navigation": {
     "tabs": [
+      {
+        "tab": "Buyer Guides",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "buyer-guides/overview",
+              "buyer-guides/quickstart",
+              "buyer-guides/authentication"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "buyer-guides/concepts"
+            ]
+          },
+          {
+            "group": "How-tos",
+            "pages": [
+              "buyer-guides/create-and-dispatch-a-work-order",
+              "buyer-guides/pagination-and-filtering",
+              "buyer-guides/webhooks"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "buyer-guides/errors-and-rate-limits"
+            ]
+          }
+        ]
+      },
       {
         "tab": "Buyer API",
         "groups": [
@@ -50,6 +83,38 @@
                   "directory": "internal-teams-reference"
                 }
               }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Supplier Guides",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "supplier-guides/overview",
+              "supplier-guides/quickstart",
+              "supplier-guides/authentication"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "supplier-guides/concepts"
+            ]
+          },
+          {
+            "group": "How-tos",
+            "pages": [
+              "supplier-guides/accept-and-complete-a-work-order",
+              "supplier-guides/wrench-mode-time-tracking"
+            ]
+          },
+          {
+            "group": "Operations",
+            "pages": [
+              "supplier-guides/errors-and-rate-limits"
             ]
           }
         ]

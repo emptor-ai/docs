@@ -1,0 +1,33 @@
+# Create and dispatch a work order
+
+> End-to-end flow for turning a maintenance need into an assigned work order
+
+<Info>
+  This guide is a scaffold. Fill in the exact endpoint calls and payloads for your integration.
+</Info>
+
+## Prerequisites
+
+- A Buyer API key (see [Authentication](/buyer-guides/authentication)).
+- A known location and, optionally, one or more assets to attach.
+- A supplier from your network (or the criteria to pick one).
+
+## 1. Confirm the location and asset
+
+Fetch the location and any assets you plan to attach so you have their ids and current state.
+
+## 2. Create the work order
+
+Post the work order with its location, assets, trade, and description. Note the returned work order id.
+
+## 3. Assign a supplier
+
+Dispatch the work order to a supplier from your network.
+
+## 4. Track status
+
+Poll the work order (or receive webhooks, if configured) as the supplier accepts, schedules, and completes the job.
+
+## 5. Review the quote and invoice
+
+Approve any submitted quote, then reconcile the final invoice against expected charges.

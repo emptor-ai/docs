@@ -1,0 +1,31 @@
+# Core concepts
+
+> How the Supplier API's main resources relate
+
+<Info>
+  Fill in this page with the concepts most relevant to your supplier integrators. The outline below is a starting point.
+</Info>
+
+## Work orders
+
+A **work order** is a request for service dispatched to your facility. It has a buyer, a location, one or more assets, a trade, and a status. You accept it, schedule service calls against it, and eventually invoice for it.
+
+## Service calls
+
+A **service call** is a scheduled visit against a work order. One work order can have many service calls (e.g. diagnostic, repair, follow-up). Each service call records who went, when, and what happened.
+
+## Quotes
+
+**Quotes** are your estimates for a work order, submitted for buyer approval before work proceeds.
+
+## Invoices
+
+**Invoices** are the final bill for completed work — usually one per work order.
+
+## WrenchMode
+
+**WrenchMode** captures per-technician work and drive time. The analytics endpoint rolls it up per technician over a window (capped at one month); the raw events endpoint returns the underlying event log.
+
+## Purchasing and inventory
+
+The purchasing endpoints track purchase requests, purchase orders, receipts, and the parts you consume on work orders.
