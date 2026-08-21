@@ -53,7 +53,12 @@
           },
           {
             "group": "Approvals & Spend",
-            "pages": []
+            "pages": [
+              "buyers/spend/nte-approvals",
+              "buyers/spend/quotes",
+              "buyers/spend/invoices",
+              "buyers/spend/budgets"
+            ]
           },
           {
             "group": "Maintenance & Assets",
