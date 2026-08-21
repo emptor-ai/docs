@@ -142,7 +142,10 @@
           },
           {
             "group": "Planning & Projects",
-            "pages": []
+            "pages": [
+              "internal-teams/preventive-maintenance",
+              "internal-teams/projects-site-surveys"
+            ]
           }
         ]
       }
