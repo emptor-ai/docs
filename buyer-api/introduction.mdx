@@ -1,0 +1,61 @@
+---
+title: "Buyer API"
+sidebarTitle: "Introduction"
+description: "Programmatic access to your OpenWrench buyer account — work orders, assets, locations, invoices, PM, and more"
+icon: "building"
+---
+
+The OpenWrench Buyer API gives facility operators programmatic access to everything on the buyer side of the platform: creating and tracking work orders, managing assets and locations, reviewing quotes and invoices, monitoring preventive maintenance, and querying your supplier network.
+
+## Base URL
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+All buyer endpoints are under `/v1/buyer/`.
+
+## Authentication
+
+Send your API key in the `X-API-KEY` header on every request. The key is issued per buyer contact and automatically scopes every request to your company — you only ever see your own data.
+
+```bash
+curl -H "X-API-KEY: <your-key>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+To get an API key, contact [support@useopenwrench.com](mailto:support@useopenwrench.com). Use `GET /v1/buyer/me` to inspect the identity (contact, facility, company) behind your key.
+
+## Rate limits
+
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — back off and retry.
+
+## Response envelope
+
+Single-entity responses:
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+List responses add a total `count`:
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Errors:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` means a missing or invalid key; `400` covers bad input, bad filters, and permission denials; `429` is the rate limit.
+
+## Pagination and filtering
+
+List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters — pass a field name with a value (comma-separate multiple values) to filter the result set. Each endpoint's reference page lists its notable filters.
+
+## Date formats
+
+Most timestamps are ISO 8601 strings with offset (e.g. `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`. When sending date-times, use ISO 8601.
