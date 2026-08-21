@@ -19,11 +19,11 @@ Loop until you've fetched `count` records:
 ```bash theme={null}
 # Page 1
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=0"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?limit=25&offset=0"
 
 # Page 2
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?limit=25&offset=25"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?limit=25&offset=25"
 ```
 
 The response envelope's `count` is the total, not the count on this page.
@@ -34,14 +34,14 @@ Filter by any documented field. Comma-separate values to match any of them:
 
 ```bash theme={null}
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?status=open,in_progress&limit=25"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?status=Unassigned,PendingApproval&limit=25"
 ```
 
 ## Sorting
 
 ```bash theme={null}
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/buyer/work_orders?sort_by=created_at&order=desc"
+  "https://api.useopenwrench.com/api/external/v1/buyer/work_order/work_orders?sort_by=createdAt&order=desc"
 ```
 
 ## Rate limits and pagination

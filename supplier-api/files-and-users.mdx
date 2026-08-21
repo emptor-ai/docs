@@ -1,0 +1,64 @@
+---
+title: "File storage and user provisioning in the Supplier API"
+sidebarTitle: "Files & users"
+description: "Upload and download files for attachments and provision supplier users and technicians, including stock-location access and EPA certifications."
+---
+
+Two supporting surfaces most supplier integrations need: the file store behind every attachment field, and programmatic user provisioning for onboarding technicians.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Files
+
+**Upload** with `POST /v1/supplier/file/upload`: multipart form, single part named `file`, max **512 MB**.
+
+```bash
+curl -X POST "$BASE/v1/supplier/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@before.jpg"
+```
+
+The response (envelope type `FileManager`) is a `FileDetails` record: `{ "fileName": "before.jpg", "fileId": "a1b2c3d4e5" }`. Non-ASCII characters are stripped from the file name; a storage failure returns `500`.
+
+Use the returned object verbatim in attachment fields: work order [supplier attachments](/supplier-api/work-orders#keep-the-buyer-informed), proposal and invoice `attachments`, and check-in/check-out images. Invoice PDFs have their own [upload-and-publish endpoint](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
+
+**Download** with `GET /v1/supplier/file/download/{id}/{name}`, which streams the stored bytes as an attachment. `{id}` is the `fileId`; `{name}` is the file name to serve it under. Use it to pull buyer-provided documents off `buyerAttachments`. Download failures are answered with `400`.
+
+## Provisioning supplier users
+
+`POST /v1/supplier/user/provision` creates a supplier contact under your company, optionally with an active login. Typical use: onboarding technicians from your HR system.
+
+```bash
+curl -X POST "$BASE/v1/supplier/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "sam.tech@supplier.com",
+    "nameGiven": "Sam",
+    "nameFamily": "Ortiz",
+    "roles": ["SUPPLIER_TECH"],
+    "title": "Refrigeration Technician",
+    "epaCertificationType": "Type II",
+    "epaCertificationNumber": "EPA-882913",
+    "stockLocationIds": [7]
+  }'
+```
+
+Rules enforced by the endpoint:
+
+- `email` (lower-cased and trimmed), `nameGiven`, `nameFamily`, and a non-empty `roles` array are required. Role names are matched case-insensitively, and **admin or super-admin roles are rejected with `403`**.
+- `SUPPLIER_TECH` roles additionally get a field-tech record, which is what makes the user schedulable on service calls and visible in WrenchMode.
+- The target `facilityId` defaults to your key's facility and must belong to the same supplier company (`403` otherwise).
+- An existing account or contact for the email is a `400` conflict.
+- **Login creation.** Without a `password`, the user gets a sign-up invitation email. With one, the account is created active immediately; add `passwordResetRequired` to force a change on first login.
+- **Location access**: `hasAccessToAllLocations`, or explicit `locationIds`/`brandIds` (ignored when the all-locations flag is true).
+- **Stock-location access**: `hasAccessToAllStockLocations` and `canManageAllStockLocations` default to false and are **forced false whenever `stockLocationIds` is non-empty**; explicit ids win.
+- EPA 608 credentials: `epaCertificationType` is validated against the recognized classes; `epaCertificationNumber` is free-form.
+
+The created contact is returned in the standard envelope.

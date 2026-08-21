@@ -1,0 +1,118 @@
+---
+title: "Submitting quotes and invoices with the Supplier API"
+sidebarTitle: "Quotes & invoicing"
+description: "Create proposals for buyer approval and bill completed work orders: draft invoices, line-item sections, PDF upload-and-publish, and status side effects."
+---
+
+Money flows through two objects: **proposals** (quotes the buyer approves before work proceeds) and **invoices** (the bill for completed work). Both are created by suppliers through this API.
+
+<Note>
+Neither endpoint is available to internal-service-team keys; quoting and invoicing are for third-party suppliers billing a buyer.
+</Note>
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Money is strings, in sections
+
+Proposals and invoices share a line-item structure. Amounts are **strings that must parse as numbers** ("450.00", not 450.00 as a float; senders should format with two decimals and parse as decimals). The sections are labor, material, travel, freight, and misc (proposals add incurred cost), each carrying its own line items, tax rate, and `...TotalBeforeTax`, rolling up to before-tax, tax, and after-tax totals. Travel, freight, and misc lines are simple `{ "description", "amount" }` objects.
+
+## Proposals (quotes)
+
+`POST /v1/supplier/quote/proposals` creates the proposal directly in **`pending`** status under your facility; there is no separate submit step. Required: `workOrderId` and `totalAfterTax`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "scope": "Replace condenser fan motor and recharge refrigerant.",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "totalBeforeTax": "850.00",
+    "taxRate": "8.5",
+    "tax": "72.25",
+    "totalAfterTax": "922.25"
+  }'
+```
+
+Behavior to know:
+
+- `locationId`, `buyerFacilityId`, and `buyerCompanyId` are derived from the work order; you cannot set them.
+- Unset tax fields and section totals default to `"0"`.
+- `requestForProposalId` defaults to the work order's RFP when omitted.
+- `proposalPdfLink`, if sent, must be a valid URL. `attachments` take `FileDetails` from the [file upload endpoint](/supplier-api/files-and-users).
+- Passing an `id` updates an existing proposal.
+
+Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or `declined` (decline reasons appear in `declineNotes`). List with `GET /v1/supplier/quote/proposals`, read one with `GET /v1/supplier/quote/proposals/{id}`.
+
+## Invoices
+
+### The lifecycle
+
+Invoices start as **`draft`** (invisible to the buyer), get **published** into `pending`, then the buyer moves them through `approved` and `processing` to `paid` (or disputes them). Your integration creates the draft and publishes it; from `pending` onward you are mostly reading status.
+
+### Create the draft
+
+`POST /v1/supplier/invoice/invoices` requires `workOrderId`; `locationId`, `buyerFacilityId`, `buyerCompanyId`, `spendCategoryId`, and `problemTypeId` are all derived from it.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "invoiceNumber": "INV-2026-0451",
+    "dateOfInvoice": "2026-08-21T00:00:00.000-07:00",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "invoiceTotalBeforeTax": "850.00",
+    "invoiceTaxRate": "8.5",
+    "invoiceTax": "72.25",
+    "invoiceTotalAfterTax": "922.25"
+  }'
+```
+
+Details that bite:
+
+- `poNumber` defaults to the work order's PO number.
+- `serviceCallIds` defaults to **all** service calls on the work order when omitted or empty; set it explicitly when billing a subset of visits.
+- `taxLineItems` are validated against the invoice currency's allowed tax types (currently only CAD supports them: GST/HST/PST); anything else is rejected.
+- `invoicePDFLink` (a valid URL) becomes the invoice's single PDF entry if you host the PDF yourself; most integrations use the upload endpoint below instead.
+- `autoPublishOnApproval` opts this invoice into auto-publishing when the work order completes.
+- Saving an invoice can transition the associated work order's status per the invoice-to-work-order status mapping. A save-level validation failure returns `406`.
+- Passing an `id` updates an existing invoice (drafts only, in practice; buyer-side statuses are not yours to edit).
+
+### Upload the PDF and publish
+
+`POST /v1/supplier/invoice/file/upload_and_publish/{invoiceId}` does both steps at once: the uploaded PDF (multipart part `file`, max 512 MB) becomes the invoice's single PDF, and the status moves to `pending`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@INV-2026-0451.pdf"
+```
+
+Each precondition failing returns `400`: your facility must own the invoice, the associated work order must be in **Completed** display status, and supplier invoice editing must be allowed by the buyer's configuration.
+
+### Read and reconcile
+
+`GET /v1/supplier/invoice/invoices` (filterable, e.g. `?status=pending`) and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your AR ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
+
+## End-to-end billing flow
+
+1. Work order reaches quoting: submit a proposal, wait for `awarded`.
+2. Complete the work through [service-call check-out](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+3. Create the draft invoice; generate your PDF.
+4. Once the work order shows Completed, `upload_and_publish`.
+5. Poll invoice status until `paid`, and reconcile against `markedPaidAt`.

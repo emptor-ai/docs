@@ -1,0 +1,126 @@
+---
+title: "Service calls: scheduling, check-in, and completion"
+sidebarTitle: "Service calls"
+description: "Drive the visit lifecycle with the Supplier API: schedule and reschedule technicians, check in and out, set completion statuses, and read work logs."
+---
+
+A **service call** is one technician visit against a work order. The Supplier API drives the whole visit lifecycle through five status-update endpoints plus read expansions. This is the most nuanced part of the API; the details below are worth reading before you write code.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## How the status-update endpoints work
+
+All five share one request shape (a service-call payload) and one crucial behavior:
+
+<Warning>
+**The response is the associated work order, not the service call.** Each call creates or updates a service call, moves the work order's status, and returns the updated work order in the envelope. Read the new service call state off the work order's `associatedServiceCalls` / `lastServiceCall`.
+</Warning>
+
+Shared request fields: `workOrderId` and `numberOfTechs` are always required. `id` targets an existing service call (omit it on first creation, then reuse the id for every later update of the same visit). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, the `checkIn*`/`checkOut*` groups, `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` fill in as the visit progresses.
+
+`supplierFacilityId` is required for internal-service-team keys; for third-party supplier keys it is overwritten with your own facility id regardless of what you send.
+
+| Endpoint | Work order status becomes |
+| --- | --- |
+| `POST .../service_calls/status_update/tech_scheduled` | `TechScheduled` when `serviceScheduledAt` is present, else `TechAssigned` |
+| `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` when `serviceScheduledAt` is present, else `TechAssigned` |
+| `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
+| `POST .../service_calls/status_update/check_out` | The `checkOutStatus` you send (required) |
+| `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Same as their on-site counterparts, for remote work |
+
+All paths are under `/v1/supplier/work_order/`.
+
+## 1. Schedule the visit
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_scheduled" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "leadTechnicianEmail": "tech@supplier.com",
+    "serviceScheduledAt": "2026-08-22T09:00:00.000-07:00"
+  }'
+```
+
+To move the appointment later, call `tech_rescheduled` with the service call's `id` and the new `serviceScheduledAt`.
+
+## 2. Check in
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkInByEmail": "tech@supplier.com",
+    "checkInStatus": "TechWorkingOnSite",
+    "checkInNotes": "On site, starting diagnosis.",
+    "checkInGeoLocation": { "lat": "37.7749", "long": "-122.4194" }
+  }'
+```
+
+`checkInTime` defaults to the server's current time when you set a `checkInStatus` without a time, so live integrations can omit it; backfills should pass it explicitly. `checkInImages` takes photo references, and geo coordinates give the buyer on-site proof.
+
+## 3. Check out and set the outcome
+
+Check-out is where the work order's next status is decided. **`checkOutStatus` is required and must be a valid work-order status name**; it becomes the work order's new status.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkOutByEmail": "tech@supplier.com",
+    "checkOutStatus": "WaitingForReview",
+    "checkOutNotes": "Replaced condenser fan motor. Unit holding 36F.",
+    "checkOutImages": ["<uploaded-file-id>"]
+  }'
+```
+
+Common `checkOutStatus` choices:
+
+- `WaitingForReview` — work finished, hand off to the buyer for review.
+- `TechScheduled` or `PartsRequested` and friends — the visit ended but the job continues (follow-up visit, waiting on parts).
+
+Parts and stock consumed on the visit are recorded through `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` on the same payload; the ids come from your [inventory catalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+
+Two automation behaviors trigger at this point:
+
+- **Auto-approval.** For third-party suppliers whose buyer company has `autoApproveWorkOrdersCompletedByThirdParty` enabled, a `WaitingForReview` outcome is auto-promoted to `WorkReviewedAndCompleted`.
+- **Invoice auto-publishing.** Whenever the resulting status is `WorkReviewedAndCompleted`, invoice auto-publishing rules may run and publish your draft invoice. See [Quotes and invoicing](/supplier-api/quotes-and-invoicing).
+
+`remote_check_in` and `remote_check_out` behave identically for work done off-site.
+
+## Reading a service call back
+
+Three expansions on `GET /v1/supplier/work_order/service_calls/{id}`:
+
+| Endpoint | Adds |
+| --- | --- |
+| `.../{id}/with_work_logs` | WrenchMode events in the check-in/check-out window plus `trueWorkTimeMillis` (pause-excluded work duration). |
+| `.../{id}/with_tech_details` | Technician contact records. `hourlyRate` appears only for techs of your own facility. |
+| `.../{id}/with_work_logs/with_tech_details` | Both. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+For fleet-level time reporting across all technicians, use [WrenchMode](/supplier-api/wrenchmode) instead of iterating calls.
+
+## Multi-visit jobs
+
+One work order can carry many service calls (diagnosis, repair, follow-up). Create each visit with its own `tech_scheduled` call (no `id`), and keep each visit's subsequent updates keyed to its service-call `id`. Check out intermediate visits with a continuing status such as `PartsRequested` or `TechScheduled`, and only the final visit with `WaitingForReview`.

@@ -63,3 +63,40 @@ List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `or
 ## Date formats
 
 Most timestamps are ISO 8601 strings with offset (e.g. `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`. When sending date-times, use ISO 8601.
+
+## Detailed guides
+
+The guides in this tab walk each part of the API in depth, with payloads, status models, and integration patterns:
+
+<CardGroup cols={2}>
+  <Card title="Work orders" href="/buyer-api/work-orders" icon="clipboard-list">
+    Create, filter, reassign, close out. Status model, notes, and problem types.
+  </Card>
+  <Card title="Service calls" href="/buyer-api/service-calls" icon="user-check">
+    Visit evidence: work logs, true work time, and technician details.
+  </Card>
+  <Card title="Assets & locations" href="/buyer-api/assets-and-locations" icon="warehouse">
+    Locations, regions, asset types, models, meters, and refrigerant tracking.
+  </Card>
+  <Card title="Invoices" href="/buyer-api/invoices" icon="file-invoice-dollar">
+    The approval pipeline, AP sync, flattened exports, and bulk updates.
+  </Card>
+  <Card title="Quotes & proposals" href="/buyer-api/quotes-and-proposals" icon="file-signature">
+    Read supplier quotes and reconcile them against invoices.
+  </Card>
+  <Card title="Planned maintenance" href="/buyer-api/planned-maintenance" icon="calendar-check">
+    Read schedules, skip runs, and drive PM from an external scheduler.
+  </Card>
+  <Card title="Supplier network" href="/buyer-api/supplier-network" icon="network-wired">
+    Query your network and rank private-network suppliers for dispatch.
+  </Card>
+  <Card title="Site surveys" href="/buyer-api/site-survey-walkthroughs" icon="clipboard-check">
+    Walkthroughs and the work orders cut from their findings.
+  </Card>
+  <Card title="Files & attachments" href="/buyer-api/files-and-attachments" icon="paperclip">
+    Upload once, reference everywhere, download evidence.
+  </Card>
+  <Card title="Account & utilities" href="/buyer-api/account-and-utilities" icon="id-badge">
+    Ping, key identity, user provisioning, and exchange rates.
+  </Card>
+</CardGroup>

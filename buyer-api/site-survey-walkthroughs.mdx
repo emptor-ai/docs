@@ -1,0 +1,45 @@
+---
+title: "Site survey walkthroughs in the Buyer API"
+sidebarTitle: "Site surveys"
+description: "Read site survey walkthroughs and generate follow-up work orders from survey findings with the OpenWrench Buyer API."
+---
+
+A **walkthrough** is a completed site survey: an inspector walks a location against a task list and records answers, photos, and issues. The Buyer API exposes walkthroughs read-only, and lets you cut follow-up work orders that stay linked to the survey finding they came from.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Reading walkthroughs
+
+```bash
+# Recent walkthroughs for a location
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+
+# Count by filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/count_by?locationId=1204"
+
+# One walkthrough, with task answers
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/230"
+```
+
+Standard pagination and field filters apply, plus your role's location and brand scoping. Work orders referenced from a walkthrough's task answers are filtered by your read permission, so different keys may see different linked work orders on the same walkthrough.
+
+## Creating follow-up work orders
+
+When a survey finding needs remediation, create the work order with the linkage fields set:
+
+- `walkThroughId` — the walkthrough the finding came from.
+- `siteSurveyTaskTitleId` — the specific task within it.
+- `includeWalkthroughTaskList` — optionally copy the walkthrough's task list onto the work order.
+
+`walkThroughId` and `siteSurveyTaskTitleId` **must be provided together or not at all**; the create is rejected otherwise. See [Create a work order](/buyer-api/work-orders#create-a-work-order) for the rest of the payload.
+
+The link is visible both ways: the work order carries `walkThroughId`, and the walkthrough's task answers reference the work orders cut from them. That makes "every open finding from last quarter's surveys, with remediation status" a two-query report.

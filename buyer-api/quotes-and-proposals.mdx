@@ -1,0 +1,61 @@
+---
+title: "Quotes and proposals in the Buyer API"
+sidebarTitle: "Quotes & proposals"
+description: "Read supplier quote proposals with the OpenWrench Buyer API: statuses, line-item sections, scoping rules, and how proposals fit the approval workflow."
+---
+
+When work needs pricing before it proceeds, suppliers submit **proposals** (quotes) against the work order. Through the Buyer API, proposals are **read-only**: you list them, inspect line items, and reconcile them against invoices. Approving or declining a proposal happens in the OpenWrench app.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Proposal statuses
+
+| Status | Meaning |
+| --- | --- |
+| `draft` | Supplier still editing. Never visible to buyers. |
+| `pending` | Submitted, awaiting your decision. |
+| `awarded` | Approved; work proceeds at the quoted price. |
+| `declined` | Rejected (decline reasons are in `declineNotes`). |
+
+Statuses persist lowercase.
+
+## Reading proposals
+
+```bash
+# Pending proposals across the company
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+
+# Proposals on one work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?workOrderId=9001"
+
+# One proposal
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/quote/proposals/3320"
+```
+
+Scoping rules worth knowing:
+
+- Suppliers' unsubmitted drafts are always excluded from lists.
+- If your API key's contact is location-restricted, you only see proposals for accessible locations. A contact with an empty accessible set gets an empty page, not an error.
+- The single read returns `404` for soft-deleted proposals, drafts, and proposals outside your location scope. Treat `404` as "not visible to you", not necessarily "does not exist".
+
+## Inside a proposal
+
+The money is broken into the same sections as invoices: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems`, and `miscLineItems`, each section with its own tax rate and `...TotalBeforeTax`, rolling up to `totalBeforeTax`, `tax`, and `totalAfterTax`. **Monetary values serialize as strings**; parse them as decimals, not floats, if you are doing arithmetic.
+
+Other useful fields: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (the work order's not-to-exceed at submission time), `proposalPdfLink`, `attachments`, `submittedAt`, and `approvedAt`.
+
+## Where proposals fit the flow
+
+1. The supplier submits a proposal; the work order typically pauses awaiting approval.
+2. Your approvers award or decline it in the app. Award raises the effective spend ceiling for the job.
+3. When the final [invoice](/buyer-api/invoices) arrives, compare `invoiceTotalAfterTax` against the awarded proposal's `totalAfterTax` before approving payment. Flag variances above your tolerance for human review.
+
+A practical polling loop for a procurement dashboard: filter `status=pending`, sort by `submittedAt`, and page with `limit=25`, respecting the rate limit of 10 requests per 20-second window.
