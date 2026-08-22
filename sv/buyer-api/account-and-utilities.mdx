@@ -1,0 +1,66 @@
+# Identitet, användarprovisionering och verktyg i Buyer API
+
+> Verifiera uppgifter, inspektera identiteten bakom en Buyer API-nyckel, provisionera köparanvändare med avgränsade roller och hämta valutaväxelkurser.
+
+Den här sidan täcker de mindre slutpunkter varje integration behöver till slut: hälsokontroll, nyckelidentitet, användarprovisionering och valutaväxelkurser.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ping och identitet
+
+`GET /v1/buyer/ping` verifierar båda rubrikerna och returnerar `{"type":"pingpong","data":"pong","status":"ok"}`. Den är inte hastighetsbegränsad, så den är säker för övervakningsprober.
+
+`GET /v1/buyer/me` returnerar identiteten bakom din nyckel som en avsiktligt liten projektion: kontaktens `email`, namn, `contactType`, `buyerFacilityName`, `buyerCompanyId` och `buyerCompanyName`.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/me"
+```
+
+Anropa den en gång vid start: att skapa arbetsordrar behöver ditt `buyerCompanyId` och anläggnings-id [i förfrågan-kroppen](/buyer-api/work-orders#skapa-en-arbetsorder), och att logga identiteten gör nyckelförväxlingar uppenbara.
+
+## Provisionera köparanvändare
+
+`POST /v1/buyer/user/provision` skapar en köparkontakt, valfritt med en inloggning, och skickar ett inbjudningsmejl. Använd den för att synka användare från ditt HR- eller identitetssystem.
+
+```bash
+curl -X POST "$BASE/v1/buyer/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jordan@example.com",
+    "nameGiven": "Jordan",
+    "nameFamily": "Rivera",
+    "roles": ["BUYER_FM"],
+    "title": "Facilities Manager",
+    "hasAccessToAllLocations": false,
+    "locationIds": [1204, 1205]
+  }'
+```
+
+Regler som slutpunkten upprätthåller:
+
+- `email`, `nameGiven`, `nameFamily` och `roles` är obligatoriska. **Admin- och super-admin-roller avvisas med `403`**; API-provisionering är endast för vanliga roller.
+- Målanläggningen är som standard din API-nyckels anläggning. Ett angivet `facilityId` måste tillhöra samma köparföretag (`403` annars).
+- Ett konto eller en kontakt som redan finns för e-postadressen returnerar `400` med ett konfliktmeddelande.
+- Med ett `password` skapas inloggningen omedelbart och inbjudningsmejlet säger "invited you to OpenWrench"; utan lösenord ber inbjudan användaren att registrera sig. `passwordResetRequired` tvingar en ändring vid första inloggningen.
+- Platsavgränsning: `hasAccessToAllLocations`, eller explicita `locationIds`/`brandIds`.
+- Teknikers EPA 608-uppgifter kan bifogas med `epaCertificationType` (validerad mot de erkända klasserna; okända värden är `400`) och `epaCertificationNumber` (fritext, max 64 tecken).
+
+Den skapade kontakten returneras i standardhöljet.
+
+## Valutaväxelkurser
+
+Portföljer med flera valutor kan hämta den senast lagrade kursen mellan två valutakoder:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/currency_exchange/latest/CAD/USD"
+```
+
+`GET /v1/buyer/currency_exchange/latest/{targetCurrencyId}/{baseCurrencyId}` tar valutakoder (till exempel `USD`, `CAD`) och returnerar den senaste kursen från bas till mål. Arbetsordrar bär de relaterade fälten `currencyId`, `locationCurrencyId` och de två `currencyExchangeRate...`-värdena när priser i olika valutor är i spel.

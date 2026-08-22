@@ -1,0 +1,71 @@
+# Internal Teams API
+
+> Acceso a compras e inventario para tus equipos internos de servicio: solicitudes de compra, órdenes de compra, recibos, partes y stock
+
+La Internal Teams API es la superficie de integración para los sistemas detrás de las compras e inventario de tus equipos internos de servicio: solicitudes de compra y sus líneas, órdenes de compra hasta la recepción, catálogos de partes y equipo, ubicaciones de stock y las partes consumidas en órdenes de trabajo.
+
+## URL base
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Los endpoints de equipos internos se sirven bajo el prefijo `/v1/partners/`.
+
+## Autenticación
+
+Estos endpoints requieren una **clave de API de partner**, una credencial separada de las claves de comprador y de proveedor. Una clave de API de comprador no funcionará contra los endpoints `/v1/partners/`, aunque esta sección viva bajo la documentación de la Buyer API.
+
+Cada solicitud debe llevar **dos cabeceras**: `X-API-KEY` (la clave de partner) y `OW-KEY` (el secreto compartido de OpenWrench emitido junto a ella). La clave delimita automáticamente cada solicitud a los datos de tu empresa. Las solicitudes a las que les falte cualquiera de las cabeceras devuelven `401`.
+
+```bash
+curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/partners/ping"
+```
+
+Para que te emitan una clave de API de partner y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Límites de tasa
+
+10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`. Aplica back off y reintenta.
+
+## Envoltura de respuesta
+
+Respuestas de una sola entidad:
+
+```json
+{ "type": "SupplierPurchaseOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Las respuestas de listado añaden un `count` total:
+
+```json
+{ "type": "SupplierPurchaseRequest", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Errores:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` significa clave faltante o inválida; `400` cubre entrada inválida, filtros incorrectos y denegaciones de permisos; `429` es el límite de tasa.
+
+## Paginación y filtrado
+
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order` (`asc` | `desc`). Los parámetros de consulta adicionales se tratan como filtros de campo: pasa un nombre de campo con un valor (separa varios valores por coma) para filtrar el conjunto de resultados.
+
+## El flujo de compras
+
+Una integración típica sigue el ciclo de compras: lee **solicitudes de compra** aprobadas y sus líneas, crea una **orden de compra** contra un proveedor, asocia las líneas de PR a líneas de PO, marca la PO como **ordenada** y registra **recibos** a medida que llegan los artículos (las cantidades recibidas negativas registran devoluciones). Partes, tipos de equipo, proveedores y ubicaciones de stock completan los datos de referencia.
+
+## Guías detalladas
+
+<CardGroup cols={2}>
+  <Card title="Flujo de compras" href="/partners-api/purchasing-flow" icon="cart-flatbed">
+    El ciclo de vida de extremo a extremo: solicitudes, órdenes, líneas y recibos.
+  </Card>
+  <Card title="Catálogo y stock" href="/partners-api/catalog-and-stock" icon="boxes-stacked">
+    Partes, equipo, proveedores, ubicaciones de stock y consumo de órdenes de trabajo.
+  </Card>
+</CardGroup>

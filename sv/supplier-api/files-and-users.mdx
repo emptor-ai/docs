@@ -1,0 +1,62 @@
+# Fillagring och användarprovisionering i Supplier API
+
+> Ladda upp och ladda ner filer för bilagor, och provisionera leverantörsanvändare och tekniker, inklusive tillgång till lagerplats och EPA-certifieringar.
+
+Två stödytor som de flesta leverantörsintegrationer behöver: fillagret bakom varje bilagefält, och programmatisk användarprovisionering för onboarding av tekniker.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Filer
+
+**Ladda upp** med `POST /v1/supplier/file/upload`: multipart-formulär, enda del som heter `file`, max **512 MB**.
+
+```bash
+curl -X POST "$BASE/v1/supplier/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@before.jpg"
+```
+
+Svaret (höljetyp `FileManager`) är en `FileDetails`-post: `{ "fileName": "before.jpg", "fileId": "a1b2c3d4e5" }`. Icke-ASCII-tecken tas bort från filnamnet; ett lagringsfel returnerar `500`.
+
+Använd det returnerade objektet ordagrant i bilagefält: [leverantörsbilagor för arbetsorder](/supplier-api/work-orders#håll-köparen-informerad), förslags- och faktura-`attachments` samt bilder för in-/utcheckning. Faktura-PDF:er har sin egen [ladda-upp-och-publicera-slutpunkt](/supplier-api/quotes-and-invoicing#ladda-upp-pdf-en-och-publicera).
+
+**Ladda ner** med `GET /v1/supplier/file/download/{id}/{name}`, som strömmar de lagrade byten som en bilaga. `{id}` är `fileId`; `{name}` är filnamnet att servera den under. Använd den för att hämta köpar-tillhandahållna dokument från `buyerAttachments`. Nedladdningsfel besvaras med `400`.
+
+## Provisionera leverantörsanvändare
+
+`POST /v1/supplier/user/provision` skapar en leverantörskontakt under ditt företag, valfritt med en aktiv inloggning. Typisk användning: onboarding av tekniker från ditt HR-system.
+
+```bash
+curl -X POST "$BASE/v1/supplier/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "sam.tech@supplier.com",
+    "nameGiven": "Sam",
+    "nameFamily": "Ortiz",
+    "roles": ["SUPPLIER_TECH"],
+    "title": "Refrigeration Technician",
+    "epaCertificationType": "Type II",
+    "epaCertificationNumber": "EPA-882913",
+    "stockLocationIds": [7]
+  }'
+```
+
+Regler som slutpunkten upprätthåller:
+
+- `email` (gemener och trimmad), `nameGiven`, `nameFamily` och en icke-tom `roles`-array är obligatoriska. Rollnamn matchas skiftlägesokänsligt, och **admin- eller super-admin-roller avvisas med `403`**.
+- `SUPPLIER_TECH`-roller får dessutom en fältteknikpost, vilket är det som gör användaren schemaläggbar på servicebesök och synlig i WrenchMode.
+- Målets `facilityId` är som standard din nyckels anläggning och måste tillhöra samma leverantörsföretag (`403` annars).
+- Ett befintligt konto eller kontakt för e-postadressen är en `400`-konflikt.
+- **Skapa inloggning.** Utan ett `password` får användaren ett registreringsinbjudningsmejl. Med ett lösenord skapas kontot aktivt omedelbart; lägg till `passwordResetRequired` för att tvinga en ändring vid första inloggningen.
+- **Platsåtkomst**: `hasAccessToAllLocations`, eller explicita `locationIds`/`brandIds` (ignoreras när flaggan för alla platser är sann).
+- **Lagerplatsåtkomst**: `hasAccessToAllStockLocations` och `canManageAllStockLocations` är som standard falska och **tvingas till falska när `stockLocationIds` inte är tom**; explicita id:n vinner.
+- EPA 608-uppgifter: `epaCertificationType` valideras mot de erkända klasserna; `epaCertificationNumber` är fritext.
+
+Den skapade kontakten returneras i standardhöljet.

@@ -1,0 +1,71 @@
+# Entreprises acheteurs, emplacements, actifs et masquage des données
+
+> Lisez les données de référence côté acheteur que les fournisseurs peuvent voir : entreprises acheteurs liées, emplacements et régions, actifs et types d'actifs, et fonctionnement du masquage.
+
+Les bons de travail référencent un monde détenu par vos acheteurs : leurs entreprises, emplacements, régions et actifs. L'API Fournisseur en expose des vues en lecture seule, filtrées selon ce que vos relations vous autorisent à voir.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Masquage des données
+
+Ce que vous voyez dépend du type de fournisseur auquel votre clé appartient :
+
+- **Les clés d'équipe de service interne** (votre entreprise fournisseur est l'équipe interne de l'acheteur) reçoivent des enregistrements complets.
+- **Les clés de fournisseur tiers** reçoivent des enregistrements masqués sur les bons de travail, emplacements et factures : les champs privés à l'acheteur sont vidés avant que la réponse ne soit retournée.
+
+Si un champ que vous attendez est systématiquement vide, le masquage est la première chose à vérifier. La portée elle-même ne peut pas être élargie par des filtres ; les filtres de sécurité locataire dérivés de votre clé s'appliquent toujours.
+
+## Entreprises acheteurs
+
+`GET /v1/supplier/buyer_company/buyer_companies` retourne chaque entreprise acheteur qui a une relation avec votre fournisseur. Aucune pagination ni aucun filtre n'est honoré : l'ensemble complet limité au locataire revient en une seule réponse (le `buyerCompanySettings` de chaque entreprise est retiré).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/buyer_company/buyer_companies"
+```
+
+Utilisez-le pour ajuster le comportement par acheteur dans votre intégration (quels types de problème utiliser, quels acheteurs approuvent automatiquement les complétions tierces, etc.).
+
+## Emplacements et régions
+
+```bash
+# Liste : la taille de page est plafonnée à 10 sur cet endpoint (les limites plus grandes sont réduites silencieusement)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/location/locations?limit=10"
+
+# Nombre, un seul ou plusieurs à la fois
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/count_by"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/multiple/1204,1205"
+```
+
+- La liste des emplacements plafonne `limit` à **10** ; la plupart des autres listes autorisent 25.
+- `multiple/{ids}` supprime silencieusement les identifiants que vous ne pouvez pas lire ; le `count` de la réponse est égal à ce qui a été effectivement retourné.
+- Les régions (regroupements d'emplacements par entreprise acheteur) sont à `GET /v1/supplier/location/regions` et `/regions/{id}` avec pagination standard.
+
+## Actifs et types d'actifs
+
+Les actifs sont les équipements que vos techniciens entretiennent ; les types d'actifs les classifient.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/assets?locationId=1204&limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/assets/5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_types?limit=25"
+```
+
+La lecture d'un actif unique enrichit les compteurs de l'actif (type d'enveloppe `ApiAssetWithMeter`), ce qui donne à vos techniciens un contexte historique des compteurs avant une visite. Les quatre endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) sont en lecture seule avec pagination standard et filtres par champ.
+
+## Stratégie de mise en cache
+
+Les données de référence changent lentement. Une configuration pratique :
+
+- Actualisez les entreprises acheteurs quotidiennement (un appel).
+- Synchronisez les emplacements et actifs des bons de travail actifs à la demande, en cache par identifiant.
+- Traitez `400` sur une lecture unique comme « hors de votre portée » et `404` comme « n'existe pas », et attendez-vous à ce que des identifiants disparaissent de votre vue lorsqu'une relation acheteur prend fin.

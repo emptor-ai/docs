@@ -1,0 +1,167 @@
+# Achats et inventaire avec l'API Fournisseur
+
+> Exécutez le cycle de vie complet des achats : demandes d'achat, bons de commande et leurs postes, réceptions et retours, catalogues, niveaux de stock et le webhook Order.co.
+
+Les endpoints d'inventaire sous `/v1/supplier/inventory/` couvrent tout le cycle de vie des achats : les techniciens émettent des **demandes d'achat** (DA), les acheteurs les transforment en **bons de commande** (BC) auprès de vendeurs, les marchandises arrivent comme **réceptions**, et les niveaux de stock sont mis à jour par **emplacement de stock**. La même surface est reflétée pour les équipes internes des acheteurs dans l'[API Équipes internes](/partners-api/introduction).
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Demandes d'achat
+
+Statuts de DA : `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`.
+
+```bash
+# DA approuvées en attente de commande
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_requests?status=approved&limit=25"
+
+# Une DA avec ses postes
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_requests/601"
+```
+
+Deux écritures de statut :
+
+- `PATCH /v1/supplier/inventory/purchase_requests/{id}/cancelled` annule, et ne fonctionne que depuis un statut annulable (`requested` ou `approved`); tout autre statut donne `400`.
+- `PATCH /v1/supplier/inventory/purchase_requests/{id}/{status}` définit tout statut de la liste ci-dessus. Les noms inconnus sont rejetés.
+
+En fonctionnement normal, vous définissez rarement les statuts de DA directement : ils sont **recalculés à partir des postes** à mesure que vous les associez à des BC, et l'exécution se produit à la complétion des bons de travail.
+
+### Postes de DA
+
+Les postes sont interrogés séparément, ce qui vous permet de bâtir une liste de travail de commande à travers plusieurs DA :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_request_line_items?status=approved&partId=210"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/inventory/purchase_request_line_items/count_by?status=approved"
+```
+
+Ces deux endpoints ne sont pas limités en débit et utilisent des valeurs par défaut de pagination internes plutôt que le plafond externe 10/25.
+
+Le pont entre les DA et les BC est `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}` : il prend des ids de postes de DA séparés par des virgules, met chacun à `orderInProgress` avec son `associatedPurchaseOrderLineItemId`, et recalcule le statut de chaque DA parent. Les ids pour lesquels vous n'avez pas de permission sont silencieusement ignorés, alors comparez la liste retournée avec ce que vous avez envoyé.
+
+## Bons de commande
+
+Statuts de BC : `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
+
+### Création
+
+`POST /v1/supplier/inventory/purchase_orders` requiert `status` (typiquement `new`), `partEquipmentVendorId`, `currencyId` et `createdByEmail`. `totalCost` est aussi requis à moins que les paramètres d'inventaire de votre entreprise ne marquent le coût du BC comme non obligatoire.
+
+```bash
+curl -X POST "$BASE/v1/supplier/inventory/purchase_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "new",
+    "partEquipmentVendorId": 44,
+    "currencyId": "USD",
+    "createdByEmail": "purchasing@supplier.com",
+    "stockLocationId": 7,
+    "totalBeforeTax": 620.00,
+    "tax": 52.70,
+    "totalCost": 672.70,
+    "incomingLineItems": [
+      {
+        "isEquipmentLine": false,
+        "partId": 210,
+        "partQuantity": 2,
+        "partUomId": 1,
+        "partCost": 310.00,
+        "partCurrencyId": "USD",
+        "prLineItemIds": [8801, 8802]
+      }
+    ]
+  }'
+```
+
+Les postes distinguent les lignes de pièces des lignes d'équipement via `isEquipmentLine`; les lignes de pièces portent `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, les lignes d'équipement les équivalents `equipment*`. `prLineItemIds` relie le poste aux demandes d'achat qu'il exécute. Passer un `id` de premier niveau met à jour un BC existant.
+
+### Remplacer les postes en lot
+
+`POST /v1/supplier/inventory/purchase_order_line_items/bulk` prend un **tableau JSON** de charges utiles de postes et a une sémantique de remplacement :
+
+<Warning>
+Tous les postes **non reçus** du bon de commande cible sont d'abord supprimés, puis les postes soumis sont créés. Envoyez toujours l'ensemble complet des lignes ouvertes prévues, jamais seulement le delta. Les éléments pour lesquels vous n'avez pas de permission d'écriture sont silencieusement ignorés.
+</Warning>
+
+`supplierFacilityId` et `supplierCompanyId` sur chaque poste sont écrasés à partir de votre clé, les listes d'ids de pièces/équipements/DA du BC sont recalculées, et la notification de bon de commande est renvoyée. Non limité en débit.
+
+### Marquer commandé
+
+`PATCH /v1/supplier/inventory/purchase_orders/{id}/ordered` définit le statut à `ordered` et envoie la commande au vendeur par courriel.
+
+<Note>
+La réponse de succès est une enveloppe de chaîne (`"type": "Email"`, `"data": "Email has been sent"`), et **non** le bon de commande. Récupérez à nouveau le BC si vous avez besoin de son état mis à jour.
+</Note>
+
+`PATCH /v1/supplier/inventory/purchase_orders/{id}/cancel` annule et retourne le BC mis à jour.
+
+## Réceptions et retours
+
+La réception est un `PUT` indexé par le poste de BC :
+
+```bash
+curl -X PUT "$BASE/v1/supplier/inventory/purchase_order_receipts" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptNumber": "RCPT-1042",
+    "purchaseOrderId": 350,
+    "purchaseOrderLineItemId": 9902,
+    "receivedQuantity": 2,
+    "pricePerQuantity": 310.00,
+    "updatedBy": "warehouse@supplier.com",
+    "supplierFacilityId": 12
+  }'
+```
+
+Requis : `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy`, `supplierFacilityId`. Règles :
+
+- `receivedQuantity` doit être non nulle. **Une quantité négative enregistre un retour.**
+- La réception met à jour les quantités/coûts reçus du poste de BC et les fiches de stock à l'emplacement de destination; le statut du BC est cumulé vers `partially_received`/`received` en conséquence.
+- Pour l'équipement sérialisé, `equipmentPerStockLocationReceiptValues` (ou `assetReceiptValues`/`receiptValuesWithoutId`) porte une entrée `{ serialNumber, assetNumber }` par unité. La longueur de la liste doit égaler `receivedQuantity`, ces tableaux ne sont pas permis sur les retours, et les numéros de série ou d'actif déjà utilisés sont rejetés.
+- Les métadonnées de facture du vendeur (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) peuvent être enregistrées sur la réception.
+
+Relisez une réception avec `GET /v1/supplier/inventory/purchase_order_receipts/{id}`.
+
+## Catalogue : pièces, équipement, vendeurs et stock
+
+Données de référence en lecture seule, toutes avec pagination standard et filtres par champ :
+
+| Endpoint | Contenu |
+| --- | --- |
+| `GET /v1/supplier/inventory/parts` (+`/{id}`) | Votre catalogue de pièces. |
+| `GET /v1/supplier/inventory/equipments` (+`/{id}`) | Types d'équipement (modèles). |
+| `GET /v1/supplier/inventory/part_equipment_vendors` (+`/{id}`) | Vendeurs auprès desquels vous commandez. |
+| `GET /v1/supplier/inventory/parts_per_stock_locations` (+`/{id}`) | Inventaire de pièces par emplacement de stock : quantités et emplacements de casiers. |
+| `GET /v1/supplier/inventory/equipment_per_stock_locations` (+`/{id}`) | Unités d'équipement sérialisé conservées aux emplacements de stock. |
+
+`parts_per_stock_locations?partId=210` répond à « où avons-nous cette pièce et en quelle quantité »; filtrez par `stockLocationId` pour obtenir la liste de stock complète d'un emplacement.
+
+## Webhook Order.co
+
+`POST /v1/supplier/inventory/webhook/purchase_order` est un webhook **entrant** pour les systèmes d'achats tiers, actuellement Order.co, et uniquement pour les entreprises fournisseurs inscrites (les autres reçoivent `400`). La charge utile porte `order_id` (l'id tiers), `purchase_order_number` (l'id du BC OpenWrench sous forme de chaîne), un `status`, et un objet `message` spécifique au statut. Effets selon le statut :
+
+- `approved` / `error` — ajoute une note au BC.
+- `rejected` — annule le BC.
+- `completed` — marque le BC comme commandé.
+- `shipping_update` — ajoute une note d'expédition; lorsque `message.shipment_delivery_date` est présent, crée automatiquement des réceptions pour tous les postes non reçus.
+
+Chaque requête et réponse est auditée, et la forme de la réponse varie selon la branche.
+
+## Le flux complet en un coup d'œil
+
+1. Listez les postes de DA `approved` pour bâtir la liste de travail de commande.
+2. Créez le BC avec `incomingLineItems` référençant `prLineItemIds` (ou associez les postes de DA explicitement par la suite).
+3. Marquez le BC `ordered` (le vendeur reçoit le courriel).
+4. Recevez les livraisons avec des réceptions; enregistrez les retours en quantités négatives; les unités sérialisées reçoivent des numéros de série et d'actif par unité.
+5. Les statuts de DA avancent automatiquement (`orderInProgress` → `ordered` → `fulfilled`) à mesure que les postes s'associent et que les bons de travail se terminent.

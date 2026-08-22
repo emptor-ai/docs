@@ -1,0 +1,99 @@
+# Buyer API
+
+> Programmatisk åtkomst till ditt OpenWrench-köparkonto: arbetsordrar, tillgångar, platser, fakturor, PM och mer
+
+OpenWrench Buyer API ger anläggningsoperatörer programmatisk åtkomst till allt på köparsidan av plattformen: skapa och följa arbetsordrar, hantera tillgångar och platser, granska offerter och fakturor, övervaka förebyggande underhåll och söka i ditt leverantörsnätverk.
+
+## Bas-URL
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Alla köparslutpunkter ligger under `/v1/buyer/`.
+
+## Autentisering
+
+Varje förfrågan måste innehålla **två rubriker**: `X-API-KEY` (din API-nyckel, utfärdad per köparkontakt) och `OW-KEY` (den delade hemligheten från OpenWrench som utfärdas tillsammans med den). Nyckeln avgränsar automatiskt varje förfrågan till ditt företag. Du ser bara dina egna data. Förfrågningar som saknar någon av rubrikerna returnerar `401`.
+
+```bash
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+För att få en API-nyckel och en delad hemlighet, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com). Använd `GET /v1/buyer/me` för att inspektera identiteten (kontakt, anläggning, företag) bakom din nyckel.
+
+<Note>
+Sektionen **Internal Teams API** längre ner i den här fliken använder en **separat partner-API-nyckel**. Din köparnyckel autentiserar inte mot slutpunkterna under `/v1/partners/`. Se [Introduktion till Internal Teams API](/partners-api/introduction) för detaljer.
+</Note>
+
+## Hastighetsgränser
+
+10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`. Backa av och försök igen.
+
+## Svarshöljet
+
+Svar för enskilda entiteter:
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Listsvar lägger till ett totalt `count`:
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Fel:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` betyder att en nyckel saknas eller är ogiltig; `400` täcker felaktig indata, felaktiga filter och behörighetsavslag; `429` är hastighetsgränsen.
+
+## Paginering och filtrering
+
+List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som fältfilter. Skicka ett fältnamn med ett värde (kommaseparera flera värden) för att filtrera resultatuppsättningen. Referensens sida för varje slutpunkt listar dess viktigare filter.
+
+## Datumformat
+
+De flesta tidsstämplar är ISO 8601-strängar med offset (t.ex. `2026-08-14T13:05:22.000-07:00`); vissa databastidsstämpelfält serialiseras som `yyyy-MM-dd HH:mm:ss.S`. Rena datum är `yyyy-MM-dd`. När du skickar datum-tider, använd ISO 8601.
+
+## Detaljerade guider
+
+Guiderna i den här fliken går igenom varje del av API:et i detalj, med payloads, statusmodeller och integrationsmönster:
+
+<CardGroup cols={2}>
+  <Card title="Arbetsordrar" href="/buyer-api/work-orders" icon="clipboard-list">
+    Skapa, filtrera, tilldela om, avsluta. Statusmodell, anteckningar och problemtyper.
+  </Card>
+  <Card title="Servicebesök" href="/buyer-api/service-calls" icon="user-check">
+    Besöksbevis: arbetsloggar, faktisk arbetstid och teknikeruppgifter.
+  </Card>
+  <Card title="Tillgångar och platser" href="/buyer-api/assets-and-locations" icon="warehouse">
+    Platser, regioner, tillgångstyper, modeller, mätare och köldmediespårning.
+  </Card>
+  <Card title="Fakturor" href="/buyer-api/invoices" icon="file-invoice-dollar">
+    Godkännandeflödet, AP-synk, plattade exporter och massuppdateringar.
+  </Card>
+  <Card title="Offerter och förslag" href="/buyer-api/quotes-and-proposals" icon="file-signature">
+    Läs leverantörsofferter och stäm av dem mot fakturor.
+  </Card>
+  <Card title="Planerat underhåll" href="/buyer-api/planned-maintenance" icon="calendar-check">
+    Läs scheman, hoppa över körningar och driv PM från en extern schemaläggare.
+  </Card>
+  <Card title="Leverantörsnätverk" href="/buyer-api/supplier-network" icon="network-wired">
+    Sök i ditt nätverk och rangordna privata nätverksleverantörer för utskick.
+  </Card>
+  <Card title="Platsbesiktningar" href="/buyer-api/site-survey-walkthroughs" icon="clipboard-check">
+    Genomgångar och arbetsordrar som skapas av deras iakttagelser.
+  </Card>
+  <Card title="Filer och bilagor" href="/buyer-api/files-and-attachments" icon="paperclip">
+    Ladda upp en gång, referera överallt, ladda ner bevis.
+  </Card>
+  <Card title="Konto och verktyg" href="/buyer-api/account-and-utilities" icon="id-badge">
+    Ping, nyckelidentitet, användarprovisionering och växelkurser.
+  </Card>
+</CardGroup>

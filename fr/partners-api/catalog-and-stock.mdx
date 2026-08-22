@@ -1,0 +1,76 @@
+# Catalogue, niveaux de stock et consommation sur les bons de travail
+
+> Lisez les pièces, types d'équipement, fournisseurs, emplacements de stock, inventaire par emplacement et pièces consommées sur les bons de travail avec l'API Internal Teams.
+
+Autour du [flux d'achats](/partners-api/purchasing-flow) se trouvent les données de référence et de stock : ce que vous pouvez commander (pièces, types d'équipement), auprès de qui vous commandez (fournisseurs), où cela se trouve (emplacements de stock et inventaire par emplacement), et où c'est allé (consommation sur les bons de travail). Tout cela est en lecture seule via l'API Internal Teams.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"
+export SECRET="<shared-secret>"
+```
+
+Chaque liste ci-dessous prend en charge les paramètres de pagination ainsi que les filtres d'égalité sur les colonnes de l'entité (tout autre paramètre de requête, par exemple `stockLocationId=42`), toujours limités au périmètre de votre entreprise.
+
+## Catalogue
+
+| Endpoint | Contenu |
+| --- | --- |
+| `GET /v1/partners/inventory/parts` (+`/{id}`) | Le catalogue de pièces : consommables et pièces de rechange. |
+| `GET /v1/partners/inventory/equipment_types` (+`/{id}`) | Modèles d'équipement (articles sérialisés). |
+| `GET /v1/partners/inventory/part_equipment_vendors` (+`/{id}`) | Fournisseurs, utilisés comme `partEquipmentVendorId` sur les bons de commande. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/parts?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/part_equipment_vendors"
+```
+
+Synchronisez-les d'abord dans votre système d'achats ; tous les autres appels référencent leurs identifiants.
+
+## Emplacements de stock et inventaire
+
+Les **emplacements de stock** sont les entrepôts, camions et remises qui contiennent l'inventaire :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations/7"
+```
+
+Deux types d'enregistrements expriment ce qui est détenu où :
+
+**Pièces par emplacement de stock** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) : un enregistrement par pièce par emplacement : quantités en main, réservées et disponibles, emplacement de bac et coûts.
+
+```bash
+# Où la pièce 210 est-elle stockée ?
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?partId=210"
+
+# Tout ce qui se trouve à l'emplacement de stock 7
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
+```
+
+**Équipement par emplacement de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) : un enregistrement par unité physique sérialisée : numéro de série, état et provenance. Ce sont les unités que les [réceptions avec numéros de série](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) créent.
+
+Les réceptions constituent la voie d'écriture dans le stock via cette API ; le côté lecture ici est la façon dont vous rapprochez le stock OpenWrench avec votre ERP.
+
+## Pièces et équipement utilisés sur les bons de travail
+
+`GET /v1/partners/work_order/work_order_parts_equipments/{workOrderId}` liste les enregistrements de pièces et d'équipement consommés sur un bon de travail : le côté consommation du grand livre d'inventaire.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/work_order/work_order_parts_equipments/9001"
+```
+
+Les résultats sont paginés et acceptent les mêmes filtres d'égalité. Pour les clés partenaires dont l'entreprise fournisseur **n'est pas** une entreprise de techniciens internes, les objets `workOrder` et `location` intégrés reviennent masqués, avec les champs sensibles retirés.
+
+## Modèle de rapprochement
+
+Un rapprochement d'inventaire nocturne :
+
+1. Récupérez `parts_per_stock_locations` par emplacement de stock et comparez les quantités avec votre ERP.
+2. Expliquez les écarts : réceptions enregistrées ce jour-là (entrée d'achats) moins `work_order_parts_equipments` pour les bons de travail complétés ce jour-là (sortie de consommation).
+3. Enquêtez sur ce qui reste : généralement une réception manquée, un retour non enregistré (réception négative) ou une consommation journalisée sur le mauvais bon de travail.

@@ -1,0 +1,107 @@
+# Fakturans livscykel och betalflöden i Buyer API
+
+> Läs, godkänn och betala leverantörsfakturor med OpenWrench Buyer API, inklusive statusövergångar, AP-systemsynk, plattade exporter och massuppdateringar.
+
+Leverantörer fakturerar avslutade arbetsordrar via fakturor; Buyer API är där din AP-integration läser dem, för dem genom godkännande och markerar dem betalda.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Fakturastatusar
+
+Fakturor bär en gemen `status`:
+
+| Status | Betydelse |
+| --- | --- |
+| `draft` | Leverantören redigerar fortfarande. **Aldrig synlig i köparläsningar.** |
+| `pending` | Publicerad till dig, väntar på granskning. |
+| `approved` | Godkänd för betalning. |
+| `processing` | I din betalningskörning. |
+| `paid` | Avräknad. |
+| `disputed` | Du har bestridit den (upprättad i appen). |
+| `pastdue`, `transferred`, `void` | Åldrande, överlämnad och ogiltigförklarad. |
+
+Den köparkontrollerade vägen är `pending → approved → processing → paid`. Varje flytt har en dedikerad slutpunkt; det finns ingen generisk statussättare.
+
+## Läsa fakturor
+
+```bash
+# Väntande fakturor, nyast först
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+
+# Endast antal
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices/count_by?status=pending"
+
+# En faktura
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
+```
+
+En faktura länkar tillbaka till sitt `workOrderId`, `locationId` och `supplierFacilityId`, och bär pengauppdelningen i sektioner (arbete, material, resa, frakt, övrigt), var och en med rader, en `taxRate` och en `totalBeforeTax`, som rullar upp till `invoiceTotalBeforeTax`, `invoiceTax` och `invoiceTotalAfterTax`. Monetära värden serialiseras som strängar. Den renderade PDF:en finns i `invoicePDFs`; stödjande filer finns i `attachments` (se [Filer och bilagor](/buyer-api/files-and-attachments)).
+
+### Plattad export
+
+`GET /v1/buyer/invoice/invoices/download` returnerar samma data som platta rader (en rad per faktura med totalsummorna denormaliserade), byggd för kalkylbladsexport och AP-systemimporter. Samma filter som list-slutpunkten.
+
+## Flytta en faktura genom godkännande
+
+Varje övergångsslutpunkt tar bara fakturans id:
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/approved" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 7710 }'
+```
+
+De fyra slutpunkterna är `status/pending`, `status/approved`, `status/processing` och `status/paid`. Delat beteende:
+
+- Varje övergång **rensar fakturans tvistflagga** och sprider sedan en matchande statusändring till den associerade arbetsordern.
+- Om statusmappningen för arbetsordern misslyckas **ogiltigförklaras** fakturan och anropet returnerar `400`. Behandla `400` här som "hämta om och inspektera", inte "försök igen".
+- Ett spar-nivåvalideringsfel returnerar `406`.
+
+### Markera betald efter arbetsorder-id
+
+När ditt AP-system känner till arbetsordern men inte OpenWrench-fakturans id, stäng loopen med:
+
+```bash
+curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "workOrderId": "9001" }'
+```
+
+Uppslagningen provar `workOrderId` först och faller tillbaka på `externalWorkOrderId`, alltid inom ditt företag. Redan `paid` fakturor returneras oförändrade (säkert att försöka igen); `approved` eller `processing` fakturor markeras som betalda; en faktura i någon annan status returnerar `400` med "Invoice not found".
+
+## Verktyg
+
+**Lägg till arbetsorderdetaljsidan till PDF:en.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` genererar om fakturans PDF med arbetsorderdetaljsidan bifogad och returnerar den nya PDF-länken (höljestyp `UpdatedInvoicePdf`). Ingen förfrågan-kropp; inte hastighetsbegränsad.
+
+**Massuppdatering med filter.** `PATCH /v1/buyer/invoice/bulk_update_with_filters` tillämpar en kolumnuppdatering på varje faktura som matchar ett filter, alltid begränsat till ditt företag. Båda kartorna är fria kolumn→värde-mappningar:
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/invoice/bulk_update_with_filters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "filters": { "status": "approved" }, "updates": { "status": "processing" } }'
+```
+
+Den returnerar antalet uppdaterade fakturor. Det här är ett kraftverktyg som förbigår sidoeffekterna från per-faktura-övergångar, så föredra statusslutpunkterna om du inte verkligen behöver en sweep. Inte hastighetsbegränsad.
+
+**Publicera utkast för avslutade arbetsordrar.** `PATCH /v1/buyer/invoice/publish_draft_invoices_if_wo_complete_and_auto_publish_enabled` publicerar leverantörsfakturautkast vars arbetsorder är klar, för leverantörer som aktiverade auto-publicering. Det kräver en **super-admin** köpar-API-nyckel och returnerar `403` för en vanlig nyckel. Avsett för schemalagda skötseljobb.
+
+## AP-synk-mönster
+
+En robust leverantörsreskontrasynk:
+
+1. Polla `GET /invoices?status=pending` (eller `publishedAt`-fönster) enligt schema.
+2. Hämta varje faktura, matcha totalsummor mot det godkända [förslaget](/buyer-api/quotes-and-proposals) och arbetsorderns `nte`.
+3. `POST status/approved`, exportera till ditt AP-system och sedan `POST status/processing`.
+4. Vid avräkning, `POST status/paid` via id, eller `status/paid/by_work_order_id` med den arbetsorderreferens som ditt AP-system bär.
+5. Logga höljets `traceId` vid varje `400`/`406` så att supporten kan spåra den exakta förfrågan.

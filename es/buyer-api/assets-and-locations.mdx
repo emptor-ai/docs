@@ -1,0 +1,155 @@
+# Activos, tipos de activos, modelos, medidores y ubicaciones
+
+> Gestiona el mundo físico de la Buyer API: ubicaciones y regiones, tipos y modelos de activos, creación de activos con seguimiento de refrigerante y registro de lecturas de medidores.
+
+Todo lo que una orden de trabajo referencia vive aquí: **ubicaciones** (tus sitios físicos, agrupadas en **regiones**) y **activos** (equipos en una ubicación, clasificados por **tipo de activo**, opcionalmente estandarizados por **modelo de activo** e instrumentados con **medidores**).
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ubicaciones
+
+Las ubicaciones son de lectura principalmente a través de la API:
+
+```bash
+# Listar (el tamaño de página en este endpoint se limita a 10, aunque pidas más)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations?limit=10"
+
+# Contar coincidencias con un filtro
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/count_by?regionId=4"
+
+# Una ubicación, o varias en una sola llamada
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/multiple/1204,1205,1210"
+```
+
+Notas:
+
+- El endpoint de listado limita `limit` a **10** (la mayoría de los listados permite 25). Planifica los bucles de paginación en consecuencia.
+- `multiple/{ids}` toma ids separados por coma y **omite silenciosamente** cualquier id sobre el que no tengas permiso de lectura; verifica qué ids llegaron en lugar de asumir que llegaron todos.
+- La única escritura es `PATCH /v1/buyer/location/locations/{id}`, y lee **solo `locationTypeDetails`** del cuerpo (valores de campos personalizados del tipo de ubicación). Todos los demás campos se ignoran.
+
+Las regiones agrupan ubicaciones: `GET /v1/buyer/location/regions` y `GET /v1/buyer/location/regions/{id}`.
+
+## Tipos de activos
+
+Los tipos de activos clasifican el equipamiento ("Walk-in cooler", "Rooftop unit") y llevan valores por defecto a nivel de clase, incluidas las configuraciones de refrigerante.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/asset_types" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Walk-in cooler",
+    "usesRefrigerant": true,
+    "refrigerantTypeCode": "R-448A",
+    "fullChargeLb": 12.5
+  }'
+```
+
+- `name` es el único campo obligatorio. `buyerCompanyId` se deriva de tu clave y no se puede establecer.
+- `applianceCategory`, `refrigerantTypeCode` y `fullChargeLb` aceptan un **`null` explícito para borrar** el valor por defecto a nivel de clase. `fullChargeLb` debe ser positivo cuando se suministra.
+- Pasar un `id` hace upsert sobre un tipo existente.
+
+Lectura con `GET /v1/buyer/asset/asset_types` y `GET /v1/buyer/asset/asset_types/{id}`.
+
+## Activos
+
+Crea un activo con `POST /v1/buyer/asset/assets`. Obligatorios: `name`, `assetTypeId`, `locationId`, `isActive`, `isLeased`.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/assets" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Cooler #2 - back of house",
+    "assetTypeId": 301,
+    "locationId": 1204,
+    "isActive": true,
+    "isLeased": false,
+    "serialNumber": "WC2-99841",
+    "manufacturer": "Arctic Air",
+    "assetModelId": 77,
+    "installDate": "2024-05-01"
+  }'
+```
+
+Comportamiento a conocer:
+
+- `buyerFacilityId` y `buyerCompanyId` se **derivan de la ubicación**, nunca se leen del cuerpo.
+- **Los overrides de refrigerante se pueden borrar.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` y `refrigerantRequiresProcessShutdown` son overrides por unidad de los valores por defecto del tipo de activo. Omitir la clave mantiene el valor almacenado; un `null` explícito (o cadena vacía) lo borra y vuelve a heredar del tipo. `isRefrigerantTracked` se comporta de forma similar: omitido o `null` mantiene el valor almacenado, y la inscripción solo se desactiva con un `false` explícito.
+- **Subactivos.** `parentId` convierte esto en un subactivo. Requiere que los subactivos estén habilitados para tu empresa, y el hijo debe estar en la misma ubicación que el padre.
+- Pasar un `id` hace upsert sobre un activo existente.
+
+Lecturas:
+
+```bash
+# Listado completo con filtros
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets?locationId=1204&limit=25"
+
+# Proyección lite: id, name, type, serial, location, warranties
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asset_lite?locationId=1204"
+
+# Un activo, hidratado con sus medidores
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
+```
+
+`asset_lite` es la forma económica de sincronizar un selector de activos: cuando no pasas parámetros de paginación devuelve el **conjunto completo sin paginar**, con `count` igual al número de elementos devueltos. La lectura de un solo activo hidrata los medidores (el `type` de la envoltura es `ApiAssetWithMeter`).
+
+## Modelos de activos
+
+Los modelos estandarizan especificaciones y manuales por tipo. `POST /v1/buyer/asset/asset_models` requiere `modelName` y `assetTypeId`, con `manuals` y `specs` opcionales como adjuntos.
+
+El comparador difuso es útil durante importaciones, cuando tus datos de origen tienen nombres de modelo en texto libre:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_models/fuzzy/Arctic%20Air%20WC-200/301"
+```
+
+`GET /v1/buyer/asset/asset_models/fuzzy/{name}/{assetTypeId}` devuelve el modelo más cercano dentro del tipo de activo, o `404` cuando nada es suficientemente parecido. Ante un `404`, cae al plan B de crear el modelo.
+
+## Medidores y lecturas
+
+Los medidores adjuntan una serie medible a un activo (temperatura, horas de funcionamiento, conteo de ciclos). Crea el medidor una vez y luego registra lecturas contra él:
+
+```bash
+# 1. Crear el medidor
+curl -X POST "$BASE/v1/buyer/asset/meters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Box temperature",
+    "assetId": 5511,
+    "locationId": 1204,
+    "meterTypeId": 2,
+    "seriesType": "continuous",
+    "valueType": "number",
+    "valueUnit": "F"
+  }'
+
+# 2. Registrar lecturas (por ejemplo desde un puente IoT)
+curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meterId": 9310,
+    "value": "38.2",
+    "expectedValue": "36",
+    "recordedAt": "2026-08-21T09:00:00.000-07:00",
+    "recordedBy": "iot-bridge@example.com"
+  }'
+```
+
+<Note>
+Los payloads de medidor y de lectura son parseados por un ayudante compartido del lado del servidor, y el esquema documentado está abreviado. Los campos mostrados arriba son el núcleo confiable; verifica cualquier cosa más allá contra las páginas de referencia de la API o con soporte.
+</Note>
+
+## Estrategia de sincronización
+
+Para una sincronización nocturna de activos: pagina `asset_lite` por el conjunto de ids, compara contra tu sistema y luego obtén los registros completos por id solo para los activos modificados. Eso te mantiene dentro del límite de tasa (10 solicitudes por ventana de 20 segundos) con mucho más margen que paginar el listado completo a 25 por llamada.

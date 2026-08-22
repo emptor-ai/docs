@@ -1,0 +1,155 @@
+# Actifs, types d'actifs, modèles, compteurs et emplacements
+
+> Gérez le monde physique de l'API Acheteur : emplacements et régions, types et modèles d'actifs, création d'actifs avec suivi des frigorigènes et enregistrement des relevés de compteurs.
+
+Tout ce que pointe un bon de travail se trouve ici : les **emplacements** (vos sites physiques, regroupés en **régions**) et les **actifs** (équipements sur un emplacement, classés par **type d'actif**, éventuellement normalisés par **modèle d'actif** et instrumentés avec des **compteurs**).
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Emplacements
+
+Les emplacements sont principalement en lecture via l'API :
+
+```bash
+# Liste (la taille de page sur cet endpoint est limitée à 10, même si vous demandez davantage)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations?limit=10"
+
+# Nombre correspondant à un filtre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/count_by?regionId=4"
+
+# Un emplacement, ou plusieurs en un seul aller-retour
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/multiple/1204,1205,1210"
+```
+
+Notes :
+
+- L'endpoint de liste limite `limit` à **10** (la plupart des endpoints de liste permettent 25). Planifiez vos boucles de pagination en conséquence.
+- `multiple/{ids}` prend des ids séparés par des virgules et **omet silencieusement** tout id pour lequel vous n'avez pas la permission de lecture. Vérifiez quels ids ont été retournés plutôt que de présumer que tous l'ont été.
+- La seule écriture est `PATCH /v1/buyer/location/locations/{id}`, et elle ne lit **que `locationTypeDetails`** dans le corps (les valeurs de champ personnalisées pour le type de l'emplacement). Tous les autres champs sont ignorés.
+
+Les régions regroupent les emplacements : `GET /v1/buyer/location/regions` et `GET /v1/buyer/location/regions/{id}`.
+
+## Types d'actifs
+
+Les types d'actifs classent l'équipement (« Chambre froide », « Unité de toit ») et portent des valeurs par défaut au niveau de la classe, y compris les paramètres de frigorigène.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/asset_types" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Walk-in cooler",
+    "usesRefrigerant": true,
+    "refrigerantTypeCode": "R-448A",
+    "fullChargeLb": 12.5
+  }'
+```
+
+- `name` est le seul champ requis. `buyerCompanyId` est dérivé de votre clé et ne peut pas être défini.
+- `applianceCategory`, `refrigerantTypeCode` et `fullChargeLb` acceptent un **`null` explicite pour effacer** la valeur par défaut au niveau de la classe. `fullChargeLb` doit être positif lorsqu'il est fourni.
+- Passer un `id` met à jour un type existant.
+
+Lecture avec `GET /v1/buyer/asset/asset_types` et `GET /v1/buyer/asset/asset_types/{id}`.
+
+## Actifs
+
+Créez un actif avec `POST /v1/buyer/asset/assets`. Requis : `name`, `assetTypeId`, `locationId`, `isActive`, `isLeased`.
+
+```bash
+curl -X POST "$BASE/v1/buyer/asset/assets" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Cooler #2 - back of house",
+    "assetTypeId": 301,
+    "locationId": 1204,
+    "isActive": true,
+    "isLeased": false,
+    "serialNumber": "WC2-99841",
+    "manufacturer": "Arctic Air",
+    "assetModelId": 77,
+    "installDate": "2024-05-01"
+  }'
+```
+
+Comportement à connaître :
+
+- `buyerFacilityId` et `buyerCompanyId` sont **dérivés de l'emplacement**, jamais lus depuis le corps.
+- **Les remplacements de frigorigène sont effaçables.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` et `refrigerantRequiresProcessShutdown` sont des remplacements par unité des valeurs par défaut du type d'actif. Omettre la clé conserve la valeur stockée; un `null` explicite (ou une chaîne vide) l'efface pour revenir à hériter du type. `isRefrigerantTracked` se comporte de la même façon : omis ou `null` conserve la valeur stockée, et l'inscription n'est désactivée que par un `false` explicite.
+- **Sous-actifs.** `parentId` en fait un sous-actif. Cela nécessite que les sous-actifs soient activés pour votre entreprise, et l'enfant doit être au même emplacement que le parent.
+- Passer un `id` met à jour un actif existant.
+
+Lectures :
+
+```bash
+# Liste complète avec filtres
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets?locationId=1204&limit=25"
+
+# Projection allégée : id, nom, type, numéro de série, emplacement, garanties
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asset_lite?locationId=1204"
+
+# Un actif, hydraté avec ses compteurs
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
+```
+
+`asset_lite` est le moyen économique de synchroniser un sélecteur d'actifs : lorsque vous ne passez aucun paramètre de pagination, il retourne **l'ensemble complet non paginé**, avec `count` égal au nombre d'éléments retournés. La lecture d'un seul actif hydrate les compteurs (le `type` de l'enveloppe indique `ApiAssetWithMeter`).
+
+## Modèles d'actifs
+
+Les modèles normalisent les caractéristiques et les manuels par type. `POST /v1/buyer/asset/asset_models` requiert `modelName` et `assetTypeId`, avec des pièces jointes `manuals` et `specs` optionnelles.
+
+L'appariement approximatif est pratique lors des importations, quand vos données sources contiennent des noms de modèles en texte libre :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_models/fuzzy/Arctic%20Air%20WC-200/301"
+```
+
+`GET /v1/buyer/asset/asset_models/fuzzy/{name}/{assetTypeId}` retourne le modèle le plus proche dans le type d'actif, ou `404` si rien n'est suffisamment proche. Repliez-vous sur la création du modèle en cas de `404`.
+
+## Compteurs et relevés
+
+Les compteurs attachent une série mesurable à un actif (température, heures de fonctionnement, nombres de cycles). Créez le compteur une fois, puis enregistrez des relevés :
+
+```bash
+# 1. Créer le compteur
+curl -X POST "$BASE/v1/buyer/asset/meters" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Box temperature",
+    "assetId": 5511,
+    "locationId": 1204,
+    "meterTypeId": 2,
+    "seriesType": "continuous",
+    "valueType": "number",
+    "valueUnit": "F"
+  }'
+
+# 2. Enregistrer des relevés (p. ex. depuis un pont IoT)
+curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "meterId": 9310,
+    "value": "38.2",
+    "expectedValue": "36",
+    "recordedAt": "2026-08-21T09:00:00.000-07:00",
+    "recordedBy": "iot-bridge@example.com"
+  }'
+```
+
+<Note>
+Les charges utiles de compteur et de relevé sont analysées par un utilitaire côté serveur partagé, et le schéma documenté est abrégé. Les champs montrés ci-dessus constituent le noyau fiable; vérifiez tout ce qui va au-delà auprès des pages de référence de l'API ou du soutien.
+</Note>
+
+## Stratégie de synchronisation
+
+Pour une synchronisation nocturne des actifs : paginez `asset_lite` pour l'ensemble des ids, comparez avec votre système, puis récupérez les fiches complètes par id uniquement pour les actifs modifiés. Cela vous garde bien à l'intérieur de la limite de débit (10 requêtes par fenêtre de 20 secondes), beaucoup plus confortablement que de paginer la liste complète à 25 par appel.

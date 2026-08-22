@@ -1,0 +1,76 @@
+# Katalog, lagernivåer och förbrukning på arbetsordrar
+
+> Läs delar, utrustningstyper, leverantörer, lagerplatser, per-plats-inventering och delarna som förbrukas på arbetsordrar med Internal Teams API.
+
+Runt [inköpsflödet](/partners-api/purchasing-flow) finns referens- och lagerdatan: vad du kan beställa (delar, utrustningstyper), vem du beställer från (leverantörer), var det bor (lagerplatser och per-plats-inventering) och vart det tog vägen (förbrukning på arbetsordrar). Allt är skrivskyddat via Internal Teams API.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"
+export SECRET="<shared-secret>"
+```
+
+Varje lista nedan stödjer pagineringsparametrarna plus likhetsfilter på entitetens kolumner (varje annan frågeparameter, t.ex. `stockLocationId=42`), alltid avgränsat till ditt företag.
+
+## Katalog
+
+| Slutpunkt | Innehåll |
+| --- | --- |
+| `GET /v1/partners/inventory/parts` (+`/{id}`) | Delkatalogen: förbrukningsvaror och reservdelar. |
+| `GET /v1/partners/inventory/equipment_types` (+`/{id}`) | Utrustningsmodeller (serialiserade artiklar). |
+| `GET /v1/partners/inventory/part_equipment_vendors` (+`/{id}`) | Leverantörer, används som `partEquipmentVendorId` på inköpsordrar. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/parts?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/part_equipment_vendors"
+```
+
+Synka dessa till ditt inköpssystem först; varje annat anrop refererar till deras id:n.
+
+## Lagerplatser och inventering
+
+**Lagerplatser** är lagren, lastbilarna och förråden som håller inventering:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations/7"
+```
+
+Två posttyper uttrycker vad som hålls var:
+
+**Delar per lagerplats** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) är en post per del per plats: kvantiteter tillgängliga, reserverade och tillgängliga, binlageringplats och kostnader.
+
+```bash
+# Var finns del 210 lagrad?
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?partId=210"
+
+# Allt i lagerplats 7
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
+```
+
+**Utrustning per lagerplats** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) är en post per fysisk serialiserad enhet: serienummer, skick och proveniens. Det här är enheterna som [mottagningar med serienummer](/partners-api/purchasing-flow#4-registrera-mottagningar-när-varor-kommer) skapar.
+
+Mottagningar är skrivvägen in i lager via det här API:et; läs-sidan här är hur du stämmer av OpenWrench-lager mot ditt ERP.
+
+## Delar och utrustning använda på arbetsordrar
+
+`GET /v1/partners/work_order/work_order_parts_equipments/{workOrderId}` listar del- och utrustningsposter som förbrukats på en arbetsorder: förbrukningssidan av lagerhuvudboken.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/work_order/work_order_parts_equipments/9001"
+```
+
+Resultat är paginerade och accepterar samma likhetsfilter. För partner-nycklar vars leverantörsföretag **inte** är ett internt teknikerföretag returneras de inbäddade `workOrder`- och `location`-objekten maskerade, med känsliga fält borttagna.
+
+## Avstämningsmönster
+
+En nattlig inventeringsavstämning:
+
+1. Hämta `parts_per_stock_locations` per lagerplats och jämför kvantiteter mot ditt ERP.
+2. Förklara skillnaderna: mottagningar registrerade den dagen (inköpsflöde in) minus `work_order_parts_equipments` för arbetsordrar avslutade den dagen (förbrukning ut).
+3. Undersök vad som återstår: vanligtvis en missad mottagning, en oregistrerad retur (negativ mottagning) eller förbrukning loggad mot fel arbetsorder.

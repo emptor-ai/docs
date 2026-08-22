@@ -1,0 +1,124 @@
+# Llamadas de servicio: programación, check-in y finalización
+
+> Conduce el ciclo de vida de la visita con la Supplier API: programa y reprograma técnicos, haz check-in y check-out, establece estados de finalización y lee registros de trabajo.
+
+Una **llamada de servicio** es una visita de un técnico contra una orden de trabajo. La Supplier API conduce todo el ciclo de vida de la visita a través de cinco endpoints de actualización de estado más expansiones de lectura. Es la parte más matizada de la API; los detalles a continuación vale la pena leerlos antes de escribir código.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Cómo funcionan los endpoints de actualización de estado
+
+Los cinco comparten una misma forma de solicitud (un payload de llamada de servicio) y un comportamiento crucial:
+
+<Warning>
+**La respuesta es la orden de trabajo asociada, no la llamada de servicio.** Cada llamada crea o actualiza una llamada de servicio, mueve el estado de la orden de trabajo y devuelve la orden de trabajo actualizada en la envoltura. Lee el nuevo estado de la llamada de servicio desde `associatedServiceCalls` / `lastServiceCall` de la orden de trabajo.
+</Warning>
+
+Campos compartidos de la solicitud: `workOrderId` y `numberOfTechs` siempre son requeridos. `id` apunta a una llamada de servicio existente (omítelo en la primera creación y luego reutilízalo para cada actualización posterior de la misma visita). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, los grupos `checkIn*`/`checkOut*`, `partsWithQuantity`, `stockLocationIds` y `equipmentPerStockLocationIds` se van completando a medida que avanza la visita.
+
+`supplierFacilityId` es requerido para claves de equipo interno de servicio; para claves de proveedor tercero se sobrescribe con el id de tu propia instalación sin importar lo que envíes.
+
+| Endpoint | El estado de la orden de trabajo pasa a |
+| --- | --- |
+| `POST .../service_calls/status_update/tech_scheduled` | `TechScheduled` cuando `serviceScheduledAt` está presente, si no `TechAssigned` |
+| `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` cuando `serviceScheduledAt` está presente, si no `TechAssigned` |
+| `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
+| `POST .../service_calls/status_update/check_out` | El `checkOutStatus` que envías (requerido) |
+| `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Igual que sus contrapartes en sitio, para trabajo remoto |
+
+Todas las rutas están bajo `/v1/supplier/work_order/`.
+
+## 1. Programar la visita
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_scheduled" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "leadTechnicianEmail": "tech@supplier.com",
+    "serviceScheduledAt": "2026-08-22T09:00:00.000-07:00"
+  }'
+```
+
+Para mover la cita más tarde, llama a `tech_rescheduled` con el `id` de la llamada de servicio y el nuevo `serviceScheduledAt`.
+
+## 2. Check-in
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkInByEmail": "tech@supplier.com",
+    "checkInStatus": "TechWorkingOnSite",
+    "checkInNotes": "On site, starting diagnosis.",
+    "checkInGeoLocation": { "lat": "37.7749", "long": "-122.4194" }
+  }'
+```
+
+`checkInTime` toma por defecto la hora actual del servidor cuando estableces un `checkInStatus` sin hora, así que las integraciones en vivo pueden omitirlo; los backfills deberían pasarlo explícitamente. `checkInImages` toma referencias de foto, y las coordenadas geográficas dan al comprador la prueba en sitio.
+
+## 3. Check-out y establecer el resultado
+
+El check-out es donde se decide el próximo estado de la orden de trabajo. **`checkOutStatus` es requerido y debe ser un nombre de estado de orden de trabajo válido**; se convierte en el nuevo estado de la orden de trabajo.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkOutByEmail": "tech@supplier.com",
+    "checkOutStatus": "WaitingForReview",
+    "checkOutNotes": "Replaced condenser fan motor. Unit holding 36F.",
+    "checkOutImages": ["<uploaded-file-id>"]
+  }'
+```
+
+Opciones comunes de `checkOutStatus`:
+
+- `WaitingForReview`: trabajo terminado, entregar al comprador para revisión.
+- `TechScheduled` o `PartsRequested` y similares: la visita terminó pero el trabajo continúa (visita de seguimiento, esperando partes).
+
+Las partes y stock consumidos en la visita se registran mediante `partsWithQuantity`, `stockLocationIds` y `equipmentPerStockLocationIds` en el mismo payload; los ids vienen de tu [catálogo de inventario](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+
+En este punto se disparan dos comportamientos de automatización:
+
+- **Auto-aprobación.** Para proveedores terceros cuya empresa compradora tenga `autoApproveWorkOrdersCompletedByThirdParty` habilitado, un resultado `WaitingForReview` se promueve automáticamente a `WorkReviewedAndCompleted`.
+- **Auto-publicación de facturas.** Cuando el estado resultante sea `WorkReviewedAndCompleted`, las reglas de auto-publicación de facturas pueden ejecutarse y publicar tu factura en borrador. Consulta [Cotizaciones y facturación](/supplier-api/quotes-and-invoicing).
+
+`remote_check_in` y `remote_check_out` se comportan de forma idéntica para trabajo hecho fuera del sitio.
+
+## Volver a leer una llamada de servicio
+
+Tres expansiones sobre `GET /v1/supplier/work_order/service_calls/{id}`:
+
+| Endpoint | Añade |
+| --- | --- |
+| `.../{id}/with_work_logs` | Eventos WrenchMode en la ventana de check-in/check-out más `trueWorkTimeMillis` (duración de trabajo excluyendo pausas). |
+| `.../{id}/with_tech_details` | Registros de contacto de técnicos. `hourlyRate` aparece solo para técnicos de tu propia instalación. |
+| `.../{id}/with_work_logs/with_tech_details` | Ambos. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+Para reportes de tiempo a nivel de flota entre todos los técnicos, usa [WrenchMode](/supplier-api/wrenchmode) en lugar de iterar llamadas.
+
+## Trabajos multi-visita
+
+Una orden de trabajo puede llevar muchas llamadas de servicio (diagnóstico, reparación, seguimiento). Crea cada visita con su propia llamada `tech_scheduled` (sin `id`), y mantén las actualizaciones posteriores de cada visita atadas al `id` de su llamada de servicio. Haz check-out de las visitas intermedias con un estado que continúa como `PartsRequested` o `TechScheduled`, y solo de la visita final con `WaitingForReview`.

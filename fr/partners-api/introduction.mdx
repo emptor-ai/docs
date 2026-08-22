@@ -1,0 +1,71 @@
+# API Internal Teams
+
+> Accès aux achats et à l'inventaire pour vos équipes de service internes : demandes d'achat, bons de commande, réceptions, pièces et stock.
+
+L'API Internal Teams est la surface d'intégration pour les systèmes derrière les achats et l'inventaire de vos équipes de service internes : demandes d'achat et leurs postes, bons de commande jusqu'à la réception, catalogues de pièces et d'équipement, emplacements de stock et pièces consommées sur les bons de travail.
+
+## URL de base
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+Les endpoints des équipes internes sont servis sous le préfixe `/v1/partners/`.
+
+## Authentification
+
+Ces endpoints nécessitent une **clé d'API partenaire**, un identifiant distinct des clés d'API acheteur et fournisseur. Une clé d'API acheteur ne fonctionnera pas avec les endpoints `/v1/partners/`, même si cette section se trouve sous la documentation de l'API Acheteur.
+
+Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (la clé partenaire) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête aux données de votre entreprise. Les requêtes auxquelles il manque l'un des deux en-têtes renvoient `401`.
+
+```bash
+curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/partners/ping"
+```
+
+Pour obtenir une clé d'API partenaire et un secret partagé, contactez [support@useopenwrench.com](mailto:support@useopenwrench.com).
+
+## Limites de débit
+
+10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests`. Attendez, puis réessayez.
+
+## Enveloppe de réponse
+
+Réponses pour une entité unique :
+
+```json
+{ "type": "SupplierPurchaseOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+Les réponses de liste ajoutent un `count` total :
+
+```json
+{ "type": "SupplierPurchaseRequest", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Erreurs :
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` signifie une clé manquante ou invalide ; `400` couvre les données saisies erronées, les filtres invalides et les refus de permission ; `429` correspond à la limite de débit.
+
+## Pagination et filtrage
+
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order` (`asc` | `desc`). Les paramètres de requête supplémentaires sont traités comme des filtres de champ. Passez un nom de champ avec une valeur (séparez plusieurs valeurs par des virgules) pour filtrer le jeu de résultats.
+
+## Le flux d'achats
+
+Une intégration typique suit le cycle de vie des achats : lisez les **demandes d'achat** approuvées et leurs postes, créez un **bon de commande** auprès d'un fournisseur, associez les postes de PR aux postes de PO, marquez le PO comme **commandé** et enregistrez les **réceptions** au fur et à mesure de l'arrivée des articles (les quantités reçues négatives enregistrent des retours). Les pièces, types d'équipement, fournisseurs et emplacements de stock complètent les données de référence.
+
+## Guides détaillés
+
+<CardGroup cols={2}>
+  <Card title="Flux d'achats" href="/partners-api/purchasing-flow" icon="cart-flatbed">
+    Le cycle de vie de bout en bout : demandes, commandes, postes et réceptions.
+  </Card>
+  <Card title="Catalogue et stock" href="/partners-api/catalog-and-stock" icon="boxes-stacked">
+    Pièces, équipement, fournisseurs, emplacements de stock et consommation sur les bons de travail.
+  </Card>
+</CardGroup>

@@ -1,0 +1,71 @@
+# Empresas compradoras, ubicaciones, activos y enmascaramiento de datos
+
+> Lee los datos de referencia del lado del comprador que los proveedores pueden ver: empresas compradoras relacionadas, ubicaciones y regiones, activos y tipos de activos, y cómo funciona el enmascaramiento.
+
+Las órdenes de trabajo referencian un mundo propiedad de tus compradores: sus empresas, ubicaciones, regiones y activos. La Supplier API expone vistas de solo lectura de todos ellos, filtradas por lo que tus relaciones te permiten ver.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Enmascaramiento de datos
+
+Cuánto ves depende del tipo de proveedor al que pertenezca tu clave:
+
+- **Claves de equipo interno de servicio** (tu empresa proveedora es el equipo interno del comprador) reciben registros completos.
+- **Claves de proveedor tercero** reciben registros enmascarados en órdenes de trabajo, ubicaciones y facturas: los campos privados del comprador se ponen en blanco antes de devolver la respuesta.
+
+Si un campo que esperas aparece consistentemente vacío, el enmascaramiento es lo primero a revisar. El alcance en sí no puede ampliarse con filtros; los filtros de seguridad de inquilino derivados de tu clave siempre aplican.
+
+## Empresas compradoras
+
+`GET /v1/supplier/buyer_company/buyer_companies` devuelve cada empresa compradora que tiene una relación con tu proveedor. No se respetan paginación ni filtros: el conjunto completo limitado al inquilino llega en una sola respuesta (`buyerCompanySettings` de cada empresa se elimina).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/buyer_company/buyer_companies"
+```
+
+Úsalo para personalizar el comportamiento por comprador en tu integración (qué tipos de problema usar, qué compradores auto-aprueban las completaciones de terceros, etc.).
+
+## Ubicaciones y regiones
+
+```bash
+# Listar: el tamaño de página se limita a 10 en este endpoint (los limits mayores se reducen silenciosamente)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/location/locations?limit=10"
+
+# Contar, una, o varias a la vez
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/count_by"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/1204"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/location/locations/multiple/1204,1205"
+```
+
+- El listado de ubicaciones limita `limit` a **10**; la mayoría de listados permite 25.
+- `multiple/{ids}` descarta silenciosamente los ids que no puedas leer; el `count` de la respuesta equivale a lo que realmente se devolvió.
+- Las regiones (agrupaciones de ubicaciones por empresa compradora) están en `GET /v1/supplier/location/regions` y `/regions/{id}` con paginación estándar.
+
+## Activos y tipos de activos
+
+Los activos son los equipos que tus técnicos atienden; los tipos de activos los clasifican.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/assets?locationId=1204&limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/assets/5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_types?limit=25"
+```
+
+La lectura de un solo activo hidrata los medidores del activo (envoltura tipo `ApiAssetWithMeter`), lo que da a tus técnicos el contexto de historial del medidor antes de una visita. Los cuatro endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) son de solo lectura con paginación estándar y filtros por campo.
+
+## Estrategia de cacheo
+
+Los datos de referencia cambian despacio. Una configuración práctica:
+
+- Refresca las empresas compradoras a diario (una llamada).
+- Sincroniza ubicaciones y activos de órdenes de trabajo activas bajo demanda, cacheando por id.
+- Trata un `400` en una lectura individual como "fuera de tu alcance" y un `404` como "no existe", y espera que los ids desaparezcan de tu vista cuando termina una relación con un comprador.

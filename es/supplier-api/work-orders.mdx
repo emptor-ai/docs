@@ -1,0 +1,119 @@
+# Trabajar órdenes de trabajo con la Supplier API
+
+> Recibe, acepta, rechaza y avanza órdenes de trabajo como proveedor: actualizaciones de estado, seguimiento de partes, fechas estimadas de finalización, adjuntos y notas.
+
+Para una integración de proveedor, la cola de órdenes de trabajo es el inbox. Esta guía cubre los endpoints bajo `/v1/supplier/work_order/` para recibir trabajos, responder a ellos y mantener informados a los compradores mientras avanza el trabajo. Programar visitas y completar el trabajo se hace a través de las [llamadas de servicio](/supplier-api/service-calls).
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Leer tu cola
+
+```bash
+# Trabajo recién asignado, más antiguo primero
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=assignedAt&order=asc"
+
+# Conteo por filtro
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+
+# Una orden de trabajo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Aplica la paginación estándar (`offset`, `limit` por defecto 10 máx. 25, `sort_by`, `order`), y cualquier otro parámetro de consulta filtra sobre las columnas indexadas de la entidad. Todo está limitado por inquilino a tu instalación. Dos cosas a recordar:
+
+- **Las lecturas vienen de una réplica de lectura**, así que tu propio cambio recién escrito puede tardar un momento en aparecer en los resultados de listado.
+- **Enmascaramiento de datos.** Si eres un proveedor tercero (no el equipo interno del comprador), los campos privados del comprador se ponen en blanco en órdenes de trabajo, ubicaciones y facturas antes de devolver la respuesta. Los campos faltantes son usualmente enmascaramiento, no bugs. Consulta [Datos de referencia](/supplier-api/reference-data#data-masking) para más detalles.
+
+## Aceptar o rechazar
+
+**Acepta** con `POST /v1/supplier/work_order/work_orders/status_update/confirm`, que establece el estado a `ConfirmedByServiceProvider`. Una orden de trabajo ya en un display status completado o cerrado no puede aceptarse (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Rechaza** con `POST .../status_update/decline`. Solo los contactos de la facility de proveedor asignada a la orden de trabajo pueden rechazar. La orden de trabajo abandona tu cola a través del flujo de cambio de proveedor: su estado vuelve a `PendingApproval`, o se elige automáticamente un proveedor de red privada, según la configuración del comprador. El `text` de la nota se registra como motivo del rechazo y se refleja en lo que el comprador ve, así que hazlo específico.
+
+Ambas llamadas toman `{ "id": ..., "note": { ... } }` y devuelven la orden de trabajo actualizada.
+
+## Mantener informado al comprador
+
+Tres señales ligeras mientras el trabajo está en marcha:
+
+**Seguimiento de partes.** Tres endpoints de estado, con la misma forma de cuerpo `{ id, note }` que arriba:
+
+| Endpoint | Estado resultante |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Fecha estimada de finalización.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` lee solo `estimatedCompletionDate` (ISO 8601) del cuerpo:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Adjuntos.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` añade referencias de archivo a `supplierAttachments`, preservando lo que ya está ahí. Sube el archivo primero (ver [Archivos y usuarios](/supplier-api/files-and-users)) y luego:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Notas
+
+Añade al hilo compartido comprador-proveedor con `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), y lee el hilo de una orden de trabajo con `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lectura actualiza los acuses de recibo para tu contacto, y una lectura denegada devuelve una lista vacía en lugar de un error.
+
+## Crear una orden de trabajo iniciada por el proveedor
+
+Los proveedores pueden abrir órdenes de trabajo ellos mismos (un técnico ve una puerta rota mientras está en sitio por otra cosa). `POST /v1/supplier/work_order/work_orders` requiere `title` y `locationId`; la ubicación determina la instalación y empresa compradora.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "isSupplierInitiated": true,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de problema hoja de la empresa compradora de la ubicación, y `woPriorityId` a una prioridad por defecto para esa empresa. `status` se deriva de la configuración de la empresa compradora (típicamente `Unassigned` o `PendingApproval`). Un `assetId`, si se da, debe existir, y su área se hereda cuando no se establece `areaId`. El campo es `needApproval` (sin "s") en este cuerpo de creación.
+
+## Tipos de problema
+
+`GET /v1/supplier/work_order/problem_types` lista los tipos de problema entre tus empresas compradoras relacionadas (sin límite de tasa). Úsalo para clasificar correctamente las órdenes de trabajo iniciadas por el proveedor por comprador.
+
+## Ciclo de integración típico
+
+1. Consulta la cola por sondeo para trabajo recién asignado (`sort_by=assignedAt`), o compara sobre `statusChangedAt`.
+2. `confirm` o `decline` dentro de tu SLA.
+3. Programa la visita vía [llamadas de servicio](/supplier-api/service-calls); publica estados de partes y una ECD a medida que las cosas evolucionan.
+4. Completa vía check-out, luego factura mediante [cotizaciones y facturación](/supplier-api/quotes-and-invoicing).

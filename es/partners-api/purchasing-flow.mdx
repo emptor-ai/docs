@@ -1,0 +1,142 @@
+# El flujo de compras: solicitudes a órdenes a recibos
+
+> Recorre el ciclo de compras de la Internal Teams API de extremo a extremo: lee solicitudes de compra aprobadas, emite órdenes de compra, asocia líneas y registra recibos.
+
+Esta guía recorre el ciclo de compras de extremo a extremo con la Internal Teams API: los técnicos levantan **solicitudes de compra** (PRs), tu sistema de compras las convierte en **órdenes de compra** (POs) con un proveedor, y las mercancías llegan como **recibos** que actualizan el stock. Asume que tienes una clave de API de partner (ver la [introducción](/partners-api/introduction)).
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"      # X-API-KEY header
+export SECRET="<shared-secret>"     # OW-KEY header
+```
+
+## Vocabulario de estados
+
+**Solicitudes de compra**: `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`. El estado de una PR se recalcula a partir de sus líneas a medida que se van asociando a POs, por lo que la mayor parte del movimiento ocurre automáticamente.
+
+**Órdenes de compra**: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
+
+## 1. Leer solicitudes de compra aprobadas
+
+```bash
+# El backlog de ordenamiento
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_requests?status=approved"
+
+# Una PR con sus líneas de parte y equipo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_requests/601"
+```
+
+Cualquier parámetro de consulta distinto de los parámetros de paginación actúa como un filtro de igualdad sobre las columnas de la entidad (`status=approved`, `stockLocationId=42`), siempre dentro del alcance de tu empresa.
+
+Para una lista de trabajo transversal a varias PRs, consulta las líneas directamente:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items?status=approved"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items/count_by?status=approved"
+```
+
+Los estados de PR también pueden establecerse directamente cuando tu flujo de aprobación vive fuera de OpenWrench: `PATCH .../purchase_requests/{id}/{status}` para cualquier estado del vocabulario, y `PATCH .../purchase_requests/{id}/cancelled` para cancelar (solo desde `requested` o `approved`; en otro caso `400`).
+
+## 2. Crear la orden de compra
+
+`POST /v1/partners/inventory/purchase_orders` crea la PO con sus líneas en una sola llamada. Requerido: `status` (típicamente `new`), `partEquipmentVendorId`, `currencyId` y `createdByEmail`. `totalCost` es requerido a menos que la configuración de inventario de tu empresa marque el costo de PO como no obligatorio (es obligatorio por defecto). `supplierCompanyId` y `supplierFacilityId` se derivan de tu clave.
+
+```bash
+curl -X POST "$BASE/v1/partners/inventory/purchase_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "new",
+    "partEquipmentVendorId": 44,
+    "currencyId": "USD",
+    "createdByEmail": "purchasing@example.com",
+    "stockLocationId": 7,
+    "totalBeforeTax": 620.00,
+    "tax": 52.70,
+    "totalCost": 672.70,
+    "incomingLineItems": [
+      {
+        "isEquipmentLine": false,
+        "partId": 210,
+        "partQuantity": 2,
+        "partUomId": 1,
+        "partCost": 310.00,
+        "partCurrencyId": "USD",
+        "prLineItemIds": [8801, 8802]
+      }
+    ]
+  }'
+```
+
+Cada línea establece `isEquipmentLine` y luego los campos `part*` o los campos `equipment*`. `prLineItemIds` registra qué líneas de PR cumple la línea de PO. Pasar un `id` de nivel superior reemplaza los campos escribibles de una PO existente en lugar de crear una nueva.
+
+### Asociar líneas de PR
+
+Si no enlazaste las PRs vía `prLineItemIds` al crearla, asócialas explícitamente:
+
+```bash
+curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_request_line_items/associate_po_line_item/8801,8802/9902"
+```
+
+Cada línea de PR listada pasa a `orderInProgress` con su `associatedPurchaseOrderLineItemId` establecido, y se recalcula el estado de cada PR padre. Los ids que tu clave no puede leer se **omiten silenciosamente** (la llamada puede devolver una lista vacía), así que verifica los ítems devueltos contra lo que enviaste.
+
+### Revisar líneas
+
+`POST /v1/partners/inventory/purchase_order_line_items/bulk` toma un **array JSON** de líneas, todas referenciando el mismo `supplierPurchaseOrderId`, y tiene semántica de reemplazo:
+
+<Warning>
+Todas las líneas **no recibidas** existentes en la PO se eliminan primero, y luego se crean las enviadas. Envía el conjunto completo de líneas abiertas deseadas cada vez. El estado de línea no es establecible aquí: las líneas nuevas empiezan como `new`, y una línea reenviada con su `id` mantiene su estado.
+</Warning>
+
+Las listas de ids de parte/equipo/solicitud-de-compra de la PO se recalculan y se reenvía la notificación de la orden de compra. `supplierFacilityId`/`supplierCompanyId` por línea vienen de tu clave; los ítems sin permiso de escritura se omiten silenciosamente.
+
+## 3. Marcar la orden como enviada
+
+```bash
+curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/purchase_orders/350/ordered"
+```
+
+Esto pone la PO en `ordered` y envía la orden al proveedor por correo. La respuesta exitosa es la envoltura tipo string de confirmación (`"type": "Email"`, `"data": "Email has been sent"`), **no** la PO; vuelve a obtener la PO para su nuevo estado. Para abortar en su lugar, `PATCH .../purchase_orders/{id}/cancel` (que sí devuelve la PO actualizada).
+
+## 4. Registrar recibos a medida que llegan los artículos
+
+`PUT /v1/partners/inventory/purchase_order_receipts` registra la recepción contra una línea de PO. En este endpoint `updatedBy` y `supplierFacilityId` **deben suministrarse en el cuerpo**; no se derivan de la clave.
+
+```bash
+curl -X PUT "$BASE/v1/partners/inventory/purchase_order_receipts" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "receiptNumber": "RCPT-1042",
+    "purchaseOrderId": 350,
+    "purchaseOrderLineItemId": 9902,
+    "receivedQuantity": 2,
+    "pricePerQuantity": 310.00,
+    "updatedBy": "warehouse@example.com",
+    "supplierFacilityId": 12
+  }'
+```
+
+Reglas:
+
+- `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy` y `supplierFacilityId` son requeridos.
+- `receivedQuantity` debe ser distinto de cero; **un valor negativo registra una devolución**.
+- Actualizar un recibo ajusta las cantidades y costos recibidos en la línea de PO y los registros de stock en la ubicación de stock de destino.
+- Para equipo serializado, envía una entrada por unidad en `equipmentPerStockLocationReceiptValues`, `assetReceiptValues` o `receiptValuesWithoutId`. La longitud del array debe igualar a `receivedQuantity`, estos arrays no pueden acompañar una devolución, y los números de serie o activo ya en uso se rechazan.
+- Los metadatos de factura del proveedor (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) pueden capturarse en el recibo.
+
+Vuelve a leer un recibo con `GET /v1/partners/inventory/purchase_order_receipts/{id}`.
+
+## Idempotencia y manejo de errores
+
+- Las creaciones no son idempotentes: reintentar una creación de PO agotada por timeout puede duplicar la orden. Usa el endpoint de listado con un filtro (por ejemplo sobre tus referencias externas al estilo `receiptNumber`) para verificar antes de reintentar.
+- Los problemas de permisos afloran como `400` (con la envoltura de error estándar), y los ids omitidos silenciosamente en los endpoints de bulk y de asociación significan que una llamada "exitosa" puede haber hecho menos de lo que pediste. Concilia siempre el payload de respuesta contra tu solicitud.
+- Los [endpoints del catálogo](/partners-api/catalog-and-stock) suministran los valores de `partId`, `equipmentTypeId`, `partEquipmentVendorId` y `stockLocationId` que necesita este flujo.

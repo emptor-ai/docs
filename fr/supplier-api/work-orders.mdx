@@ -1,0 +1,119 @@
+# Traiter les bons de travail avec l'API Fournisseur
+
+> Recevez, acceptez, refusez et faites progresser les bons de travail en tant que fournisseur : mises à jour de statut, suivi des pièces, dates de complétion estimées, pièces jointes et notes.
+
+Pour une intégration fournisseur, la file d'attente des bons de travail est la boîte de réception. Ce guide couvre les endpoints sous `/v1/supplier/work_order/` pour recevoir les travaux, y répondre et tenir les acheteurs informés pendant que le travail progresse. La planification des visites et la complétion des travaux se font à travers les [visites de service](/supplier-api/service-calls).
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # en-tête X-API-KEY
+export SECRET="<shared-secret>"    # en-tête OW-KEY
+```
+
+## Lire votre file d'attente
+
+```bash
+# Travaux nouvellement assignés, les plus anciens en premier
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=assignedAt&order=asc"
+
+# Nombre par filtre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+
+# Un bon de travail
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête filtre sur les colonnes indexées de l'entité. Tout est limité au locataire de votre établissement. Deux choses à retenir :
+
+- **Les lectures viennent d'une réplique en lecture**, votre propre changement récemment écrit peut donc mettre un instant à apparaître dans les résultats de liste.
+- **Masquage des données.** Si vous êtes un fournisseur tiers (et non l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, emplacements et factures avant que la réponse ne soit retournée. Les champs manquants correspondent généralement à du masquage, pas à des bogues. Voir [Données de référence](/supplier-api/reference-data#data-masking) pour plus de détails.
+
+## Accepter ou refuser
+
+**Acceptez** avec `POST /v1/supplier/work_order/work_orders/status_update/confirm`, qui définit le statut à `ConfirmedByServiceProvider`. Un bon de travail déjà dans un statut d'affichage complété ou clôturé ne peut pas être accepté (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Refusez** avec `POST .../status_update/decline`. Seuls les contacts de l'établissement fournisseur assigné au bon de travail peuvent refuser. Le bon de travail quitte votre file d'attente via le flux de changement de fournisseur : son statut revient à `PendingApproval`, ou un fournisseur du réseau privé est automatiquement choisi, selon la configuration de l'acheteur. Le `text` de la note est enregistré comme raison du refus et se reflète dans ce que voit l'acheteur, alors soyez précis.
+
+Les deux appels prennent `{ "id": ..., "note": { ... } }` et retournent le bon de travail mis à jour.
+
+## Tenir l'acheteur informé
+
+Trois signaux légers pendant que le travail est en cours :
+
+**Suivi des pièces.** Trois endpoints de statut, même forme de corps `{ id, note }` que ci-dessus :
+
+| Endpoint | Statut résultant |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Date de complétion estimée.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` ne lit que `estimatedCompletionDate` (ISO 8601) dans le corps :
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Pièces jointes.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` ajoute des références de fichiers à `supplierAttachments`, en préservant ce qui s'y trouve déjà. Téléversez le fichier d'abord (voir [Fichiers et utilisateurs](/supplier-api/files-and-users)), puis :
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Notes
+
+Ajoutez au fil partagé acheteur–fournisseur avec `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), et lisez le fil d'un bon de travail avec `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lecture met à jour les accusés de lecture pour votre contact, et une lecture refusée retourne une liste vide plutôt qu'une erreur.
+
+## Créer un bon de travail à l'initiative du fournisseur
+
+Les fournisseurs peuvent ouvrir des bons de travail eux-mêmes (un technicien repère une porte cassée pendant qu'il est sur place pour autre chose). `POST /v1/supplier/work_order/work_orders` requiert `title` et `locationId` ; l'emplacement détermine l'établissement et l'entreprise acheteur.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "isSupplierInitiated": true,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Valeurs par défaut si omises : `problemTypeId` revient au premier type de problème feuille de l'entreprise acheteur de l'emplacement, et `woPriorityId` à une priorité par défaut pour cette entreprise. `status` est dérivé de la configuration de l'entreprise acheteur (généralement `Unassigned` ou `PendingApproval`). Un `assetId`, s'il est fourni, doit exister, et sa zone est héritée lorsque `areaId` n'est pas défini. Le champ est `needApproval` (sans « s ») sur ce corps de création.
+
+## Types de problème
+
+`GET /v1/supplier/work_order/problem_types` liste les types de problème à travers vos entreprises acheteurs liées (non soumis à la limite de débit). Utilisez-le pour classer correctement par acheteur les bons de travail à l'initiative du fournisseur.
+
+## Boucle d'intégration typique
+
+1. Interrogez la file d'attente pour les travaux nouvellement assignés (`sort_by=assignedAt`), ou différez sur `statusChangedAt`.
+2. `confirm` ou `decline` dans les limites de votre SLA.
+3. Planifiez la visite via les [visites de service](/supplier-api/service-calls) ; publiez les statuts des pièces et une ECD au fur et à mesure de l'évolution.
+4. Complétez via le pointage de sortie, puis facturez via [Soumissions et facturation](/supplier-api/quotes-and-invoicing).
