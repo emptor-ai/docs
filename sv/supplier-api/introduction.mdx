@@ -1,6 +1,9 @@
-# Supplier API
-
-> Programmatisk åtkomst för serviceleverantörer: arbetsordrar, servicebesök, offerter, fakturor, WrenchMode och lager
+---
+title: "Supplier API"
+sidebarTitle: "Introduktion"
+description: "Programmatisk åtkomst för serviceleverantörer: ta emot arbetsordrar, schemalägg servicebesök, skicka in offerter och fakturor, hämta WrenchMode-data och hantera lager."
+icon: "screwdriver-wrench"
+---
 
 OpenWrench Supplier API ger serviceleverantörer programmatisk åtkomst till sin sida av plattformen: ta emot och uppdatera arbetsordrar, schemalägga och dokumentera servicebesök, skicka in offerter och fakturor, hämta WrenchMode-tekniktid och hantera inköp och lager.
 
@@ -23,9 +26,11 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 För att få en API-nyckel och en delad hemlighet, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
+Nycklar löper inte ut av sig själva. För att rotera en, begär ett nytt par nyckel/delad hemlighet från supporten, driftsätt det nya paret och be sedan supporten återkalla det gamla.
+
 ## Hastighetsgränser
 
-10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`. Backa av och försök igen.
+10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`: vänta minst 20 sekunder innan du försöker igen, och sprid ut bakgrundsjobb (till exempel fullständiga sidindelade exporter) så att de håller sig under gränsen.
 
 ## Svarshöljet
 

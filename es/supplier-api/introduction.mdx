@@ -1,6 +1,9 @@
-# Supplier API
-
-> Acceso programático para proveedores de servicio: órdenes de trabajo, llamadas de servicio, cotizaciones, facturas, WrenchMode e inventario
+---
+title: "Supplier API"
+sidebarTitle: "Introducción"
+description: "Acceso programático para proveedores de servicio: recibe órdenes de trabajo, programa llamadas de servicio, envía cotizaciones y facturas, extrae datos de WrenchMode y gestiona el inventario."
+icon: "screwdriver-wrench"
+---
 
 La Supplier API de OpenWrench da a los proveedores de servicio acceso programático a su lado de la plataforma: recibir y actualizar órdenes de trabajo, programar y documentar llamadas de servicio, enviar cotizaciones y facturas, extraer datos de tiempo del técnico desde WrenchMode y gestionar compras e inventario.
 
@@ -23,9 +26,11 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 Para obtener una clave de API y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
+Las claves no expiran por sí solas. Para rotar una, solicita a soporte un nuevo par clave/secreto compartido, despliega el nuevo par y luego pide a soporte que revoque el antiguo.
+
 ## Límites de tasa
 
-10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`. Aplica back off y reintenta.
+10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`: espera al menos 20 segundos antes de reintentar y espacia los trabajos en segundo plano (como exportaciones paginadas completas) para que se mantengan por debajo del límite.
 
 ## Envoltura de respuesta
 
