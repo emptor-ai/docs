@@ -20,7 +20,7 @@ Une réponse `200` confirme que les deux en-têtes sont valides. Une réponse `4
 
 ```bash theme={null}
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
-  "https://api.useopenwrench.com/api/external/v1/supplier/work_orders?limit=5"
+  "https://api.useopenwrench.com/api/external/v1/supplier/work_order/work_orders?limit=5"
 ```
 
 La réponse suit l'enveloppe standard : `type`, `data` (un tableau), `count` et `status`.
