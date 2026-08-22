@@ -26,13 +26,15 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 To get an API key and shared secret, contact [support@useopenwrench.com](mailto:support@useopenwrench.com). Use `GET /v1/buyer/me` to inspect the identity (contact, facility, company) behind your key.
 
+Keys do not expire on their own. To rotate one, request a new key/shared-secret pair from support, deploy the new pair, then ask support to revoke the old one.
+
 <Note>
 The **Internal Teams API** section further down this tab uses a **separate partner API key** — your buyer key will not authenticate against those `/v1/partners/` endpoints. See the [Internal Teams API introduction](/partners-api/introduction) for details.
 </Note>
 
 ## Rate limits
 
-10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — back off and retry.
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
 
 ## Response envelope
 
