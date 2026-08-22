@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "OpenWrench Docs",
-  "description": "Reference documentation and integration guides for the OpenWrench External API \u2014 buyer, supplier, and partner surfaces.",
+  "description": "Reference documentation and integration guides for the OpenWrench External API — buyer, supplier, and partner surfaces.",
   "colors": {
     "primary": "#6D28D9",
     "light": "#8B5CF6",
@@ -22,149 +22,49 @@
     ]
   },
   "navigation": {
-    "languages": [
+    "tabs": [
       {
-        "language": "en",
-        "tabs": [
+        "tab": "Buyer API",
+        "groups": [
           {
-            "tab": "Buyer Guides",
-            "groups": [
-              {
-                "group": "Getting started",
-                "pages": [
-                  "buyer-guides/overview",
-                  "buyer-guides/quickstart",
-                  "buyer-guides/authentication"
-                ]
-              },
-              {
-                "group": "Concepts",
-                "pages": [
-                  "buyer-guides/concepts"
-                ]
-              },
-              {
-                "group": "How-tos",
-                "pages": [
-                  "buyer-guides/create-and-dispatch-a-work-order",
-                  "buyer-guides/pagination-and-filtering",
-                  "buyer-guides/webhooks"
-                ]
-              },
-              {
-                "group": "Operations",
-                "pages": [
-                  "buyer-guides/errors-and-rate-limits"
-                ]
-              }
+            "group": "Getting Started",
+            "pages": [
+              "buyer-api/introduction"
             ]
           },
           {
-            "tab": "Buyer API",
-            "groups": [
+            "group": "Guides",
+            "pages": [
+              "buyer-api/work-orders",
+              "buyer-api/service-calls",
+              "buyer-api/assets-and-locations",
+              "buyer-api/invoices",
+              "buyer-api/quotes-and-proposals",
+              "buyer-api/planned-maintenance",
+              "buyer-api/supplier-network",
+              "buyer-api/site-survey-walkthroughs",
+              "buyer-api/files-and-attachments",
+              "buyer-api/account-and-utilities"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "openapi": {
+              "source": "openapi/buyer.json",
+              "directory": "buyer-reference"
+            }
+          },
+          {
+            "group": "Internal Teams API",
+            "pages": [
+              "partners-api/introduction",
+              "partners-api/purchasing-flow",
+              "partners-api/catalog-and-stock",
               {
-                "group": "Getting Started",
-                "pages": [
-                  "buyer-api/introduction"
-                ]
-              },
-              {
-                "group": "Guides",
-                "pages": [
-                  "buyer-api/work-orders",
-                  "buyer-api/service-calls",
-                  "buyer-api/assets-and-locations",
-                  "buyer-api/invoices",
-                  "buyer-api/quotes-and-proposals",
-                  "buyer-api/planned-maintenance",
-                  "buyer-api/supplier-network",
-                  "buyer-api/site-survey-walkthroughs",
-                  "buyer-api/files-and-attachments",
-                  "buyer-api/account-and-utilities"
-                ]
-              },
-              {
-                "group": "API Reference",
+                "group": "Endpoints",
                 "openapi": {
-                  "source": "openapi/buyer.json",
-                  "directory": "buyer-reference"
-                }
-              },
-              {
-                "group": "Internal Teams API",
-                "pages": [
-                  "partners-api/introduction",
-                  "partners-api/purchasing-flow",
-                  "partners-api/catalog-and-stock",
-                  {
-                    "group": "Endpoints",
-                    "openapi": {
-                      "source": "openapi/partners.json",
-                      "directory": "internal-teams-reference"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Supplier Guides",
-            "groups": [
-              {
-                "group": "Getting started",
-                "pages": [
-                  "supplier-guides/overview",
-                  "supplier-guides/quickstart",
-                  "supplier-guides/authentication"
-                ]
-              },
-              {
-                "group": "Concepts",
-                "pages": [
-                  "supplier-guides/concepts"
-                ]
-              },
-              {
-                "group": "How-tos",
-                "pages": [
-                  "supplier-guides/accept-and-complete-a-work-order",
-                  "supplier-guides/wrench-mode-time-tracking"
-                ]
-              },
-              {
-                "group": "Operations",
-                "pages": [
-                  "supplier-guides/errors-and-rate-limits"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Supplier API",
-            "groups": [
-              {
-                "group": "Getting Started",
-                "pages": [
-                  "supplier-api/introduction"
-                ]
-              },
-              {
-                "group": "Guides",
-                "pages": [
-                  "supplier-api/work-orders",
-                  "supplier-api/service-calls",
-                  "supplier-api/wrenchmode",
-                  "supplier-api/quotes-and-invoicing",
-                  "supplier-api/purchasing-and-inventory",
-                  "supplier-api/reference-data",
-                  "supplier-api/files-and-users"
-                ]
-              },
-              {
-                "group": "API Reference",
-                "openapi": {
-                  "source": "openapi/supplier.json",
-                  "directory": "supplier-reference"
+                  "source": "openapi/partners.json",
+                  "directory": "internal-teams-reference"
                 }
               }
             ]
@@ -172,215 +72,121 @@
         ]
       },
       {
-        "language": "sv",
-        "tabs": [
+        "tab": "Supplier API",
+        "groups": [
           {
-            "tab": "K\u00f6parguider",
-            "groups": [
-              {
-                "group": "Kom ig\u00e5ng",
-                "pages": [
-                  "sv/buyer-guides/overview",
-                  "sv/buyer-guides/quickstart",
-                  "sv/buyer-guides/authentication"
-                ]
-              },
-              {
-                "group": "Koncept",
-                "pages": [
-                  "sv/buyer-guides/concepts"
-                ]
-              },
-              {
-                "group": "Instruktioner",
-                "pages": [
-                  "sv/buyer-guides/create-and-dispatch-a-work-order",
-                  "sv/buyer-guides/pagination-and-filtering",
-                  "sv/buyer-guides/webhooks"
-                ]
-              },
-              {
-                "group": "Drift",
-                "pages": [
-                  "sv/buyer-guides/errors-and-rate-limits"
-                ]
-              }
+            "group": "Getting Started",
+            "pages": [
+              "supplier-api/introduction"
             ]
           },
           {
-            "tab": "Leverant\u00f6rsguider",
-            "groups": [
-              {
-                "group": "Kom ig\u00e5ng",
-                "pages": [
-                  "sv/supplier-guides/overview",
-                  "sv/supplier-guides/quickstart",
-                  "sv/supplier-guides/authentication"
-                ]
-              },
-              {
-                "group": "Koncept",
-                "pages": [
-                  "sv/supplier-guides/concepts"
-                ]
-              },
-              {
-                "group": "Instruktioner",
-                "pages": [
-                  "sv/supplier-guides/accept-and-complete-a-work-order",
-                  "sv/supplier-guides/wrench-mode-time-tracking"
-                ]
-              },
-              {
-                "group": "Drift",
-                "pages": [
-                  "sv/supplier-guides/errors-and-rate-limits"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "language": "es",
-        "tabs": [
-          {
-            "tab": "Gu\u00edas para compradores",
-            "groups": [
-              {
-                "group": "Primeros pasos",
-                "pages": [
-                  "es/buyer-guides/overview",
-                  "es/buyer-guides/quickstart",
-                  "es/buyer-guides/authentication"
-                ]
-              },
-              {
-                "group": "Conceptos",
-                "pages": [
-                  "es/buyer-guides/concepts"
-                ]
-              },
-              {
-                "group": "C\u00f3mo hacerlo",
-                "pages": [
-                  "es/buyer-guides/create-and-dispatch-a-work-order",
-                  "es/buyer-guides/pagination-and-filtering",
-                  "es/buyer-guides/webhooks"
-                ]
-              },
-              {
-                "group": "Operaciones",
-                "pages": [
-                  "es/buyer-guides/errors-and-rate-limits"
-                ]
-              }
+            "group": "Guides",
+            "pages": [
+              "supplier-api/work-orders",
+              "supplier-api/service-calls",
+              "supplier-api/wrenchmode",
+              "supplier-api/quotes-and-invoicing",
+              "supplier-api/purchasing-and-inventory",
+              "supplier-api/reference-data",
+              "supplier-api/files-and-users"
             ]
           },
           {
-            "tab": "Gu\u00edas para proveedores",
-            "groups": [
-              {
-                "group": "Primeros pasos",
-                "pages": [
-                  "es/supplier-guides/overview",
-                  "es/supplier-guides/quickstart",
-                  "es/supplier-guides/authentication"
-                ]
-              },
-              {
-                "group": "Conceptos",
-                "pages": [
-                  "es/supplier-guides/concepts"
-                ]
-              },
-              {
-                "group": "C\u00f3mo hacerlo",
-                "pages": [
-                  "es/supplier-guides/accept-and-complete-a-work-order",
-                  "es/supplier-guides/wrench-mode-time-tracking"
-                ]
-              },
-              {
-                "group": "Operaciones",
-                "pages": [
-                  "es/supplier-guides/errors-and-rate-limits"
-                ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "language": "fr",
-        "tabs": [
-          {
-            "tab": "Guides pour acheteurs",
-            "groups": [
-              {
-                "group": "D\u00e9marrage",
-                "pages": [
-                  "fr/buyer-guides/overview",
-                  "fr/buyer-guides/quickstart",
-                  "fr/buyer-guides/authentication"
-                ]
-              },
-              {
-                "group": "Concepts",
-                "pages": [
-                  "fr/buyer-guides/concepts"
-                ]
-              },
-              {
-                "group": "Proc\u00e9dures",
-                "pages": [
-                  "fr/buyer-guides/create-and-dispatch-a-work-order",
-                  "fr/buyer-guides/pagination-and-filtering",
-                  "fr/buyer-guides/webhooks"
-                ]
-              },
-              {
-                "group": "Exploitation",
-                "pages": [
-                  "fr/buyer-guides/errors-and-rate-limits"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Guides pour fournisseurs",
-            "groups": [
-              {
-                "group": "D\u00e9marrage",
-                "pages": [
-                  "fr/supplier-guides/overview",
-                  "fr/supplier-guides/quickstart",
-                  "fr/supplier-guides/authentication"
-                ]
-              },
-              {
-                "group": "Concepts",
-                "pages": [
-                  "fr/supplier-guides/concepts"
-                ]
-              },
-              {
-                "group": "Proc\u00e9dures",
-                "pages": [
-                  "fr/supplier-guides/accept-and-complete-a-work-order",
-                  "fr/supplier-guides/wrench-mode-time-tracking"
-                ]
-              },
-              {
-                "group": "Exploitation",
-                "pages": [
-                  "fr/supplier-guides/errors-and-rate-limits"
-                ]
-              }
-            ]
+            "group": "API Reference",
+            "openapi": {
+              "source": "openapi/supplier.json",
+              "directory": "supplier-reference"
+            }
           }
         ]
       }
     ]
-  }
+  },
+  "redirects": [
+    {
+      "source": "/buyer-guides/overview",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/buyer-guides/quickstart",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/buyer-guides/authentication",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/buyer-guides/concepts",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/buyer-guides/create-and-dispatch-a-work-order",
+      "destination": "/buyer-api/work-orders"
+    },
+    {
+      "source": "/buyer-guides/pagination-and-filtering",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/buyer-guides/webhooks",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/buyer-guides/errors-and-rate-limits",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/supplier-guides/overview",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/supplier-guides/quickstart",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/supplier-guides/authentication",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/supplier-guides/concepts",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/supplier-guides/accept-and-complete-a-work-order",
+      "destination": "/supplier-api/work-orders"
+    },
+    {
+      "source": "/supplier-guides/wrench-mode-time-tracking",
+      "destination": "/supplier-api/wrenchmode"
+    },
+    {
+      "source": "/supplier-guides/errors-and-rate-limits",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/es/buyer-guides/:slug*",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/fr/buyer-guides/:slug*",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/sv/buyer-guides/:slug*",
+      "destination": "/buyer-api/introduction"
+    },
+    {
+      "source": "/es/supplier-guides/:slug*",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/fr/supplier-guides/:slug*",
+      "destination": "/supplier-api/introduction"
+    },
+    {
+      "source": "/sv/supplier-guides/:slug*",
+      "destination": "/supplier-api/introduction"
+    }
+  ]
 }
