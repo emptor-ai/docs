@@ -52,7 +52,7 @@ Errors:
 { "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
 ```
 
-`401` means missing or invalid credentials; `400` covers bad input, bad filters, and permission denials; `429` is the rate limit.
+`401` means a missing or invalid key; `400` covers bad input, bad filters, and permission denials; `429` is the rate limit.
 
 ## Pagination and filtering
 
@@ -68,7 +68,7 @@ The WrenchMode endpoints expose per-technician work and drive time: `GET /v1/sup
 
 ## Detailed guides
 
-The guides in this tab walk each part of the API in depth, with payloads, status semantics, and integration patterns:
+The guides in this tab walk each part of the API in depth, with payloads, status models, and integration patterns:
 
 <CardGroup cols={2}>
   <Card title="Work orders" href="/supplier-api/work-orders" icon="clipboard-list">
