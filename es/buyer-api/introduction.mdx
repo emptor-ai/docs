@@ -1,6 +1,9 @@
-# Buyer API
-
-> Acceso programático a tu cuenta de comprador en OpenWrench: órdenes de trabajo, activos, ubicaciones, facturas, mantenimiento preventivo y más
+---
+title: "Buyer API"
+sidebarTitle: "Introducción"
+description: "Acceso programático a tu cuenta de comprador en OpenWrench: gestiona órdenes de trabajo, activos, ubicaciones, facturas, mantenimiento preventivo y tu red de proveedores."
+icon: "building"
+---
 
 La Buyer API de OpenWrench da a los operadores de instalaciones acceso programático a todo lo que hay del lado del comprador en la plataforma: crear y hacer seguimiento de órdenes de trabajo, gestionar activos y ubicaciones, revisar cotizaciones y facturas, monitorear el mantenimiento preventivo y consultar tu red de proveedores.
 
@@ -23,13 +26,15 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 Para obtener una clave de API y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com). Usa `GET /v1/buyer/me` para inspeccionar la identidad (contacto, instalación, empresa) detrás de tu clave.
 
+Las claves no expiran por sí solas. Para rotar una, solicita a soporte un nuevo par clave/secreto compartido, despliega el nuevo par y luego pide a soporte que revoque el antiguo.
+
 <Note>
 La sección **Internal Teams API**, más abajo en esta pestaña, usa una **clave de API de partner distinta**: tu clave de comprador no autenticará contra esos endpoints `/v1/partners/`. Consulta la [introducción a la Internal Teams API](/partners-api/introduction) para más detalles.
 </Note>
 
 ## Límites de tasa
 
-10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`. Aplica back off y reintenta.
+10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`: espera al menos 20 segundos antes de reintentar y espacia los trabajos en segundo plano (como exportaciones paginadas completas) para que se mantengan por debajo del límite.
 
 ## Envoltura de respuesta
 

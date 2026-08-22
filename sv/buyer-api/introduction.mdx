@@ -1,6 +1,9 @@
-# Buyer API
-
-> Programmatisk åtkomst till ditt OpenWrench-köparkonto: arbetsordrar, tillgångar, platser, fakturor, PM och mer
+---
+title: "Buyer API"
+sidebarTitle: "Introduktion"
+description: "Programmatisk åtkomst till ditt OpenWrench-köparkonto: hantera arbetsordrar, tillgångar, platser, fakturor, planerat underhåll och ditt leverantörsnätverk."
+icon: "building"
+---
 
 OpenWrench Buyer API ger anläggningsoperatörer programmatisk åtkomst till allt på köparsidan av plattformen: skapa och följa arbetsordrar, hantera tillgångar och platser, granska offerter och fakturor, övervaka förebyggande underhåll och söka i ditt leverantörsnätverk.
 
@@ -23,13 +26,15 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 För att få en API-nyckel och en delad hemlighet, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com). Använd `GET /v1/buyer/me` för att inspektera identiteten (kontakt, anläggning, företag) bakom din nyckel.
 
+Nycklar löper inte ut av sig själva. För att rotera en, begär ett nytt par nyckel/delad hemlighet från supporten, driftsätt det nya paret och be sedan supporten återkalla det gamla.
+
 <Note>
 Sektionen **Internal Teams API** längre ner i den här fliken använder en **separat partner-API-nyckel**. Din köparnyckel autentiserar inte mot slutpunkterna under `/v1/partners/`. Se [Introduktion till Internal Teams API](/partners-api/introduction) för detaljer.
 </Note>
 
 ## Hastighetsgränser
 
-10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`. Backa av och försök igen.
+10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`: vänta minst 20 sekunder innan du försöker igen, och sprid ut bakgrundsjobb (till exempel fullständiga sidindelade exporter) så att de håller sig under gränsen.
 
 ## Svarshöljet
 

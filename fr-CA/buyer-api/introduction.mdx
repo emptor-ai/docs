@@ -1,6 +1,9 @@
-# API Acheteur
-
-> Accès programmatique à votre compte acheteur OpenWrench — bons de travail, actifs, emplacements, factures, entretien préventif et plus encore
+---
+title: "API Acheteur"
+sidebarTitle: "Introduction"
+description: "Accès programmatique à votre compte acheteur OpenWrench : gérez les bons de travail, actifs, emplacements, factures, entretien préventif et votre réseau de fournisseurs."
+icon: "building"
+---
 
 L'API Acheteur d'OpenWrench donne aux exploitants d'installations un accès programmatique à l'ensemble du côté acheteur de la plateforme : création et suivi des bons de travail, gestion des actifs et des emplacements, révision des soumissions et des factures, surveillance de l'entretien préventif et interrogation de votre réseau de fournisseurs.
 
@@ -23,13 +26,15 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 Pour obtenir une clé d'API et un secret partagé, communiquez avec [support@useopenwrench.com](mailto:support@useopenwrench.com). Utilisez `GET /v1/buyer/me` pour inspecter l'identité (contact, établissement, entreprise) associée à votre clé.
 
+Les clés n'expirent pas d'elles-mêmes. Pour en effectuer la rotation, demandez au soutien une nouvelle paire clé/secret partagé, déployez la nouvelle paire, puis demandez au soutien de révoquer l'ancienne.
+
 <Note>
 La section **API Équipes internes** plus bas dans cet onglet utilise une **clé d'API partenaire distincte**. Votre clé acheteur ne s'authentifiera pas contre les endpoints `/v1/partners/`. Voir l'[introduction à l'API Équipes internes](/partners-api/introduction) pour les détails.
 </Note>
 
 ## Limites de débit
 
-10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests`. Espacez vos appels et réessayez.
+10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests` : attendez au moins 20 secondes avant de réessayer, et espacez les tâches en arrière-plan (par exemple les exports paginés complets) pour qu'elles demeurent sous la limite.
 
 ## Enveloppe de réponse
 

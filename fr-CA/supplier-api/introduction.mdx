@@ -1,6 +1,9 @@
-# API Fournisseur
-
-> Accès programmatique pour les prestataires de services — bons de travail, appels de service, soumissions, factures, WrenchMode et inventaire
+---
+title: "API Fournisseur"
+sidebarTitle: "Introduction"
+description: "Accès programmatique pour les prestataires de services : recevez des bons de travail, planifiez les appels de service, soumettez soumissions et factures, extrayez les données WrenchMode et gérez l'inventaire."
+icon: "screwdriver-wrench"
+---
 
 L'API Fournisseur d'OpenWrench donne aux prestataires de services un accès programmatique à leur côté de la plateforme : réception et mise à jour des bons de travail, planification et documentation des appels de service, soumission de soumissions et de factures, extraction des données de temps des techniciens WrenchMode et gestion des achats et de l'inventaire.
 
@@ -23,9 +26,11 @@ curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
 
 Pour obtenir une clé d'API et un secret partagé, communiquez avec [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
+Les clés n'expirent pas d'elles-mêmes. Pour en effectuer la rotation, demandez au soutien une nouvelle paire clé/secret partagé, déployez la nouvelle paire, puis demandez au soutien de révoquer l'ancienne.
+
 ## Limites de débit
 
-10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests`. Espacez vos appels et réessayez.
+10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests` : attendez au moins 20 secondes avant de réessayer, et espacez les tâches en arrière-plan (par exemple les exports paginés complets) pour qu'elles demeurent sous la limite.
 
 ## Enveloppe de réponse
 
