@@ -126,11 +126,8 @@ curl -X POST "$BASE/v1/buyer/asset/meters" \
   -d '{
     "name": "Box temperature",
     "assetId": 5511,
-    "locationId": 1204,
     "meterTypeId": 2,
-    "seriesType": "continuous",
-    "valueType": "number",
-    "valueUnit": "F"
+    "readingMode": "direct_reading"
   }'
 
 # 2. Enregistrer des relevés (p. ex. depuis un pont IoT)
@@ -144,11 +141,23 @@ curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
     "recordedAt": "2026-08-21T09:00:00.000-07:00",
     "recordedBy": "iot-bridge@example.com"
   }'
+
+# 3. Lister, compter et récupérer les compteurs et les relevés
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/count_by?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/9310"
+
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/count_by?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/40021"
 ```
 
-<Note>
-Les charges utiles de compteur et de relevé sont analysées par un utilitaire côté serveur partagé, et le schéma documenté est abrégé. Les champs montrés ci-dessus constituent le noyau fiable; vérifiez tout ce qui va au-delà auprès des pages de référence de l'API ou du soutien.
-</Note>
+Remarques :
+
+- `valueType`, `valueUnit` et `locationId` ne sont **pas** lus dans le corps de création du compteur : ils sont dérivés côté serveur à partir de l'actif et du type de compteur référencés; les envoyer n'a aucun effet.
+- `readingMode` (renommé depuis `seriesType`) vaut `direct_reading`, `change_from_baseline` ou `compare_to_target`; la valeur par défaut est `direct_reading` si omis.
+- Les endpoints de liste et de comptage des relevés ne sont pas limités à un seul compteur : ils couvrent tous les relevés de votre entreprise acheteuse, sauf si vous filtrez par `meterId`.
+- Lorsque le `readingMode` d'un compteur est `change_from_baseline`, le `lastBaselineValue` d'un relevé récupéré est calculé à partir du relevé antérieur le plus récent marqué `isBaseline` sur ce compteur, en date de `recordedAt`; pour les autres modes, il vaut `null`.
 
 ## Stratégie de synchronisation
 
