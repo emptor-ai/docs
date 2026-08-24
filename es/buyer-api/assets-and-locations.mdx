@@ -30,7 +30,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/location
 
 Notas:
 
-- El endpoint de listado limita `limit` a **10** (la mayoría de los listados permite 25). Planifica los bucles de paginación en consecuencia.
+- El endpoint de listado limita `limit` a **10** (la mayoría de los listados permiten 25). Planifica los bucles de paginación en consecuencia.
 - `multiple/{ids}` toma ids separados por coma y **omite silenciosamente** cualquier id sobre el que no tengas permiso de lectura; verifica qué ids llegaron en lugar de asumir que llegaron todos.
 - La única escritura es `PATCH /v1/buyer/location/locations/{id}`, y lee **solo `locationTypeDetails`** del cuerpo (valores de campos personalizados del tipo de ubicación). Todos los demás campos se ignoran.
 
