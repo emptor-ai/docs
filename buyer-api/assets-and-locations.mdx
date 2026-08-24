@@ -128,11 +128,8 @@ curl -X POST "$BASE/v1/buyer/asset/meters" \
   -d '{
     "name": "Box temperature",
     "assetId": 5511,
-    "locationId": 1204,
     "meterTypeId": 2,
-    "seriesType": "continuous",
-    "valueType": "number",
-    "valueUnit": "F"
+    "readingMode": "direct_reading"
   }'
 
 # 2. Record readings (e.g. from an IoT bridge)
@@ -146,11 +143,23 @@ curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
     "recordedAt": "2026-08-21T09:00:00.000-07:00",
     "recordedBy": "iot-bridge@example.com"
   }'
+
+# 3. List, count, and retrieve meters and readings
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/count_by?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/9310"
+
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/count_by?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/40021"
 ```
 
-<Note>
-The meter and reading payloads are parsed by a shared server-side helper, and the documented schema is abridged. The fields shown above are the reliable core; verify anything beyond them against the API Reference pages or with support.
-</Note>
+Notes:
+
+- `valueType`, `valueUnit`, and `locationId` are **not** read from the create-meter body — they're derived server-side from the referenced asset and meter type, so sending them has no effect.
+- `readingMode` (renamed from `seriesType`) is one of `direct_reading`, `change_from_baseline`, or `compare_to_target`; it defaults to `direct_reading` when omitted.
+- The meter-reading list and count endpoints aren't scoped to a single meter — they span every reading across your buyer company unless you filter by `meterId`.
+- When a meter's `readingMode` is `change_from_baseline`, a retrieved reading's `lastBaselineValue` is computed from the most recent prior reading flagged `isBaseline` on that meter as of `recordedAt`; for other modes it's `null`.
 
 ## Sync strategy
 

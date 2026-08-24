@@ -126,11 +126,8 @@ curl -X POST "$BASE/v1/buyer/asset/meters" \
   -d '{
     "name": "Box temperature",
     "assetId": 5511,
-    "locationId": 1204,
     "meterTypeId": 2,
-    "seriesType": "continuous",
-    "valueType": "number",
-    "valueUnit": "F"
+    "readingMode": "direct_reading"
   }'
 
 # 2. Registrar lecturas (por ejemplo desde un puente IoT)
@@ -144,11 +141,23 @@ curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
     "recordedAt": "2026-08-21T09:00:00.000-07:00",
     "recordedBy": "iot-bridge@example.com"
   }'
+
+# 3. Listar, contar y obtener medidores y lecturas
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/count_by?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/9310"
+
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/count_by?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/40021"
 ```
 
-<Note>
-Los payloads de medidor y de lectura son parseados por un ayudante compartido del lado del servidor, y el esquema documentado está abreviado. Los campos mostrados arriba son el núcleo confiable; verifica cualquier cosa más allá contra las páginas de referencia de la API o con soporte.
-</Note>
+Notas:
+
+- `valueType`, `valueUnit` y `locationId` **no** se leen del cuerpo al crear el medidor: se derivan en el servidor a partir del activo y el tipo de medidor referenciados, así que enviarlos no tiene efecto.
+- `readingMode` (renombrado desde `seriesType`) es uno de `direct_reading`, `change_from_baseline` o `compare_to_target`; por defecto es `direct_reading` cuando se omite.
+- Los endpoints de listado y conteo de lecturas no están limitados a un solo medidor: abarcan todas las lecturas de tu empresa compradora a menos que filtres por `meterId`.
+- Cuando el `readingMode` de un medidor es `change_from_baseline`, el `lastBaselineValue` de una lectura obtenida se calcula a partir de la lectura anterior más reciente marcada como `isBaseline` en ese medidor, según `recordedAt`; para los demás modos es `null`.
 
 ## Estrategia de sincronización
 

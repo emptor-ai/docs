@@ -126,11 +126,8 @@ curl -X POST "$BASE/v1/buyer/asset/meters" \
   -d '{
     "name": "Box temperature",
     "assetId": 5511,
-    "locationId": 1204,
     "meterTypeId": 2,
-    "seriesType": "continuous",
-    "valueType": "number",
-    "valueUnit": "F"
+    "readingMode": "direct_reading"
   }'
 
 # 2. Registrera avläsningar (t.ex. från en IoT-brygga)
@@ -144,11 +141,23 @@ curl -X POST "$BASE/v1/buyer/asset/meter_readings" \
     "recordedAt": "2026-08-21T09:00:00.000-07:00",
     "recordedBy": "iot-bridge@example.com"
   }'
+
+# 3. Lista, räkna och hämta mätare och avläsningar
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/count_by?assetId=5511"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meters/9310"
+
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/count_by?meterId=9310"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readings/40021"
 ```
 
-<Note>
-Mätar- och avläsningspayloads tolkas av en delad serverhjälpare, och det dokumenterade schemat är förkortat. Fälten som visas ovan är den pålitliga kärnan; verifiera allt utöver dem mot API-referenssidorna eller med support.
-</Note>
+Anteckningar:
+
+- `valueType`, `valueUnit` och `locationId` läses **inte** från body vid skapande av mätare — de härleds server-sidan från den refererade tillgången och mätartypen, så att skicka dem har ingen effekt.
+- `readingMode` (omdöpt från `seriesType`) är antingen `direct_reading`, `change_from_baseline` eller `compare_to_target`; standardvärdet är `direct_reading` om det utelämnas.
+- Listnings- och räkningsändpunkterna för avläsningar är inte begränsade till en enda mätare — de omfattar alla avläsningar för hela ditt köparföretag om du inte filtrerar med `meterId`.
+- När en mätares `readingMode` är `change_from_baseline` beräknas en hämtad avläsnings `lastBaselineValue` från den senaste tidigare avläsningen markerad `isBaseline` på den mätaren, per `recordedAt`; för övriga lägen är det `null`.
 
 ## Synkroniseringsstrategi
 

@@ -938,13 +938,77 @@
       }
     },
     "/v1/buyer/asset/meters": {
+      "get": {
+        "operationId": "listAssetMeters",
+        "summary": "List asset meters",
+        "tags": [
+          "Asset Meters"
+        ],
+        "description": "Lists asset meters for the caller's buyer company. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/offset"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/sort_by"
+          },
+          {
+            "$ref": "#/components/parameters/order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMeterListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "createAssetMeter",
         "summary": "Create an asset meter",
         "tags": [
           "Asset Meters"
         ],
-        "description": "Creates a meter on an asset. The request body is parsed by a shared helper (AssetMeterCommonMethod) whose source was not provided; the schema below reflects the AssetMeter model fields and is ABRIDGED \u2014 verify exact accepted fields against the implementation.",
+        "description": "Creates a meter on an asset. valueType, valueUnit and locationId are not read from the request body \u2014 they are derived server-side from the referenced asset and meter type. readingMode defaults to direct_reading when omitted.",
         "requestBody": {
           "required": true,
           "content": {
@@ -961,8 +1025,14 @@
                   "meterTypeId": {
                     "type": "integer"
                   },
-                  "seriesType": {
-                    "type": "string"
+                  "readingMode": {
+                    "type": "string",
+                    "enum": [
+                      "direct_reading",
+                      "change_from_baseline",
+                      "compare_to_target"
+                    ],
+                    "description": "Optional; defaults to direct_reading."
                   },
                   "defaultExpectedValue": {
                     "type": [
@@ -970,18 +1040,20 @@
                       "null"
                     ]
                   },
-                  "valueType": {
-                    "type": "string"
-                  },
-                  "valueUnit": {
-                    "type": "string"
-                  },
-                  "locationId": {
-                    "type": "integer"
+                  "isArchived": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
                   }
                 },
+                "required": [
+                  "name",
+                  "assetId",
+                  "meterTypeId"
+                ],
                 "additionalProperties": true,
-                "description": "Abridged: field list inferred from the AssetMeter model."
+                "description": "Fields not listed here (e.g. valueType, valueUnit, locationId) are ignored if sent."
               }
             }
           }
@@ -1031,13 +1103,77 @@
       }
     },
     "/v1/buyer/asset/meter_readings": {
+      "get": {
+        "operationId": "listAssetMeterReadings",
+        "summary": "List asset meter readings",
+        "tags": [
+          "Asset Meters"
+        ],
+        "description": "Lists asset meter readings for the caller's buyer company, across all of its meters unless filtered by meterId. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/offset"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/sort_by"
+          },
+          {
+            "$ref": "#/components/parameters/order"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMeterReadingListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      },
       "post": {
         "operationId": "createAssetMeterReading",
         "summary": "Record an asset meter reading",
         "tags": [
           "Asset Meters"
         ],
-        "description": "Records a reading against an asset meter. The request body is parsed by a shared helper (AssetMeterReadingCommonMethod) whose source was not provided; the schema below reflects the AssetMeterReading model fields and is ABRIDGED \u2014 verify exact accepted fields against the implementation.",
+        "description": "Records a reading against an asset meter. buyerCompanyId is derived server-side from the referenced meter, not read from the body.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1052,7 +1188,8 @@
                     "type": [
                       "boolean",
                       "null"
-                    ]
+                    ],
+                    "description": "Defaults to false."
                   },
                   "value": {
                     "type": "string"
@@ -1064,21 +1201,21 @@
                     ]
                   },
                   "recordedAt": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
+                    "type": "string",
                     "format": "date-time"
                   },
                   "recordedBy": {
-                    "type": [
-                      "string",
-                      "null"
-                    ]
+                    "type": "string"
                   }
                 },
+                "required": [
+                  "meterId",
+                  "value",
+                  "recordedAt",
+                  "recordedBy"
+                ],
                 "additionalProperties": true,
-                "description": "Abridged: field list inferred from the AssetMeterReading model."
+                "description": "Fields not listed here (e.g. id, lastBaselineValue) are ignored if sent."
               }
             }
           }
@@ -5770,6 +5907,254 @@
           }
         }
       }
+    },
+    "/v1/buyer/asset/meters/count_by": {
+      "get": {
+        "operationId": "countAssetMeters",
+        "summary": "Count asset meters",
+        "tags": [
+          "Asset Meters"
+        ],
+        "description": "Count of asset meters matching the given filters, scoped to the caller's buyer company. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/asset/meters/{id}": {
+      "get": {
+        "operationId": "getAssetMeter",
+        "summary": "Get an asset meter",
+        "tags": [
+          "Asset Meters"
+        ],
+        "description": "Retrieves a single asset meter by id, hydrated with its asset, meter type, location and most recent reading.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMeterResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/asset/meter_readings/count_by": {
+      "get": {
+        "operationId": "countAssetMeterReadings",
+        "summary": "Count asset meter readings",
+        "tags": [
+          "Asset Meters"
+        ],
+        "description": "Count of asset meter readings matching the given filters, scoped to the caller's buyer company. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/asset/meter_readings/{id}": {
+      "get": {
+        "operationId": "getAssetMeterReading",
+        "summary": "Get an asset meter reading",
+        "tags": [
+          "Asset Meters"
+        ],
+        "description": "Retrieves a single asset meter reading by id. When the parent meter's readingMode is change_from_baseline, lastBaselineValue is computed from the most recent prior baseline reading on that meter as of recordedAt; otherwise it is null.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetMeterReadingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -8107,8 +8492,14 @@
           "meterTypeId": {
             "type": "integer"
           },
-          "seriesType": {
-            "type": "string"
+          "readingMode": {
+            "type": "string",
+            "enum": [
+              "direct_reading",
+              "change_from_baseline",
+              "compare_to_target"
+            ],
+            "description": "Defaults to direct_reading when not supplied on create."
           },
           "defaultExpectedValue": {
             "type": [
@@ -8170,7 +8561,7 @@
           "name",
           "assetId",
           "meterTypeId",
-          "seriesType",
+          "readingMode",
           "valueType",
           "valueUnit",
           "locationId",
@@ -11876,6 +12267,68 @@
         "required": [
           "type",
           "data",
+          "status"
+        ]
+      },
+      "AssetMeterListResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, e.g. \"AssetMeter\"."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetMeter"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "description": "Total number of matching records (not just this page)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "count",
+          "status"
+        ]
+      },
+      "AssetMeterReadingListResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, e.g. \"AssetMeterReading\"."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetMeterReading"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "description": "Total number of matching records (not just this page)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "count",
           "status"
         ]
       }
