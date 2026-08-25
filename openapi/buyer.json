@@ -10915,7 +10915,7 @@
           "isDeleted"
         ],
         "additionalProperties": true,
-        "description": "Site survey walkthrough (read-only on this API). Abridged: hydrated site survey, project, subscriber contact objects may also appear."
+        "description": "Site survey walkthrough (read-only on this API). Abridged: hydrated site survey, project, subscriber contact objects may also appear. The embedded siteSurvey carries walkthroughHeatMapRanges (array of {color, lowerRange} colour bands for rendering walkthrough scores); a survey with no ranges of its own is returned with its template's ranges already filled in."
       },
       "PlannedMaintenanceSchedule": {
         "type": "object",

@@ -30,6 +30,33 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 Standardpaginering och fältfilter gäller, plus din rolls plats- och varumärkesavgränsning. Arbetsordrar som refereras från en genomgångs uppgiftssvar filtreras av din läsbehörighet, så olika nycklar kan se olika länkade arbetsordrar på samma genomgång.
 
+## Rendera poäng med värmekarteintervall
+
+Varje genomgångssvar bäddar in den hydrerade platsundersökning som genomgången kördes mot, under `siteSurvey`. Platsundersökningen bär ett valfritt fält `walkthroughHeatMapRanges`: en array av färgband som används för att rendera genomgångspoäng som en värmekarta.
+
+```json
+{
+  "siteSurvey": {
+    "id": 88,
+    "title": "Kvartalsvis butiksrevision",
+    "walkthroughHeatMapRanges": [
+      { "color": "#FF0000", "lowerRange": 0 },
+      { "color": "#FFFF00", "lowerRange": 60 },
+      { "color": "#00FF00", "lowerRange": 80 }
+    ]
+  }
+}
+```
+
+Varje post har två fält:
+
+- `color`: färgen som ska renderas för bandet, vanligtvis en hexkod.
+- `lowerRange`: den lägsta poäng som faller inom bandet. Ett band sträcker sig från sitt `lowerRange` upp till nästa bands `lowerRange`.
+
+För att färglägga en poäng från genomgångens `scores`-array, välj bandet med det högsta `lowerRange` som är mindre än eller lika med poängen.
+
+Intervallen konfigureras på platsundersökningen eller på dess mall. Om en undersökning saknar egna intervall fyller OpenWrench i mallens intervall vid läsning, så det inbäddade `siteSurvey.walkthroughHeatMapRanges` är redan upplöst. Du behöver aldrig hämta mallen för att hitta banden. Fältet är `null` när varken undersökningen eller dess mall definierar intervall; hoppa över värmekarterendering i det fallet.
+
 ## Skapa uppföljningsarbetsordrar
 
 När ett besiktningsfynd behöver åtgärdas, skapa arbetsordern med länkfälten satta:
