@@ -959,7 +959,7 @@
       "post": {
         "operationId": "createWorkOrder",
         "summary": "Create a work order",
-        "description": "Creates a supplier-initiated work order. Requires the API key's contact to belong to a supplier facility. locationId is required; problemTypeId and woPriorityId are defaulted from the location's buyer company when omitted. Returns the created work order.",
+        "description": "Creates a supplier-initiated work order. Requires the API key's contact to belong to a supplier facility. locationId is required; problemTypeId and woPriorityId are defaulted from the location's buyer company when omitted. This endpoint always creates: an id in the body is ignored. The initial status is set by the server. For a third-party supplier key, any status or isSupplierInitiated in the body is ignored: the work order is created as SupplierInitiatedPendingApproval with isSupplierInitiated true, and the buyer's approval configuration then either holds it there until a buyer approves it or, when the buyer auto-approves supplier-initiated work orders, confirms it to the calling facility as ConfirmedByServiceProvider. Keys that belong to a buyer's internal service team, and paying suppliers creating a work order at a location of a client they manage, keep the status they send. Returns the created work order.",
         "tags": [
           "Work Orders"
         ],
@@ -1029,11 +1029,6 @@
                     "type": "integer",
                     "description": "Optional; when omitted a default priority for the buyer company is chosen (preference order 3,4,5,2,1, following linkedTo mappings)."
                   },
-                  "id": {
-                    "type": "integer",
-                    "format": "int64",
-                    "description": "Existing work order id (update semantics); the referenced work order must exist."
-                  },
                   "woNumber": {
                     "type": "string"
                   },
@@ -1057,7 +1052,8 @@
                     "type": "boolean"
                   },
                   "isSupplierInitiated": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "Set to true by the server for third-party supplier keys; a value in the body is ignored there. Keys of a buyer's internal service team and paying suppliers creating for a client they manage keep the value they send."
                   },
                   "isCustomerInitiated": {
                     "type": "boolean"
@@ -1067,7 +1063,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "Work-order status name; when omitted, the initial status is derived from the buyer company's configuration (typically Unassigned/PendingApproval). Invalid names are rejected."
+                    "description": "Ignored for third-party supplier keys: the server seeds SupplierInitiatedPendingApproval and the buyer's approval configuration resolves the initial status. Honoured only for keys of a buyer's internal service team and for paying suppliers creating at a location of a client they manage; must be a valid work-order status name (invalid names are rejected), and when omitted the initial status is derived from the buyer company's configuration."
                   },
                   "description": {
                     "type": "string"

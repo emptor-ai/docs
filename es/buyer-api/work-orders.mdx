@@ -135,6 +135,7 @@ Valores de `status` que verás y que establecerás a través de la API:
 | --- | --- | --- |
 | `Unassigned` | Sistema | Creada, sin proveedor asignado aún. |
 | `PendingApproval` | Comprador | En espera de aprobación interna, o retornada aquí tras un rechazo del proveedor. |
+| `SupplierInitiatedPendingApproval` | Comprador | Un proveedor abrió esta orden de trabajo por su cuenta; espera tu aprobación antes de que el proveedor quede confirmado en ella (se omite cuando tu empresa aprueba automáticamente el trabajo iniciado por el proveedor). |
 | `ConfirmedByServiceProvider` | Proveedor | El proveedor aceptó el trabajo. |
 | `TechAssigned`, `TechScheduled`, `TechRescheduled` | Proveedor | Llamada de servicio creada o (re)programada. |
 | `TechWorkingOnSite` | Proveedor | Técnico hizo check-in. |

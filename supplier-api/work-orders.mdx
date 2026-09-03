@@ -102,12 +102,13 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
   -d '{
     "title": "Damaged freezer door gasket, found during PM visit",
     "locationId": 1204,
-    "isSupplierInitiated": true,
     "description": "Gasket torn along bottom edge; recommend replacement."
   }'
 ```
 
-Defaults when omitted: `problemTypeId` falls back to the first leaf problem type of the location's buyer company, and `woPriorityId` to a default priority for that company. `status` is derived from the buyer company's configuration (typically `Unassigned` or `PendingApproval`). An `assetId`, if given, must exist, and its area is inherited when `areaId` is not set. The field is `needApproval` (no "s") on this create body.
+Defaults when omitted: `problemTypeId` falls back to the first leaf problem type of the location's buyer company, and `woPriorityId` to a default priority for that company. An `assetId`, if given, must exist, and its area is inherited when `areaId` is not set. The field is `needApproval` (no "s") on this create body. An `id` in the body is ignored: this call always creates a new work order.
+
+**The initial status is set by the server.** For a third-party supplier key, any `status` or `isSupplierInitiated` in the body is ignored. The work order is created as `SupplierInitiatedPendingApproval` with `isSupplierInitiated: true`, and the buyer's approval configuration then decides where it lands: it stays in `SupplierInitiatedPendingApproval` until a buyer approves it, or, when the buyer auto-approves supplier-initiated work orders, it is confirmed to your facility straight away as `ConfirmedByServiceProvider`. Keys that belong to a buyer's internal service team, and paying suppliers creating a work order at a location of a client they manage, keep the `status` they send (when omitted, the initial status is derived from the buyer company's configuration; an internal team lands in `AssignedToInternalTech`).
 
 ## Problem types
 

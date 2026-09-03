@@ -52,6 +52,8 @@ El puente entre PRs y POs es `PATCH /v1/supplier/inventory/purchase_request_line
 
 Estados de PO: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
 
+Cada cambio de orden de compra, línea de pedido o recibo realizado a través de estos endpoints queda registrado en el historial de auditoría de la orden de compra en OpenWrench, atribuido al contacto asociado a tu clave de API.
+
 ### Crear
 
 `POST /v1/supplier/inventory/purchase_orders` requiere `status` (típicamente `new`), `partEquipmentVendorId`, `currencyId` y `createdByEmail`. `totalCost` también es requerido a menos que la configuración de inventario de tu empresa marque el costo de PO como no obligatorio.

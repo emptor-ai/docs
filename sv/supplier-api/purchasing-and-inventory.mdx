@@ -52,6 +52,8 @@ Bryggan mellan PR:er och PO:er är `PATCH /v1/supplier/inventory/purchase_reques
 
 PO-statusar: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
 
+Varje ändring av inköpsorder, orderrad eller mottagning som görs via de här slutpunkterna registreras i inköpsorderns granskningslogg i OpenWrench, tillskriven kontakten bakom din API-nyckel.
+
 ### Skapa
 
 `POST /v1/supplier/inventory/purchase_orders` kräver `status` (vanligtvis `new`), `partEquipmentVendorId`, `currencyId` och `createdByEmail`. `totalCost` krävs också om inte ditt företags lagerinställningar markerar PO-kostnad som icke-obligatorisk.

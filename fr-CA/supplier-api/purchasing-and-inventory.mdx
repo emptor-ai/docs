@@ -52,6 +52,8 @@ Le pont entre les DA et les BC est `PATCH /v1/supplier/inventory/purchase_reques
 
 Statuts de BC : `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
 
+Chaque modification de bon de commande, de ligne ou de réception effectuée via ces endpoints est consignée dans le journal d'audit du bon de commande dans OpenWrench, attribuée au contact associé à votre clé d'API.
+
 ### Création
 
 `POST /v1/supplier/inventory/purchase_orders` requiert `status` (typiquement `new`), `partEquipmentVendorId`, `currencyId` et `createdByEmail`. `totalCost` est aussi requis à moins que les paramètres d'inventaire de votre entreprise ne marquent le coût du BC comme non obligatoire.

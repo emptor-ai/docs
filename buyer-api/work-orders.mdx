@@ -137,6 +137,7 @@ Every status action returns the updated work order in the standard envelope.
 | --- | --- | --- |
 | `Unassigned` | System | Created, no supplier assigned yet. |
 | `PendingApproval` | Buyer | Awaiting internal approval, or returned here after a supplier decline. |
+| `SupplierInitiatedPendingApproval` | Buyer | A supplier opened this work order themselves; it awaits your approval before the supplier is confirmed on it (skipped when your company auto-approves supplier-initiated work). |
 | `ConfirmedByServiceProvider` | Supplier | Supplier accepted the job. |
 | `TechAssigned`, `TechScheduled`, `TechRescheduled` | Supplier | Service call created or (re)scheduled. |
 | `TechWorkingOnSite` | Supplier | Technician checked in. |
