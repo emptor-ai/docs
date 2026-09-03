@@ -61,7 +61,7 @@ Händelsevokabulären delas i resehändelser (`began_trip` genom `trip_cancelled
 
 - **Analys** för dashboards, löner och utnyttjanderapporter: en siffra per tekniker per period, pausberäkningen redan gjord.
 - **Rå händelser** för att granska ett misstänkt total, rekonstruera ett besök minut för minut eller mata ditt eget analyslager.
-- **Per-besök**-frågor besvaras oftast bättre av servicebesöks-utökningen `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, som returnerar exakt de händelser som ligger i besökets in-/utcheckningsfönster plus paus-exkluderade `trueWorkTimeMillis`. Se [Servicebesök](/supplier-api/service-calls#läsa-tillbaka-ett-servicebesök).
+- **Per-besök**-frågor besvaras oftast bättre av servicebesöks-utökningen `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, som returnerar exakt de händelser som ligger i besökets in-/utcheckningsfönster plus paus-exkluderade `trueWorkTimeMillis`. Se [Servicebesök](/supplier-api/service-calls#reading-a-service-call-back).
 
 ## Beprövade mönster
 

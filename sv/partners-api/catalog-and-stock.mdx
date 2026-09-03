@@ -52,7 +52,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
 ```
 
-**Utrustning per lagerplats** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) är en post per fysisk serialiserad enhet: serienummer, skick och proveniens. Det här är enheterna som [mottagningar med serienummer](/partners-api/purchasing-flow#4-registrera-mottagningar-när-varor-kommer) skapar.
+**Utrustning per lagerplats** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) är en post per fysisk serialiserad enhet: serienummer, skick och proveniens. Det här är enheterna som [mottagningar med serienummer](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) skapar.
 
 Mottagningar är skrivvägen in i lager via det här API:et; läs-sidan här är hur du stämmer av OpenWrench-lager mot ditt ERP.
 

@@ -48,6 +48,6 @@ Innan du godkänner en avslutad arbetsorder eller dess faktura:
 1. Hämta arbetsordern och läs `associatedServiceCalls`.
 2. Begär `/with_work_logs/with_tech_details` för varje besök.
 3. Kontrollera `checkInGeoLocation` mot platsen, jämför `trueWorkTimeMillis` mot fakturerade arbetstimmar och granska utcheckningsanteckningar och bilder.
-4. Godkänn via [arbetsorderns statusåtgärder](/buyer-api/work-orders#köparens-statusåtgärder) eller bestrid via `work_unsatisfactory` och citera det du hittade i anteckningen.
+4. Godkänn via [arbetsorderns statusåtgärder](/buyer-api/work-orders#buyer-status-actions) eller bestrid via `work_unsatisfactory` och citera det du hittade i anteckningen.
 
 Fel följer standardhöljet: `404` för ett okänt besök, `400` för ett besök utanför ditt omfång.

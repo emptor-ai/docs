@@ -110,7 +110,7 @@ Varje förutsättning som misslyckas returnerar `400`: din anläggning måste ä
 ## End-to-end-faktureringsflöde
 
 1. Arbetsordern når offereringsfasen: skicka in ett förslag, vänta på `awarded`.
-2. Slutför arbetet via [utcheckning från servicebesök](/supplier-api/service-calls#3-checka-ut-och-sätt-utfallet).
+2. Slutför arbetet via [utcheckning från servicebesök](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
 3. Skapa fakturautkastet; generera din PDF.
 4. När arbetsordern visar Completed, `upload_and_publish`.
 5. Polla fakturastatus tills `paid` och stäm av mot `markedPaidAt`.
