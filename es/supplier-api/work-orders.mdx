@@ -100,12 +100,13 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
   -d '{
     "title": "Damaged freezer door gasket, found during PM visit",
     "locationId": 1204,
-    "isSupplierInitiated": true,
     "description": "Gasket torn along bottom edge; recommend replacement."
   }'
 ```
 
-Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de problema hoja de la empresa compradora de la ubicación, y `woPriorityId` a una prioridad por defecto para esa empresa. `status` se deriva de la configuración de la empresa compradora (típicamente `Unassigned` o `PendingApproval`). Un `assetId`, si se da, debe existir, y su área se hereda cuando no se establece `areaId`. El campo es `needApproval` (sin "s") en este cuerpo de creación.
+**Estado al crear.** OpenWrench ignora cualquier `status` en el payload en una creación por un proveedor externo. La orden de trabajo siempre se crea como `SupplierInitiatedPendingApproval` con `isSupplierInitiated` en `true`, y la configuración de aprobación del comprador resuelve después el estado efectivo. Si el comprador auto-aprueba las órdenes de trabajo iniciadas por el proveedor, la orden pasa directamente a `ConfirmedByServiceProvider`; de lo contrario, permanece en el flujo de aprobación del comprador hasta ser aprobada. Un `id` en el payload también se descarta, por lo que esta llamada siempre inserta una nueva orden de trabajo. Dos tipos de llamadores están exentos y conservan el estado que envían: los equipos de servicio internos y los proveedores de pago que crean para un cliente que gestionan.
+
+Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de problema hoja de la empresa compradora de la ubicación, y `woPriorityId` a una prioridad por defecto para esa empresa. Un `assetId`, si se da, debe existir, y su área se hereda cuando no se establece `areaId`. El campo es `needApproval` (sin "s") en este cuerpo de creación.
 
 ## Tipos de problema
 

@@ -100,12 +100,13 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
   -d '{
     "title": "Damaged freezer door gasket, found during PM visit",
     "locationId": 1204,
-    "isSupplierInitiated": true,
     "description": "Gasket torn along bottom edge; recommend replacement."
   }'
 ```
 
-Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den första löv-problemtypen för platsens köparföretag, och `woPriorityId` till en standardprioritet för det företaget. `status` härleds från köparföretagets konfiguration (vanligtvis `Unassigned` eller `PendingApproval`). Ett `assetId`, om det anges, måste existera, och dess område ärvs när `areaId` inte är satt. Fältet heter `needApproval` (utan "s") i den här skapa-kroppen.
+**Status vid skapande.** OpenWrench ignorerar all `status` i payloaden när en tredjepartsleverantör skapar. Arbetsordern skapas alltid som `SupplierInitiatedPendingApproval` med `isSupplierInitiated` satt till `true`, och köparens godkännandekonfiguration avgör sedan den faktiska statusen. Om köparen auto-godkänner leverantörsinitierade arbetsordrar går arbetsordern direkt till `ConfirmedByServiceProvider`; annars stannar den i köparens godkännandeflöde tills den godkänns. Ett `id` i payloaden tas också bort, så det här anropet infogar alltid en ny arbetsorder. Två typer av anropare är undantagna och behåller statusen de skickar: interna serviceteam och betalande leverantörer som skapar för en klient de förvaltar.
+
+Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den första löv-problemtypen för platsens köparföretag, och `woPriorityId` till en standardprioritet för det företaget. Ett `assetId`, om det anges, måste existera, och dess område ärvs när `areaId` inte är satt. Fältet heter `needApproval` (utan "s") i den här skapa-kroppen.
 
 ## Problemtyper
 

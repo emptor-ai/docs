@@ -959,7 +959,7 @@
       "post": {
         "operationId": "createWorkOrder",
         "summary": "Create a work order",
-        "description": "Creates a supplier-initiated work order. Requires the API key's contact to belong to a supplier facility. locationId is required; problemTypeId and woPriorityId are defaulted from the location's buyer company when omitted. Returns the created work order.",
+        "description": "Creates a supplier-initiated work order. Requires the API key's contact to belong to a supplier facility. locationId is required; problemTypeId and woPriorityId are defaulted from the location's buyer company when omitted. For third-party suppliers, any status in the payload is ignored: the work order is always created as SupplierInitiatedPendingApproval with isSupplierInitiated set to true, and the buyer's approval configuration then resolves the effective status. Internal service teams and paying suppliers creating for a client they manage keep the status they send. A payload id is dropped; this call always inserts a new work order. Returns the created work order.",
         "tags": [
           "Work Orders"
         ],
@@ -1032,7 +1032,7 @@
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Existing work order id (update semantics); the referenced work order must exist."
+                    "description": "Ignored. A payload id is dropped on create; this call always inserts a new work order."
                   },
                   "woNumber": {
                     "type": "string"
@@ -1057,7 +1057,8 @@
                     "type": "boolean"
                   },
                   "isSupplierInitiated": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "description": "Set to true automatically on third-party supplier creates; a payload value is ignored."
                   },
                   "isCustomerInitiated": {
                     "type": "boolean"
@@ -1067,7 +1068,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "Work-order status name; when omitted, the initial status is derived from the buyer company's configuration (typically Unassigned/PendingApproval). Invalid names are rejected."
+                    "description": "Ignored for third-party suppliers: the work order is always created as SupplierInitiatedPendingApproval, and the buyer's approval configuration resolves the effective status. Honored only for internal service teams and paying suppliers creating for a client they manage; invalid names are rejected."
                   },
                   "description": {
                     "type": "string"
