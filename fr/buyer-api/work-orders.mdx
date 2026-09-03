@@ -135,6 +135,7 @@ Valeurs de `status` que vous verrez et pourrez définir via l'API :
 | --- | --- | --- |
 | `Unassigned` | Système | Créé, aucun fournisseur encore assigné. |
 | `PendingApproval` | Acheteur | En attente d'approbation interne, ou revenu ici après un refus du fournisseur. |
+| `SupplierInitiatedPendingApproval` | Acheteur | Un fournisseur a ouvert ce bon de travail de lui-même ; il attend votre approbation avant que le fournisseur y soit confirmé (ignoré lorsque votre entreprise approuve automatiquement le travail à l'initiative du fournisseur). |
 | `ConfirmedByServiceProvider` | Fournisseur | Le fournisseur a accepté le travail. |
 | `TechAssigned`, `TechScheduled`, `TechRescheduled` | Fournisseur | Visite de service créée ou (re)planifiée. |
 | `TechWorkingOnSite` | Fournisseur | Le technicien a pointé son entrée. |

@@ -100,12 +100,13 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
   -d '{
     "title": "Damaged freezer door gasket, found during PM visit",
     "locationId": 1204,
-    "isSupplierInitiated": true,
     "description": "Gasket torn along bottom edge; recommend replacement."
   }'
 ```
 
-Valeurs par défaut si omises : `problemTypeId` revient au premier type de problème feuille de l'entreprise acheteur de l'emplacement, et `woPriorityId` à une priorité par défaut pour cette entreprise. `status` est dérivé de la configuration de l'entreprise acheteur (généralement `Unassigned` ou `PendingApproval`). Un `assetId`, s'il est fourni, doit exister, et sa zone est héritée lorsque `areaId` n'est pas défini. Le champ est `needApproval` (sans « s ») sur ce corps de création.
+Valeurs par défaut si omises : `problemTypeId` revient au premier type de problème feuille de l'entreprise acheteur de l'emplacement, et `woPriorityId` à une priorité par défaut pour cette entreprise. Un `assetId`, s'il est fourni, doit exister, et sa zone est héritée lorsque `areaId` n'est pas défini. Le champ est `needApproval` (sans « s ») sur ce corps de création. Un `id` dans le corps est ignoré : cet appel crée toujours un nouveau bon de travail.
+
+**Le statut initial est fixé par le serveur.** Pour une clé de fournisseur tiers, tout `status` ou `isSupplierInitiated` dans le corps est ignoré. Le bon de travail est créé en `SupplierInitiatedPendingApproval` avec `isSupplierInitiated: true`, et la configuration d'approbation de l'acheteur décide ensuite de sa destination : il reste en `SupplierInitiatedPendingApproval` jusqu'à ce qu'un acheteur l'approuve ou, lorsque l'acheteur approuve automatiquement les bons de travail à l'initiative du fournisseur, il est immédiatement confirmé à votre établissement en `ConfirmedByServiceProvider`. Les clés appartenant à l'équipe de service interne d'un acheteur, ainsi que les fournisseurs payants qui créent un bon de travail sur l'emplacement d'un client qu'ils gèrent, conservent le `status` qu'ils envoient (s'il est omis, le statut initial est dérivé de la configuration de l'entreprise acheteur ; une équipe interne arrive en `AssignedToInternalTech`).
 
 ## Types de problème
 

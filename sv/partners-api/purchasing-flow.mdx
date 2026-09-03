@@ -140,3 +140,4 @@ Läs tillbaka en mottagning med `GET /v1/partners/inventory/purchase_order_recei
 - Skapanden är inte idempotenta: att försöka igen på ett timeout-adderat PO-skapande kan duplicera ordern. Använd list-slutpunkten med ett filter (till exempel på dina `receiptNumber`-liknande externa referenser) för att kontrollera innan du försöker igen.
 - Behörighetsproblem yttrar sig som `400` (med standardfelshöljet), och tyst-överhoppade id:n på bulk- och associate-slutpunkterna innebär att ett "lyckat" anrop kan ha gjort mindre än du bad om. Stäm alltid av svarspayloaden mot din förfrågan.
 - [Katalog-slutpunkterna](/partners-api/catalog-and-stock) tillhandahåller de `partId`, `equipmentTypeId`, `partEquipmentVendorId` och `stockLocationId`-värden det här flödet behöver.
+- Varje ändring av inköpsorder, orderrad eller mottagning som görs via de här slutpunkterna registreras i inköpsorderns granskningslogg i OpenWrench, tillskriven kontakten bakom din API-nyckel.

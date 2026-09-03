@@ -135,6 +135,7 @@ Varje statusåtgärd returnerar den uppdaterade arbetsordern i standardhöljet.
 | --- | --- | --- |
 | `Unassigned` | Systemet | Skapad, ingen leverantör tilldelad ännu. |
 | `PendingApproval` | Köparen | Väntar på internt godkännande, eller återförd hit efter att en leverantör tackat nej. |
+| `SupplierInitiatedPendingApproval` | Köparen | En leverantör öppnade den här arbetsordern på eget initiativ; den väntar på ditt godkännande innan leverantören bekräftas på den (hoppas över när ditt företag automatiskt godkänner leverantörsinitierat arbete). |
 | `ConfirmedByServiceProvider` | Leverantören | Leverantören har accepterat jobbet. |
 | `TechAssigned`, `TechScheduled`, `TechRescheduled` | Leverantören | Servicebesök skapat eller (om)schemalagt. |
 | `TechWorkingOnSite` | Leverantören | Teknikern har checkat in. |

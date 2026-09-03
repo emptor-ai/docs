@@ -142,3 +142,4 @@ Read a receipt back with `GET /v1/partners/inventory/purchase_order_receipts/{id
 - Creates are not idempotent: retrying a timed-out PO create can duplicate the order. Use the list endpoint with a filter (for example on your `receiptNumber`-style external references) to check before retrying.
 - Permission problems surface as `400` (with the standard error envelope), and silently-skipped ids on the bulk and associate endpoints mean a "successful" call may have done less than you asked. Always reconcile the response payload against your request.
 - The [catalog endpoints](/partners-api/catalog-and-stock) supply the `partId`, `equipmentTypeId`, `partEquipmentVendorId`, and `stockLocationId` values this flow needs.
+- Every purchase order, line item, and receipt change made through these endpoints is recorded on the purchase order's audit trail in OpenWrench, attributed to the contact behind your API key.

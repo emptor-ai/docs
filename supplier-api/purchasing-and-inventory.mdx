@@ -54,6 +54,8 @@ The bridge between PRs and POs is `PATCH /v1/supplier/inventory/purchase_request
 
 PO statuses: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
 
+Every purchase order, line item, and receipt change made through these endpoints is recorded on the purchase order's audit trail in OpenWrench, attributed to the contact behind your API key.
+
 ### Create
 
 `POST /v1/supplier/inventory/purchase_orders` requires `status` (typically `new`), `partEquipmentVendorId`, `currencyId`, and `createdByEmail`. `totalCost` is also required unless your company's inventory settings mark PO cost as not mandatory.
