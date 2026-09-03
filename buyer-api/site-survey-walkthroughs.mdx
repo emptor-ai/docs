@@ -34,7 +34,7 @@ Standard pagination and field filters apply, plus your role's location and brand
 
 ## Rendering scores with heat map ranges
 
-Each walkthrough response embeds the hydrated site survey it was run against, under `siteSurvey`. The site survey carries an optional `walkthroughHeatMapRanges` field: an array of colour bands used to render walkthrough scores as a heat map.
+Each walkthrough response embeds the hydrated site survey it was run against, under `siteSurvey`. The site survey carries an optional `walkthroughHeatMapRanges` field: an array of color bands used to render walkthrough scores as a heat map.
 
 ```json
 {
@@ -55,9 +55,9 @@ Each entry has two fields:
 - `color` — the color to render for the band, typically a hex code.
 - `lowerRange` — the lowest score that falls into the band. A band runs from its `lowerRange` up to the next band's `lowerRange`.
 
-To colour a score from the walkthrough's `scores` array, pick the band with the highest `lowerRange` that is less than or equal to the score.
+To color a score from the walkthrough's `scores` array, pick the band with the highest `lowerRange` that is less than or equal to the score.
 
-Ranges are configured on the site survey or on its template. If a survey has no ranges of its own, OpenWrench fills in the template's ranges at read time, so the embedded `siteSurvey.walkthroughHeatMapRanges` is already resolved. You never need to fetch the template to find the bands. The field is `null` when neither the survey nor its template defines ranges; skip heat map rendering in that case.
+You configure ranges on the site survey or on its template. If a survey has no ranges of its own, OpenWrench fills in the template's ranges at read time, so the embedded `siteSurvey.walkthroughHeatMapRanges` is already resolved. You never need to fetch the template to find the bands. The field is `null` when neither the survey nor its template defines ranges; skip heat map rendering in that case.
 
 ## Creating follow-up work orders
 
