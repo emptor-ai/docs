@@ -91,6 +91,21 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Append to the shared buyer–supplier thread with `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), and read a work order's thread with `GET /v1/supplier/work_order/work_order_notes/{woId}`. Reading updates read receipts for your contact, and a denied read returns an empty list rather than an error.
 
+To post a batch of photos (a technician's before/after set, for example), use `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` with `{ "id": ..., "notes": [ ... ] }`. Each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. A request takes 1–25 notes, duplicate photo URLs are rejected with `400`, and the batch keeps its order under one server-set `noteAddedAt`. Subscribers receive a single grouped notification instead of one notification per photo.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 ## Create a supplier-initiated work order
 
 Suppliers can open work orders themselves (a tech spots a broken door while on site for something else). `POST /v1/supplier/work_order/work_orders` requires `title` and `locationId`; the location determines the buyer facility and company.

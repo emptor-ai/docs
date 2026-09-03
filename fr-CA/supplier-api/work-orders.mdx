@@ -89,6 +89,21 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Ajoutez au fil partagé acheteur-fournisseur avec `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), et lisez le fil d'un bon de travail avec `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lecture met à jour les accusés de lecture pour votre contact, et une lecture refusée retourne une liste vide plutôt qu'une erreur.
 
+Pour publier un lot de photos (le jeu avant/après d'un technicien, par exemple), utilisez `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` avec `{ "id": ..., "notes": [ ... ] }`. Chaque note doit porter une URL `photo` et aucun autre contenu : `text` doit être vide et `video`, `audio`, `otherFile` et `elements` doivent être absents. Une requête accepte 1 à 25 notes, les URL de photo en double sont rejetées avec `400`, et le lot conserve son ordre sous un seul `noteAddedAt` défini par le serveur. Les abonnés reçoivent une seule notification groupée au lieu d'une notification par photo.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 ## Créer un bon de travail à l'initiative du fournisseur
 
 Les fournisseurs peuvent ouvrir eux-mêmes des bons de travail (un technicien remarque une porte brisée pendant qu'il est sur place pour autre chose). `POST /v1/supplier/work_order/work_orders` requiert `title` et `locationId`; l'emplacement détermine l'établissement et l'entreprise acheteuse.

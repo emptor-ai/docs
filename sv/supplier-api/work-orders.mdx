@@ -89,6 +89,21 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Lägg till i den delade köpar–leverantör-tråden med `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), och läs en arbetsorders tråd med `GET /v1/supplier/work_order/work_order_notes/{woId}`. Läsning uppdaterar läskvitton för din kontakt, och en nekad läsning returnerar en tom lista istället för ett fel.
 
+För att publicera en uppsättning foton (en teknikers före/efter-bilder, till exempel), använd `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` med `{ "id": ..., "notes": [ ... ] }`. Varje anteckning måste bära en `photo`-URL och inget annat innehåll: `text` måste vara tomt och `video`, `audio`, `otherFile` och `elements` måste utelämnas. En begäran tar 1–25 anteckningar, dubblerade foto-URL:er avvisas med `400`, och batchen behåller sin ordning under ett enda serversatt `noteAddedAt`. Prenumeranter får en enda grupperad avisering istället för en avisering per foto.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 ## Skapa en leverantörsinitierad arbetsorder
 
 Leverantörer kan öppna arbetsordrar själva (en tekniker upptäcker en trasig dörr medan han är på plats för något annat). `POST /v1/supplier/work_order/work_orders` kräver `title` och `locationId`; platsen avgör köparanläggningen och företaget.

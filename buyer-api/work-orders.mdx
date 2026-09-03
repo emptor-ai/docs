@@ -168,6 +168,21 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Bulk-append photos** with `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Use it when you have a batch of photos to post (a technician's before/after set, for example): subscribers receive a single grouped notification instead of one notification per photo. The body is `{ "id": <woId>, "notes": [ ... ] }` with 1–25 notes, and each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. Repeating the same photo URL within a request is rejected with `400`. The server stamps every note in the batch with the same `noteAddedAt` and preserves the order you sent them in.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 **Read** with `GET /v1/buyer/work_order/work_order_notes/{woId}`. This returns the root buyer–supplier thread only (contractor and internal threads are separate), and reading marks the notes as read for your contact. A denied read returns an empty list rather than an error.
 
 ## Problem types

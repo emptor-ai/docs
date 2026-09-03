@@ -166,6 +166,21 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Añade fotos en bloque** con `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Úsalo cuando tengas un lote de fotos que publicar (el conjunto de antes/después de un técnico, por ejemplo): los suscriptores reciben una única notificación agrupada en lugar de una notificación por foto. El cuerpo es `{ "id": <woId>, "notes": [ ... ] }` con de 1 a 25 notas, y cada nota debe llevar una URL en `photo` y ningún otro contenido: `text` debe estar vacío y `video`, `audio`, `otherFile` y `elements` deben estar ausentes. Repetir la misma URL de foto dentro de una solicitud se rechaza con `400`. El servidor marca cada nota del lote con el mismo `noteAddedAt` y conserva el orden en que las enviaste.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 **Lee** con `GET /v1/buyer/work_order/work_order_notes/{woId}`. Esto devuelve solo el hilo raíz comprador-proveedor (los hilos de contratista e internos son separados), y la lectura marca las notas como leídas para tu contacto. Una lectura denegada devuelve una lista vacía en lugar de un error.
 
 ## Tipos de problema

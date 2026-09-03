@@ -3363,6 +3363,87 @@
         }
       }
     },
+    "/v1/buyer/work_order/work_orders/append_notes/bulk": {
+      "patch": {
+        "operationId": "bulkAppendWorkOrderNotes",
+        "summary": "Append photo notes to a work order in bulk",
+        "tags": [
+          "Work Order Notes"
+        ],
+        "description": "Appends up to 25 photo-only notes to the work order's buyer\u2194supplier thread in one call and sends a single grouped notification instead of one notification per photo. Each note must carry a photo URL and no other content (empty text, no video, audio, otherFile, or elements), and the same photo URL cannot appear twice in one request. Every note's noteAddedBy is set to the calling contact and noteAddedAt is overwritten with the current server time, so the batch keeps the order it was sent in. The author's email is added to the work order's buyer subscriber list.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "description": "Work order id."
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/Note"
+                    },
+                    "minItems": 1,
+                    "maxItems": 25,
+                    "description": "Photo-only notes to append, in the order they should appear on the thread. Each entry must set photo and leave every other content field empty; photo URLs must be unique within the request."
+                  }
+                },
+                "required": [
+                  "id",
+                  "notes"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure: notes is empty, has more than 25 entries, contains a note that is not photo-only, repeats a photo URL, or the payload could not be parsed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/buyer/work_order/work_order_notes/{woId}": {
       "get": {
         "operationId": "getWorkOrderNotes",
