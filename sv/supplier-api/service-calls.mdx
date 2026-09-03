@@ -93,7 +93,7 @@ Vanliga val för `checkOutStatus`:
 - `WaitingForReview` — arbetet är klart, lämna över till köparen för granskning.
 - `TechScheduled` eller `PartsRequested` med flera — besöket slutade men jobbet fortsätter (uppföljningsbesök, väntar på delar).
 
-Delar och lager som förbrukas vid besöket registreras via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload; id:na kommer från din [lagerkatalog](/supplier-api/purchasing-and-inventory#katalog-delar-utrustning-leverantörer-och-lager).
+Delar och lager som förbrukas vid besöket registreras via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload; id:na kommer från din [lagerkatalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 Två automationsbeteenden utlöses vid denna punkt:
 

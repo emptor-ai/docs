@@ -24,7 +24,7 @@ curl -X POST "$BASE/v1/supplier/file/upload" \
 
 Svaret (höljetyp `FileManager`) är en `FileDetails`-post: `{ "fileName": "before.jpg", "fileId": "a1b2c3d4e5" }`. Icke-ASCII-tecken tas bort från filnamnet; ett lagringsfel returnerar `500`.
 
-Använd det returnerade objektet ordagrant i bilagefält: [leverantörsbilagor för arbetsorder](/supplier-api/work-orders#håll-köparen-informerad), förslags- och faktura-`attachments` samt bilder för in-/utcheckning. Faktura-PDF:er har sin egen [ladda-upp-och-publicera-slutpunkt](/supplier-api/quotes-and-invoicing#ladda-upp-pdf-en-och-publicera).
+Använd det returnerade objektet ordagrant i bilagefält: [leverantörsbilagor för arbetsorder](/supplier-api/work-orders#keep-the-buyer-informed), förslags- och faktura-`attachments` samt bilder för in-/utcheckning. Faktura-PDF:er har sin egen [ladda-upp-och-publicera-slutpunkt](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
 
 **Ladda ner** med `GET /v1/supplier/file/download/{id}/{name}`, som strömmar de lagrade byten som en bilaga. `{id}` är `fileId`; `{name}` är filnamnet att servera den under. Använd den för att hämta köpar-tillhandahållna dokument från `buyerAttachments`. Nedladdningsfel besvaras med `400`.
 

@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter filtrerar på entitetens indexerade kolumner. Allt är tenant-avgränsat till din anläggning. Två saker att komma ihåg:
 
 - **Läsningar kommer från en läs-replika**, så en ändring du just skrivit kan släpa efter ett ögonblick i listresultat.
-- **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/supplier-api/reference-data#datamaskering) för detaljer.
+- **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/supplier-api/reference-data#data-masking) för detaljer.
 
 ## Acceptera eller avvisa
 
