@@ -28,7 +28,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Aplica la paginación estándar (`offset`, `limit` por defecto 10 máx. 25, `sort_by`, `order`), y cualquier otro parámetro de consulta filtra sobre las columnas indexadas de la entidad. Todo está limitado por inquilino a tu instalación. Dos cosas a recordar:
+Aplica la paginación estándar (`offset`, `limit` por defecto 10, máx. 25, `sort_by`, `order`), y cualquier otro parámetro de consulta filtra sobre las columnas indexadas de la entidad. Todo está limitado por inquilino a tu instalación. Dos cosas a recordar:
 
 - **Las lecturas vienen de una réplica de lectura**, así que tu propio cambio recién escrito puede tardar un momento en aparecer en los resultados de listado.
 - **Enmascaramiento de datos.** Si eres un proveedor tercero (no el equipo interno del comprador), los campos privados del comprador se ponen en blanco en órdenes de trabajo, ubicaciones y facturas antes de devolver la respuesta. Los campos faltantes son usualmente enmascaramiento, no bugs. Consulta [Datos de referencia](/supplier-api/reference-data#data-masking) para más detalles.
