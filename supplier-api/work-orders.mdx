@@ -106,7 +106,7 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
   }'
 ```
 
-**Status on create.** OpenWrench ignores any `status` in the payload on a third-party supplier create. The work order is always created as `SupplierInitiatedPendingApproval` with `isSupplierInitiated` set to `true`, and the buyer's approval configuration then resolves the effective status. If the buyer auto-approves supplier-initiated work orders, the work order moves straight to `ConfirmedByServiceProvider`; otherwise it stays in the buyer's approval flow until approved. A payload `id` is also dropped, so this call always inserts a new work order. Two callers are exempt and keep the status they send: internal service teams, and paying suppliers creating for a client they manage.
+**Status on create.** OpenWrench ignores any `status` in the payload on a third-party supplier create. The work order is always created as `SupplierInitiatedPendingApproval` with `isSupplierInitiated` set to `true`, and the buyer's approval configuration then resolves the effective status. If the buyer auto-approves supplier-initiated work orders, the work order moves straight to `ConfirmedByServiceProvider`; otherwise it stays in the buyer's approval flow until approved. A payload `id` is also dropped, so this call always inserts a new work order. Two callers are exempt and keep the status they send: internal service teams and paying suppliers creating for a client they manage.
 
 Defaults when omitted: `problemTypeId` falls back to the first leaf problem type of the location's buyer company, and `woPriorityId` to a default priority for that company. An `assetId`, if given, must exist, and its area is inherited when `areaId` is not set. The field is `needApproval` (no "s") on this create body.
 
