@@ -20,7 +20,7 @@ Un bon de travail retourné par l'API porte, entre autres champs :
 | --- | --- |
 | `id` | Id numérique utilisé par tous les autres endpoints. |
 | `title`, `description` | Ce qu'il faut faire. `descriptionNonFormatted` est la variante en texte brut. |
-| `status`, `displayStatus` | `status` est le statut machine à granularité fine (voir [le modèle de statut](#the-status-model)); `displayStatus` est l'étiquette plus grossière affichée dans l'interface. |
+| `status`, `displayStatus` | `status` est le statut machine à granularité fine (voir [le modèle de statut](#le-modèle-de-statut)); `displayStatus` est l'étiquette plus grossière affichée dans l'interface. |
 | `locationId`, `assetId`, `subAssetIds`, `areaId` | Où le travail se déroule et sur quoi il porte. |
 | `problemTypeId`, `workCategoryId`, `spendCategoryId`, `woPriorityId` | Classification. |
 | `supplierFacilityId`, `supplierPrimaryContactEmail` | Le fournisseur affecté, une fois réparti. |
@@ -136,7 +136,7 @@ Valeurs de `status` que vous verrez et définirez via l'API :
 | `Unassigned` | Système | Créé, aucun fournisseur affecté pour l'instant. |
 | `PendingApproval` | Acheteur | En attente d'approbation interne, ou retourné ici après un refus de fournisseur. |
 | `SupplierInitiatedPendingApproval` | Acheteur | Un fournisseur a ouvert ce bon de travail de lui-même; il attend votre approbation avant que le fournisseur y soit confirmé (ignoré lorsque votre entreprise approuve automatiquement le travail à l'initiative du fournisseur). |
-| `ConfirmedByServiceProvider` | Fournisseur | Fournisseur a accepté le travail. |
+| `ConfirmedByServiceProvider` | Fournisseur | Le fournisseur a accepté le travail. |
 | `TechAssigned`, `TechScheduled`, `TechRescheduled` | Fournisseur | Appel de service créé ou (re)planifié. |
 | `TechWorkingOnSite` | Fournisseur | Technicien arrivé sur place. |
 | `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Fournisseur | Approvisionnement de pièces en cours. |
