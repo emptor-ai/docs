@@ -89,6 +89,21 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Añade al hilo compartido comprador-proveedor con `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), y lee el hilo de una orden de trabajo con `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lectura actualiza los acuses de recibo para tu contacto, y una lectura denegada devuelve una lista vacía en lugar de un error.
 
+Para publicar un lote de fotos (el conjunto de antes/después de un técnico, por ejemplo), usa `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` con `{ "id": ..., "notes": [ ... ] }`. Cada nota debe llevar una URL en `photo` y ningún otro contenido: `text` debe estar vacío y `video`, `audio`, `otherFile` y `elements` deben estar ausentes. Una solicitud acepta de 1 a 25 notas, las URL de foto duplicadas se rechazan con `400`, y el lote conserva su orden bajo un único `noteAddedAt` fijado por el servidor. Los suscriptores reciben una única notificación agrupada en lugar de una notificación por foto.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 ## Crear una orden de trabajo iniciada por el proveedor
 
 Los proveedores pueden abrir órdenes de trabajo ellos mismos (un técnico ve una puerta rota mientras está en sitio por otra cosa). `POST /v1/supplier/work_order/work_orders` requiere `title` y `locationId`; la ubicación determina la instalación y empresa compradora.

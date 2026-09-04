@@ -167,6 +167,21 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Lägg till foton i bulk** med `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Använd den när du har en uppsättning foton att publicera (en teknikers före/efter-bilder, till exempel): prenumeranter får en enda grupperad avisering istället för en avisering per foto. Kroppen är `{ "id": <woId>, "notes": [ ... ] }` med 1–25 anteckningar, och varje anteckning måste bära en `photo`-URL och inget annat innehåll: `text` måste vara tomt och `video`, `audio`, `otherFile` och `elements` måste utelämnas. Att upprepa samma foto-URL i en begäran avvisas med `400`. Servern stämplar varje anteckning i batchen med samma `noteAddedAt` och bevarar ordningen du skickade dem i.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
 **Läs** med `GET /v1/buyer/work_order/work_order_notes/{woId}`. Detta returnerar bara den grundläggande köpar–leverantör-tråden (entreprenörs- och interna trådar är separata), och läsningen markerar anteckningarna som lästa för din kontakt. En nekad läsning returnerar en tom lista istället för ett fel.
 
 ## Problemtyper
