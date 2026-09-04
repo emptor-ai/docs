@@ -109,7 +109,7 @@ Quatre endpoints dédiés font progresser un bon de travail dans les parties du 
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Peut publier la facture brouillon du fournisseur (selon les paramètres du fournisseur) et satisfaire les demandes d'achat liées. |
 | `POST .../status_update/cancelled` | `CancelledWithReason` | |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envoie la note jointe au fournisseur. |
-| `POST .../status_update/reopen` | Réouvert | Envoie la note jointe. |
+| `POST .../status_update/reopen` | Rouvert | Envoie la note jointe. |
 
 ```bash
 curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_and_completed" \
