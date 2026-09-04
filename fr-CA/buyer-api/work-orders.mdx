@@ -129,7 +129,7 @@ Chaque action de statut retourne le bon de travail mis à jour dans l'enveloppe 
 
 ### Verrou d'annulation pendant qu'un technicien est sur place
 
-Les entreprises peuvent activer un verrou d'annulation qui garde les bons de travail ouverts pendant qu'un technicien est sur place. Avec le verrou activé, OpenWrench rejette toute annulation avec `409 Conflict` si un technicien est activement arrivé (check-in) sur l'un des appels de service du bon de travail. Cela couvre les visites du bon de travail lui-même et les visites de ses bons de travail sous-traités. Annuler un sous-contrat self-client qui propagerait l'annulation au bon de travail racine est bloqué de la même façon, et rien n'est enregistré sur aucun des deux bons.
+Les entreprises peuvent activer un verrou d'annulation qui garde les bons de travail ouverts pendant qu'un technicien est sur place. Avec le verrou activé, OpenWrench rejette toute annulation avec `409 Conflict` si un technicien est activement arrivé (check-in) sur l'un des appels de service du bon de travail. Cela couvre les visites du bon de travail lui-même et les visites de ses bons de travail sous-traités. OpenWrench bloque de la même façon l'annulation d'un sous-contrat dont le statut se propage au bon de travail racine, et n'enregistre rien sur aucun des deux bons.
 
 Le verrou se configure par entreprise acheteuse avec deux paramètres :
 

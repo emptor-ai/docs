@@ -129,7 +129,7 @@ Cada acción de estado devuelve la orden de trabajo actualizada en la envoltura 
 
 ### Bloqueo de cancelación mientras un técnico tiene check-in activo
 
-Las empresas pueden optar por un bloqueo de cancelación que mantiene abiertas las órdenes de trabajo mientras un técnico está en sitio. Con el bloqueo habilitado, OpenWrench rechaza cualquier cancelación con `409 Conflict` si un técnico tiene un check-in activo en cualquiera de las llamadas de servicio de la orden de trabajo. Esto cubre las visitas de la propia orden de trabajo y las visitas de sus órdenes de trabajo subcontratadas. Cancelar un subcontrato self-client que propagaría la cancelación a la orden de trabajo raíz se bloquea de la misma forma, y no se confirma nada en ninguna de las dos órdenes.
+Las empresas pueden optar por un bloqueo de cancelación que mantiene abiertas las órdenes de trabajo mientras un técnico está en sitio. Con el bloqueo habilitado, OpenWrench rechaza cualquier cancelación con `409 Conflict` si un técnico tiene un check-in activo en cualquiera de las llamadas de servicio de la orden de trabajo. Esto cubre las visitas de la propia orden de trabajo y las visitas de sus órdenes de trabajo subcontratadas. OpenWrench bloquea de la misma forma la cancelación de un subcontrato cuyo estado se propaga a la orden de trabajo raíz, y no confirma nada en ninguna de las dos órdenes.
 
 El bloqueo se configura por empresa compradora con dos ajustes:
 

@@ -129,7 +129,7 @@ Varje statusåtgärd returnerar den uppdaterade arbetsordern i standardhöljet.
 
 ### Avbokningslås medan en tekniker är incheckad
 
-Företag kan aktivera ett avbokningslås som håller arbetsordrar öppna medan en tekniker är på plats. Med låset aktiverat avvisar OpenWrench varje avbokning med `409 Conflict` om en tekniker är aktivt incheckad på något av arbetsorderns servicebesök. Detta täcker besök på själva arbetsordern och besök på dess underentreprenad-arbetsordrar. Att avboka ett self-client-underkontrakt som skulle propagera avbokningen till rotarbetsordern blockeras på samma sätt, och ingenting sparas på någon av arbetsordrarna.
+Företag kan aktivera ett avbokningslås som håller arbetsordrar öppna medan en tekniker är på plats. Med låset aktiverat avvisar OpenWrench varje avbokning med `409 Conflict` om en tekniker är aktivt incheckad på något av arbetsorderns servicebesök. Detta täcker besök på själva arbetsordern och besök på dess underentreprenad-arbetsordrar. OpenWrench blockerar på samma sätt avbokning av ett underkontrakt vars status propageras till rotarbetsordern, och sparar ingenting på någon av arbetsordrarna.
 
 Låset konfigureras per köparföretag med två inställningar:
 
