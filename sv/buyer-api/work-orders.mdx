@@ -107,7 +107,7 @@ Fyra dedikerade slutpunkter flyttar en arbetsorder genom de köparägda delarna 
 | Slutpunkt | Resulterande status | Sidoeffekter |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Kan publicera leverantörens fakturautkast (enligt leverantörsinställningar) och uppfylla länkade inköpsförfrågningar. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Avvisas med `409` medan en tekniker är incheckad, om ditt företag aktiverar avbokningslåset som beskrivs nedan. |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Skickar den bifogade anteckningen till leverantören. |
 | `POST .../status_update/reopen` | Återöppnad | Skickar den bifogade anteckningen. |
 
@@ -126,6 +126,27 @@ curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_
 ```
 
 Varje statusåtgärd returnerar den uppdaterade arbetsordern i standardhöljet.
+
+### Avbokningslås medan en tekniker är incheckad
+
+Företag kan aktivera ett avbokningslås som håller arbetsordrar öppna medan en tekniker är på plats. Med låset aktiverat avvisar OpenWrench varje avbokning med `409 Conflict` om en tekniker är aktivt incheckad på något av arbetsorderns servicebesök. Detta täcker besök på själva arbetsordern och besök på dess underentreprenad-arbetsordrar. OpenWrench blockerar på samma sätt avbokning av ett underkontrakt vars status propageras till rotarbetsordern, och sparar ingenting på någon av arbetsordrarna.
+
+Låset konfigureras per köparföretag med två inställningar:
+
+| Inställning | Standard | Effekt |
+| --- | --- | --- |
+| `enabled` | `false` | Slår på låset. Avstängt (standardvärdet) blockerar incheckningar aldrig avbokningar. |
+| `checkInConsideredStaleAfterHours` | `24` | En öppen incheckning som är äldre än så här många timmar behandlas som en bortglömd utcheckning, inte pågående arbete, och slutar blockera avbokning på egen hand. |
+
+Felmeddelandet i `409` identifierar den incheckade teknikern via e-post när besöket registrerade den:
+
+```json
+{
+  "message": "You can’t cancel this work order: technician tech@supplier.com is currently checked in."
+}
+```
+
+När din integration får detta `409`, vänta tills teknikern checkar ut (eller tills incheckningen blir inaktuell) och försök igen, eller be leverantören avsluta besöket först. Låset är en del av ditt köparföretags arbetsorderkonfiguration i OpenWrench.
 
 ## Statusmodellen
 

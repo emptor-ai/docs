@@ -3039,7 +3039,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Sets the work order status to CancelledWithReason.",
+        "description": "Sets the work order status to CancelledWithReason. If the buyer company has enabled the active-work cancellation lock, the cancellation is rejected with 409 Conflict while a technician is actively checked in on any of the work order's service calls (including sub-contracted visits). An open check-in older than the company's configured stale window (24 hours by default) does not block.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3094,6 +3094,16 @@
           },
           "401": {
             "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The buyer company's active-work cancellation lock is enabled and a technician is actively checked in on the work order or one of its sub-contracted visits. The error message identifies the checked-in technician by email when the visit recorded one. Retry after the technician checks out or the check-in passes the stale window.",
             "content": {
               "application/json": {
                 "schema": {

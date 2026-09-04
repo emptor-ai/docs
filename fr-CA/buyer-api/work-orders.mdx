@@ -107,7 +107,7 @@ Quatre endpoints dédiés font progresser un bon de travail à travers les parti
 | Endpoint | Statut résultant | Effets secondaires |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Peut publier le brouillon de facture du fournisseur (selon les paramètres du fournisseur) et remplir les demandes d'achat liées. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejetée avec `409` pendant qu'un technicien est sur place, si votre entreprise active le verrou d'annulation décrit plus bas. |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envoie la note jointe au fournisseur. |
 | `POST .../status_update/reopen` | Rouvert | Envoie la note jointe. |
 
@@ -126,6 +126,27 @@ curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_
 ```
 
 Chaque action de statut retourne le bon de travail mis à jour dans l'enveloppe standard.
+
+### Verrou d'annulation pendant qu'un technicien est sur place
+
+Les entreprises peuvent activer un verrou d'annulation qui garde les bons de travail ouverts pendant qu'un technicien est sur place. Avec le verrou activé, OpenWrench rejette toute annulation avec `409 Conflict` si un technicien est activement arrivé (check-in) sur l'un des appels de service du bon de travail. Cela couvre les visites du bon de travail lui-même et les visites de ses bons de travail sous-traités. OpenWrench bloque de la même façon l'annulation d'un sous-contrat dont le statut se propage au bon de travail racine, et n'enregistre rien sur aucun des deux bons.
+
+Le verrou se configure par entreprise acheteuse avec deux paramètres :
+
+| Paramètre | Par défaut | Effet |
+| --- | --- | --- |
+| `enabled` | `false` | Active le verrou. Désactivé (la valeur par défaut), les arrivées ne bloquent jamais les annulations. |
+| `checkInConsideredStaleAfterHours` | `24` | Une arrivée ouverte plus ancienne que ce nombre d'heures est traitée comme un départ oublié, pas comme du travail en cours, et cesse de bloquer l'annulation d'elle-même. |
+
+Le message d'erreur `409` identifie le technicien sur place par son courriel lorsque la visite l'a enregistré :
+
+```json
+{
+  "message": "You can’t cancel this work order: technician tech@supplier.com is currently checked in."
+}
+```
+
+Quand votre intégration reçoit ce `409`, attendez que le technicien enregistre son départ (ou que l'arrivée devienne périmée) et réessayez, ou demandez au fournisseur de terminer la visite d'abord. Le verrou fait partie de la configuration des bons de travail de votre entreprise acheteuse dans OpenWrench.
 
 ## Le modèle de statut
 
