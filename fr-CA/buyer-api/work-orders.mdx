@@ -1,8 +1,8 @@
 # Bons de travail dans l'API Acheteur
 
-> Créez, listez, filtrez, réaffectez et clôturez des bons de travail avec l'API Acheteur OpenWrench, incluant les actions de statut, les notes et les types de problèmes.
+> Créez, listez, filtrez, réaffectez et clôturez des bons de travail avec l'API Acheteur OpenWrench, incluant les actions de statut, les notes, les étiquettes et les types de problèmes.
 
-Les bons de travail sont au centre de l'API Acheteur. Ce guide couvre l'ensemble de la surface sous `/v1/buyer/work_order/` : la création de bons de travail, leur interrogation, les actions de statut côté acheteur, le fil de notes et les types de problèmes.
+Les bons de travail sont au centre de l'API Acheteur. Ce guide couvre l'ensemble de la surface sous `/v1/buyer/work_order/` : la création de bons de travail, leur interrogation, les actions de statut côté acheteur, le fil de notes, les étiquettes et les types de problèmes.
 
 Tous les exemples supposent ces variables shell :
 
@@ -183,6 +183,32 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
 ```
 
 **Lire** avec `GET /v1/buyer/work_order/work_order_notes/{woId}`. Cela retourne uniquement le fil racine acheteur-fournisseur (les fils sous-traitant et interne sont séparés), et la lecture marque les notes comme lues pour votre contact. Une lecture refusée retourne une liste vide plutôt qu'une erreur.
+
+## Étiquettes
+
+Les étiquettes sont des marqueurs légers que votre équipe définit dans l'application OpenWrench (un nom et une couleur optionnelle). Via l'API, vous pouvez lire le catalogue et remplacer les étiquettes appliquées à un bon de travail. La création et la modification des étiquettes elles-mêmes restent dans l'application.
+
+**Parcourir le catalogue** avec `GET /v1/buyer/work_order/work_order_labels`, ou récupérez-en une avec `GET /v1/buyer/work_order/work_order_labels/{id}`. La liste est restreinte aux étiquettes de votre entreprise et paginée à 10 par page par défaut. Elle accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel (le tri s'applique toujours).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_order_labels?no_pagination=true"
+```
+
+**Remplacer les étiquettes d'un bon de travail** avec `PUT /v1/buyer/work_order/work_orders/{woId}/labels`. Le corps est `{ "ids": [...] }` et il s'agit d'un remplacement complet : les étiquettes non listées sont retirées, et un tableau vide les efface toutes. La réponse liste les associations d'étiquettes désormais actives sur le bon de travail.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Comportement à connaître :
+
+- Un `ids` manquant ou qui n'est pas un tableau, ou un id qui n'est pas un nombre entier, est rejeté avec `400`.
+- Chaque id doit être une étiquette active de votre propre catalogue. Les ids inconnus ou d'un autre locataire répondent `400` avec la liste des ids fautifs.
+- L'écriture requiert la permission d'écriture sur les bons de travail. Un id de bon de travail inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
 
 ## Types de problèmes
 

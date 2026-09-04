@@ -101,6 +101,32 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511
 
 `asset_lite` es la forma económica de sincronizar un selector de activos: cuando no pasas parámetros de paginación devuelve el **conjunto completo sin paginar**, con `count` igual al número de elementos devueltos. La lectura de un solo activo hidrata los medidores (el `type` de la envoltura es `ApiAssetWithMeter`).
 
+## Etiquetas de activos
+
+Las etiquetas de activos son marcadores ligeros que tu equipo define en la app de OpenWrench (un nombre más un color opcional), útiles para segmentar el listado de activos de formas que los campos integrados no cubren. A través de la API puedes leer el catálogo y reemplazar las etiquetas aplicadas a un activo. La creación y edición de las etiquetas en sí permanece en la app.
+
+**Explora el catálogo** con `GET /v1/buyer/asset/asset_labels`, u obtén una con `GET /v1/buyer/asset/asset_labels/{id}`. El listado está limitado a las etiquetas de tu empresa y paginado a 10 por página por defecto. Acepta filtros `search` y `label` sobre el texto de la etiqueta. Pasa `no_pagination=true` para traer el catálogo completo en una sola llamada (el ordenamiento sigue aplicando).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_labels?no_pagination=true"
+```
+
+**Reemplaza las etiquetas de un activo** con `PUT /v1/buyer/asset/assets/{assetId}/labels`. El cuerpo es `{ "ids": [...] }` y es un reemplazo completo: las etiquetas no listadas se eliminan, y un array vacío las borra todas. La respuesta lista las etiquetas ahora activas en el activo.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+Comportamiento a conocer:
+
+- Un `ids` ausente o que no sea un array, o un id que no sea un número entero, se rechaza con `400`.
+- Cada id debe ser una etiqueta viva del catálogo de tu empresa. Los ids desconocidos o de otro inquilino responden `400` con los ids problemáticos listados.
+- La escritura requiere permiso de escritura de activos. Un id de activo desconocido, eliminado o ajeno responde el mismo `400` que una escritura denegada, no un `404`.
+
 ## Modelos de activos
 
 Los modelos estandarizan especificaciones y manuales por tipo. `POST /v1/buyer/asset/asset_models` requiere `modelName` y `assetTypeId`, con `manuals` y `specs` opcionales como adjuntos.
