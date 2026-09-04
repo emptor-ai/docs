@@ -110,7 +110,7 @@ Les étiquettes de bons de travail sont des marqueurs légers (un nom et une cou
 
 Le catalogue que vous voyez dépend de votre clé : une clé appartenant à l'équipe de service interne d'un acheteur voit le catalogue de cette entreprise acheteuse, et la clé d'un fournisseur tiers voit le catalogue de son propre établissement.
 
-**Parcourir le catalogue** avec `GET /v1/supplier/work_order/work_order_labels`, ou récupérez-en une avec `GET /v1/supplier/work_order/work_order_labels/{id}`. La liste est paginée à 10 par page par défaut et accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel.
+**Parcourir le catalogue** avec `GET /v1/supplier/work_order/work_order_labels`, ou en récupérer une avec `GET /v1/supplier/work_order/work_order_labels/{id}`. La liste est paginée à 10 par page par défaut et accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel.
 
 **Remplacer les étiquettes d'un bon de travail** avec `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. Le corps est `{ "ids": [...] }` et il s'agit d'un remplacement complet : les étiquettes non listées sont retirées, et un tableau vide les efface toutes. La réponse liste les associations d'étiquettes désormais actives sur le bon de travail.
 

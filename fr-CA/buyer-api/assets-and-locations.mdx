@@ -105,7 +105,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511
 
 Les étiquettes d'actifs sont des marqueurs légers que votre équipe définit dans l'application OpenWrench (un nom et une couleur optionnelle), utiles pour découper la liste d'actifs de façons que les champs intégrés ne couvrent pas. Via l'API, vous pouvez lire le catalogue et remplacer les étiquettes appliquées à un actif. La création et la modification des étiquettes elles-mêmes restent dans l'application.
 
-**Parcourir le catalogue** avec `GET /v1/buyer/asset/asset_labels`, ou récupérez-en une avec `GET /v1/buyer/asset/asset_labels/{id}`. La liste est restreinte aux étiquettes de votre entreprise et paginée à 10 par page par défaut. Elle accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel (le tri s'applique toujours).
+**Parcourir le catalogue** avec `GET /v1/buyer/asset/asset_labels`, ou en récupérer une avec `GET /v1/buyer/asset/asset_labels/{id}`. La liste est restreinte aux étiquettes de votre entreprise et paginée à 10 par page par défaut. Elle accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel (le tri s'applique toujours).
 
 ```bash
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
