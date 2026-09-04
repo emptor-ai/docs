@@ -109,7 +109,7 @@ Four dedicated endpoints move a work order through the buyer-owned parts of the 
 | Endpoint | Resulting status | Side effects |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | May publish the supplier's draft invoice (per supplier settings) and fulfil linked purchase requests. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejected with `409` while a technician is checked in, if your company enables the [cancellation lock](#cancellation-lock-while-a-technician-is-checked-in). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Sends the attached note to the supplier. |
 | `POST .../status_update/reopen` | Reopened | Sends the attached note. |
 
@@ -128,6 +128,27 @@ curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_
 ```
 
 Every status action returns the updated work order in the standard envelope.
+
+### Cancellation lock while a technician is checked in
+
+Companies can opt in to a cancellation lock that keeps work orders open while a technician is on site. With the lock enabled, OpenWrench rejects any cancellation with `409 Conflict` if a technician is actively checked in on any of the work order's service calls. This covers visits on the work order itself and visits on its sub-contracted work orders. Cancelling a self-client sub-contract that would propagate the cancel to the root work order is blocked the same way, and nothing is committed on either work order.
+
+The lock is configured per buyer company with two settings:
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `enabled` | `false` | Turns the lock on. When off (the default), cancellations are never blocked by check-ins. |
+| `checkInConsideredStaleAfterHours` | `24` | An open check-in older than this many hours is treated as a forgotten checkout, not live work, and stops blocking cancellation on its own. |
+
+The `409` error message identifies the checked-in technician by email when the visit recorded one:
+
+```json
+{
+  "message": "You can’t cancel this work order: technician tech@supplier.com is currently checked in."
+}
+```
+
+When your integration receives this `409`, wait for the technician to check out (or for the check-in to go stale) and retry, or have the supplier end the visit first. The lock is part of your buyer company's work order configuration in OpenWrench.
 
 ## The status model
 

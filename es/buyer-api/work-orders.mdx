@@ -107,7 +107,7 @@ Cuatro endpoints dedicados mueven una orden de trabajo por las partes del ciclo 
 | Endpoint | Estado resultante | Efectos secundarios |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Puede publicar la factura en borrador del proveedor (según la configuración del proveedor) y cumplir las solicitudes de compra enlazadas. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Se rechaza con `409` mientras un técnico tiene check-in activo, si tu empresa habilita el bloqueo de cancelación descrito más abajo. |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envía la nota adjunta al proveedor. |
 | `POST .../status_update/reopen` | Reabierta | Envía la nota adjunta. |
 
@@ -126,6 +126,27 @@ curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_
 ```
 
 Cada acción de estado devuelve la orden de trabajo actualizada en la envoltura estándar.
+
+### Bloqueo de cancelación mientras un técnico tiene check-in activo
+
+Las empresas pueden optar por un bloqueo de cancelación que mantiene abiertas las órdenes de trabajo mientras un técnico está en sitio. Con el bloqueo habilitado, OpenWrench rechaza cualquier cancelación con `409 Conflict` si un técnico tiene un check-in activo en cualquiera de las llamadas de servicio de la orden de trabajo. Esto cubre las visitas de la propia orden de trabajo y las visitas de sus órdenes de trabajo subcontratadas. Cancelar un subcontrato self-client que propagaría la cancelación a la orden de trabajo raíz se bloquea de la misma forma, y no se confirma nada en ninguna de las dos órdenes.
+
+El bloqueo se configura por empresa compradora con dos ajustes:
+
+| Ajuste | Predeterminado | Efecto |
+| --- | --- | --- |
+| `enabled` | `false` | Activa el bloqueo. Cuando está desactivado (el valor predeterminado), los check-ins nunca bloquean cancelaciones. |
+| `checkInConsideredStaleAfterHours` | `24` | Un check-in abierto más antiguo que este número de horas se trata como un check-out olvidado, no como trabajo en curso, y deja de bloquear la cancelación por sí solo. |
+
+El mensaje de error `409` identifica al técnico con check-in por su email cuando la visita lo registró:
+
+```json
+{
+  "message": "You can’t cancel this work order: technician tech@supplier.com is currently checked in."
+}
+```
+
+Cuando tu integración recibe este `409`, espera a que el técnico haga check-out (o a que el check-in caduque) y reintenta, o pide al proveedor que termine la visita primero. El bloqueo forma parte de la configuración de órdenes de trabajo de tu empresa compradora en OpenWrench.
 
 ## El modelo de estados
 
