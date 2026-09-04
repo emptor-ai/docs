@@ -1,6 +1,6 @@
 # Traiter des bons de travail avec l'API Fournisseur
 
-> Recevez, acceptez, refusez et faites progresser les bons de travail comme fournisseur : mises à jour de statut, suivi des pièces, dates d'achèvement estimées, pièces jointes et notes.
+> Recevez, acceptez, refusez et faites progresser les bons de travail comme fournisseur : mises à jour de statut, suivi des pièces, dates d'achèvement estimées, pièces jointes, notes et étiquettes.
 
 Pour une intégration fournisseur, la file de bons de travail est la boîte de réception. Ce guide couvre les endpoints sous `/v1/supplier/work_order/` pour recevoir des travaux, y répondre et tenir les acheteurs informés pendant la progression du travail. La planification des visites et l'achèvement du travail se font via les [appels de service](/supplier-api/service-calls).
 
@@ -103,6 +103,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
     ]
   }'
 ```
+
+## Étiquettes
+
+Les étiquettes de bons de travail sont des marqueurs légers (un nom et une couleur optionnelle) servant à découper la file. Via l'API, vous pouvez lire le catalogue d'étiquettes et remplacer les étiquettes appliquées à un bon de travail. La création et la modification des étiquettes elles-mêmes restent dans l'application OpenWrench.
+
+Le catalogue que vous voyez dépend de votre clé : une clé appartenant à l'équipe de service interne d'un acheteur voit le catalogue de cette entreprise acheteuse, et la clé d'un fournisseur tiers voit le catalogue de son propre établissement.
+
+**Parcourir le catalogue** avec `GET /v1/supplier/work_order/work_order_labels`, ou récupérez-en une avec `GET /v1/supplier/work_order/work_order_labels/{id}`. La liste est paginée à 10 par page par défaut et accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel.
+
+**Remplacer les étiquettes d'un bon de travail** avec `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. Le corps est `{ "ids": [...] }` et il s'agit d'un remplacement complet : les étiquettes non listées sont retirées, et un tableau vide les efface toutes. La réponse liste les associations d'étiquettes désormais actives sur le bon de travail.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Comportement à connaître :
+
+- Chaque id doit être une étiquette active de votre propre catalogue; un `ids` manquant ou qui n'est pas un tableau, un id non entier, et les ids inconnus ou d'un autre locataire sont tous rejetés avec `400`.
+- L'écriture requiert la permission d'écriture sur les bons de travail : une clé qui peut seulement voir le bon de travail (un soumissionnaire, ou un établissement avec visibilité en lecture seule) obtient `400`. Sur un bon de travail non assigné, seul un établissement avec visibilité en lecture-écriture peut l'étiqueter.
+- Un id de bon de travail inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
 
 ## Créer un bon de travail à l'initiative du fournisseur
 

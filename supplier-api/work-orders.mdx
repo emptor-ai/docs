@@ -1,7 +1,7 @@
 ---
 title: "Working work orders with the Supplier API"
 sidebarTitle: "Work orders"
-description: "Receive, accept, decline, and progress work orders as a supplier: status updates, parts tracking, estimated completion dates, attachments, and notes."
+description: "Receive, accept, decline, and progress work orders as a supplier: status updates, parts tracking, estimated completion dates, attachments, notes, and labels."
 ---
 
 For a supplier integration, the work order queue is the inbox. This guide covers the endpoints under `/v1/supplier/work_order/` for receiving jobs, responding to them, and keeping buyers informed while the work progresses. Scheduling visits and completing work happen through [service calls](/supplier-api/service-calls).
@@ -105,6 +105,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
     ]
   }'
 ```
+
+## Labels
+
+Work order labels are lightweight tags (a name plus an optional color) used to slice the queue. Through the API you can read the label catalog and replace the labels applied to a work order. Creating or editing the labels themselves stays in the OpenWrench app.
+
+Which catalog you see depends on your key: a key belonging to a buyer's internal service team sees that buyer company's catalog, and a third-party supplier's key sees its own facility's catalog.
+
+**Browse the catalog** with `GET /v1/supplier/work_order/work_order_labels`, or fetch one with `GET /v1/supplier/work_order/work_order_labels/{id}`. The list is paginated 10 per page by default and accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call.
+
+**Replace a work order's labels** with `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. The body is `{ "ids": [...] }` and it is a full replacement: labels not listed are removed, and an empty array clears them all. The response lists the label mappings now active on the work order.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Behavior to know:
+
+- Every id must be a live label from your own catalog; a missing or non-array `ids`, a non-integer id, and unknown or cross-tenant ids are all rejected with `400`.
+- The write requires work order write permission: a key that can only see the work order (a bidder, or a facility with read-only visibility) gets `400`. On an unassigned work order, only a facility with read-write visibility may label it.
+- An unknown, deleted, or foreign work order id answers the same `400` as a denied write, not a `404`.
 
 ## Create a supplier-initiated work order
 

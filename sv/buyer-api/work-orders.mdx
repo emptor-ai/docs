@@ -1,8 +1,8 @@
 # Arbetsordrar i Buyer API
 
-> Skapa, lista, filtrera, tilldela om och avsluta arbetsordrar med OpenWrench Buyer API, inklusive statusåtgärder, anteckningar och problemtyper.
+> Skapa, lista, filtrera, tilldela om och avsluta arbetsordrar med OpenWrench Buyer API, inklusive statusåtgärder, anteckningar, etiketter och problemtyper.
 
-Arbetsordrar är i centrum för Buyer API. Den här guiden täcker hela ytan under `/v1/buyer/work_order/`: att skapa arbetsordrar, söka i dem, köparsidans statusåtgärder, anteckningstråden och problemtyperna.
+Arbetsordrar är i centrum för Buyer API. Den här guiden täcker hela ytan under `/v1/buyer/work_order/`: att skapa arbetsordrar, söka i dem, köparsidans statusåtgärder, anteckningstråden, etiketterna och problemtyperna.
 
 Alla exempel förutsätter dessa skalvariabler:
 
@@ -183,6 +183,32 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
 ```
 
 **Läs** med `GET /v1/buyer/work_order/work_order_notes/{woId}`. Detta returnerar bara den grundläggande köpar–leverantör-tråden (entreprenörs- och interna trådar är separata), och läsningen markerar anteckningarna som lästa för din kontakt. En nekad läsning returnerar en tom lista istället för ett fel.
+
+## Etiketter
+
+Etiketter är lätta taggar som ditt team definierar i OpenWrench-appen (ett namn plus en valfri färg). Via API:et kan du läsa katalogen och ersätta etiketterna som är applicerade på en arbetsorder. Att skapa eller redigera själva etiketterna sker fortfarande i appen.
+
+**Bläddra i katalogen** med `GET /v1/buyer/work_order/work_order_labels`, eller hämta en med `GET /v1/buyer/work_order/work_order_labels/{id}`. Listan är avgränsad till ditt företags etiketter och pagineras med 10 per sida som standard. Den accepterar `search`- och `label`-filter på etikettexten. Skicka `no_pagination=true` för att hämta hela katalogen i ett anrop (sorteringen gäller fortfarande).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_order_labels?no_pagination=true"
+```
+
+**Ersätt en arbetsorders etiketter** med `PUT /v1/buyer/work_order/work_orders/{woId}/labels`. Kroppen är `{ "ids": [...] }` och det är en fullständig ersättning: etiketter som inte listas tas bort, och en tom array rensar dem alla. Svaret listar de etikettmappningar som nu är aktiva på arbetsordern.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Beteende att känna till:
+
+- Ett saknat `ids` eller ett `ids` som inte är en array, eller ett id som inte är ett heltal, avvisas med `400`.
+- Varje id måste vara en levande etikett från din egen katalog. Okända eller tenantöverskridande id:n svarar `400` med de felande id:na listade.
+- Skrivningen kräver skrivbehörighet för arbetsordrar. Ett okänt, raderat eller främmande arbetsorder-id svarar med samma `400` som en nekad skrivning, inte en `404`.
 
 ## Problemtyper
 

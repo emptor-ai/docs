@@ -1,8 +1,8 @@
 # Órdenes de trabajo en la Buyer API
 
-> Crea, lista, filtra, reasigna y cierra órdenes de trabajo con la Buyer API de OpenWrench, incluidas acciones de estado, notas y tipos de problema.
+> Crea, lista, filtra, reasigna y cierra órdenes de trabajo con la Buyer API de OpenWrench, incluidas acciones de estado, notas, etiquetas y tipos de problema.
 
-Las órdenes de trabajo son el centro de la Buyer API. Esta guía cubre la superficie completa bajo `/v1/buyer/work_order/`: creación de órdenes de trabajo, consulta, acciones de estado del lado del comprador, el hilo de notas y los tipos de problema.
+Las órdenes de trabajo son el centro de la Buyer API. Esta guía cubre la superficie completa bajo `/v1/buyer/work_order/`: creación de órdenes de trabajo, consulta, acciones de estado del lado del comprador, el hilo de notas, las etiquetas y los tipos de problema.
 
 Todos los ejemplos asumen estas variables de shell:
 
@@ -183,6 +183,32 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
 ```
 
 **Lee** con `GET /v1/buyer/work_order/work_order_notes/{woId}`. Esto devuelve solo el hilo raíz comprador-proveedor (los hilos de contratista e internos son separados), y la lectura marca las notas como leídas para tu contacto. Una lectura denegada devuelve una lista vacía en lugar de un error.
+
+## Etiquetas
+
+Las etiquetas son marcadores ligeros que tu equipo define en la app de OpenWrench (un nombre más un color opcional). A través de la API puedes leer el catálogo y reemplazar las etiquetas aplicadas a una orden de trabajo. La creación y edición de las etiquetas en sí permanece en la app.
+
+**Explora el catálogo** con `GET /v1/buyer/work_order/work_order_labels`, u obtén una con `GET /v1/buyer/work_order/work_order_labels/{id}`. El listado está limitado a las etiquetas de tu empresa y paginado a 10 por página por defecto. Acepta filtros `search` y `label` sobre el texto de la etiqueta. Pasa `no_pagination=true` para traer el catálogo completo en una sola llamada (el ordenamiento sigue aplicando).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_order_labels?no_pagination=true"
+```
+
+**Reemplaza las etiquetas de una orden de trabajo** con `PUT /v1/buyer/work_order/work_orders/{woId}/labels`. El cuerpo es `{ "ids": [...] }` y es un reemplazo completo: las etiquetas no listadas se eliminan, y un array vacío las borra todas. La respuesta lista los mapeos de etiquetas ahora activos en la orden de trabajo.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Comportamiento a conocer:
+
+- Un `ids` ausente o que no sea un array, o un id que no sea un número entero, se rechaza con `400`.
+- Cada id debe ser una etiqueta viva de tu propio catálogo. Los ids desconocidos o de otro inquilino responden `400` con los ids problemáticos listados.
+- La escritura requiere permiso de escritura de órdenes de trabajo. Un id de orden de trabajo desconocido, eliminado o ajeno responde el mismo `400` que una escritura denegada, no un `404`.
 
 ## Tipos de problema
 

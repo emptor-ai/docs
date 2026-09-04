@@ -62,6 +62,26 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_ty
 
 La lectura de un solo activo hidrata los medidores del activo (envoltura tipo `ApiAssetWithMeter`), lo que da a tus técnicos el contexto de historial del medidor antes de una visita. Los cuatro endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) son de solo lectura con paginación estándar y filtros por campo.
 
+## Etiquetas de activos
+
+Las etiquetas de activos son marcadores definidos por el comprador sobre los activos (un nombre más un color opcional). Siempre pertenecen a una empresa compradora, así que el acceso a través de la Supplier API está limitado a las claves del equipo interno de servicio de un comprador: esas claves ven el catálogo de su empresa compradora, mientras que la clave de un proveedor tercero obtiene una lista vacía.
+
+```bash
+# El catálogo (solo claves de equipo interno de servicio)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/asset_labels?no_pagination=true"
+
+# Reemplazar las etiquetas de un activo
+curl -X PUT "$BASE/v1/supplier/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+El catálogo es de solo lectura (`GET /v1/supplier/asset/asset_labels` y `/{id}`); las etiquetas se crean y editan en la app de OpenWrench. El listado está paginado a 10 por página por defecto, acepta filtros `search` y `label` sobre el texto de la etiqueta, y `no_pagination=true` devuelve el catálogo completo.
+
+`PUT /v1/supplier/asset/assets/{assetId}/labels` reemplaza el conjunto completo de etiquetas del activo (`{ "ids": [...] }`; un array vacío las borra todas) y devuelve las etiquetas ahora activas. La escritura requiere permiso de escritura de activos, y cada id debe ser una etiqueta viva del catálogo de tu empresa compradora. La clave de un proveedor tercero recibe `400` incluso cuando posee permiso de escritura de activos. Un id de activo desconocido, eliminado o ajeno responde el mismo `400` que una escritura denegada, no un `404`.
+
 ## Estrategia de cacheo
 
 Los datos de referencia cambian despacio. Una configuración práctica:

@@ -39,6 +39,10 @@
       "name": "Assets"
     },
     {
+      "name": "Asset Labels",
+      "description": "Read the asset label catalog and replace the labels applied to an asset."
+    },
+    {
       "name": "Asset Models"
     },
     {
@@ -46,6 +50,10 @@
     },
     {
       "name": "Work Order Notes"
+    },
+    {
+      "name": "Work Order Labels",
+      "description": "Read your work order label catalog and replace the labels applied to a work order."
     },
     {
       "name": "Service Calls"
@@ -1887,6 +1895,244 @@
         }
       }
     },
+    "/v1/buyer/asset/asset_labels": {
+      "get": {
+        "operationId": "listBuyerAssetLabels",
+        "summary": "List asset labels",
+        "tags": [
+          "Asset Labels"
+        ],
+        "description": "Lists your buyer company's asset label catalog. The catalog is read-only through the external API; labels are created and edited in the OpenWrench app. Reads are gated by the key's read permission. Pagination defaults to 10 per page; pass no_pagination=true to fetch the whole catalog at once.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/offset"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/sort_by"
+          },
+          {
+            "$ref": "#/components/parameters/order"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search filter matched against the label text."
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by label text."
+          },
+          {
+            "name": "no_pagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Set to true to return the whole catalog in one page (offset and limit are ignored; sorting still applies). A non-boolean value is treated as unset."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetLabelListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, the API key's contact could not be resolved, or the read permission is denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/asset/asset_labels/{id}": {
+      "get": {
+        "operationId": "getBuyerAssetLabel",
+        "summary": "Get a asset label",
+        "tags": [
+          "Asset Labels"
+        ],
+        "description": "Retrieves one asset label by id. The read permission is checked first: a label outside your scope answers 400, and 404 is returned only after authorization, for an id that does not exist or is soft-deleted.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetLabelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The read permission is denied, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live label with this id (checked after authorization).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/asset/assets/{assetId}/labels": {
+      "put": {
+        "operationId": "updateBuyerAssetLabels",
+        "summary": "Replace an asset's labels",
+        "tags": [
+          "Asset Labels"
+        ],
+        "description": "Replaces the full set of labels on an asset with the ids in the body; labels not listed are removed, and an empty ids array clears them all. Every id must be a live label of your buyer company's catalog; unknown or cross-tenant ids are rejected with 400. The write is gated by the asset write permission: a key that can only read the asset gets 400. An unknown, deleted, or foreign asset id answers the same 400 as a denied write, so ids outside your tenant are not disclosed as 404s.",
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Asset id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelIdsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success. Returns the labels now active on the asset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetLabelListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or non-array ids, a non-integer id, a label id outside your catalog, a denied write, or an unknown/foreign asset.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/buyer/asset/asset_models": {
       "post": {
         "operationId": "createAssetModel",
@@ -3475,6 +3721,244 @@
           },
           "400": {
             "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/work_order/work_order_labels": {
+      "get": {
+        "operationId": "listBuyerWorkOrderLabels",
+        "summary": "List work order labels",
+        "tags": [
+          "Work Order Labels"
+        ],
+        "description": "Lists your buyer company's work order label catalog. Only buyer-owned labels of your company are visible. The catalog is read-only through the external API; labels are created and edited in the OpenWrench app. Reads are gated by the key's read permission. Pagination defaults to 10 per page; pass no_pagination=true to fetch the whole catalog at once.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/offset"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          },
+          {
+            "$ref": "#/components/parameters/sort_by"
+          },
+          {
+            "$ref": "#/components/parameters/order"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search filter matched against the label text."
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by label text."
+          },
+          {
+            "name": "no_pagination",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Set to true to return the whole catalog in one page (offset and limit are ignored; sorting still applies). A non-boolean value is treated as unset."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderLabelListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad input, the API key's contact could not be resolved, or the read permission is denied.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/work_order/work_order_labels/{id}": {
+      "get": {
+        "operationId": "getBuyerWorkOrderLabel",
+        "summary": "Get a work order label",
+        "tags": [
+          "Work Order Labels"
+        ],
+        "description": "Retrieves one work order label by id. The read permission is checked first: a label outside your scope answers 400, and 404 is returned only after authorization, for an id that does not exist or is soft-deleted.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderLabelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The read permission is denied, or the API key's contact could not be resolved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid X-API-KEY.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No live label with this id (checked after authorization).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded (10 requests per 20-second window per key).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/buyer/work_order/work_orders/{woId}/labels": {
+      "put": {
+        "operationId": "updateBuyerWorkOrderLabels",
+        "summary": "Replace a work order's labels",
+        "tags": [
+          "Work Order Labels"
+        ],
+        "description": "Replaces the full set of labels on a work order with the ids in the body; labels not listed are removed, and an empty ids array clears them all. Every id must be a live label of your own catalog; unknown or cross-tenant ids are rejected with 400. The write is gated by the work order write permission: a key that can only read the work order gets 400. An unknown, deleted, or foreign work order id answers the same 400 as a denied write, so ids outside your tenant are not disclosed as 404s.",
+        "parameters": [
+          {
+            "name": "woId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Work order id."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelIdsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success. Returns the label mappings now active on the work order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrderLabelMappingListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or non-array ids, a non-integer id, a label id outside your catalog, a denied write, or an unknown/foreign work order.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7863,6 +8347,345 @@
         ],
         "additionalProperties": true,
         "description": "Work order. ABRIDGED: the full case class has 150+ fields (hydrated approval hierarchies, budgets, troubleshooting answers, contractor/sub-contractor details, internal workspaces, labels, stars, etc.); only the commonly used fields are listed here and additional properties may appear in responses."
+      },
+      "WorkOrderLabel": {
+        "type": "object",
+        "description": "A work order label in the caller's tenant catalog. Buyer-owned labels carry buyerCompanyId; labels owned by a third-party supplier facility carry supplierFacilityId.",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string",
+            "description": "Display text of the label."
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display color, when set."
+          },
+          "buyerCompanyId": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "supplierFacilityId": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "associatedWorkOrdersCount": {
+            "type": "integer",
+            "description": "Number of work orders currently carrying this label."
+          },
+          "createdBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isDeleted": {
+            "type": "boolean"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "label",
+          "associatedWorkOrdersCount",
+          "isDeleted"
+        ]
+      },
+      "WorkOrderLabelResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, \"WorkOrderLabel\"."
+          },
+          "data": {
+            "$ref": "#/components/schemas/WorkOrderLabel"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "status"
+        ]
+      },
+      "WorkOrderLabelListResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, \"WorkOrderLabel\"."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderLabel"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "description": "Total labels matching the filters, across all pages."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "count",
+          "status"
+        ]
+      },
+      "WorkOrderLabelMapping": {
+        "type": "object",
+        "description": "One label currently applied to a work order, hydrated with the label itself.",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "workOrderId": {
+            "type": "integer"
+          },
+          "workOrderLabelId": {
+            "type": "integer"
+          },
+          "workOrderLabel": {
+            "$ref": "#/components/schemas/WorkOrderLabel"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "added",
+              "removed"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdBy": {
+            "type": "string"
+          },
+          "createdByContact": {
+            "$ref": "#/components/schemas/Contact"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workOrderId",
+          "workOrderLabelId",
+          "action",
+          "isActive",
+          "createdBy",
+          "createdAt"
+        ]
+      },
+      "WorkOrderLabelMappingListResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, \"WorkOrderLabelMapping\"."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkOrderLabelMapping"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of mappings returned (the labels now active on the work order)."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "count",
+          "status"
+        ]
+      },
+      "AssetLabel": {
+        "type": "object",
+        "description": "An asset label in the buyer company's catalog. Asset labels always belong to a buyer company; there is no supplier-facility tenancy.",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string",
+            "description": "Display text of the label."
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display color, when set."
+          },
+          "associatedAssetsCount": {
+            "type": "integer",
+            "description": "Number of assets currently carrying this label."
+          },
+          "buyerCompanyId": {
+            "type": "integer"
+          },
+          "createdBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedBy": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "isDeleted": {
+            "type": "boolean"
+          },
+          "deletedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "label",
+          "associatedAssetsCount",
+          "buyerCompanyId",
+          "isDeleted"
+        ]
+      },
+      "AssetLabelResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, \"AssetLabel\"."
+          },
+          "data": {
+            "$ref": "#/components/schemas/AssetLabel"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "status"
+        ]
+      },
+      "AssetLabelListResponse": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Entity type marker, \"AssetLabel\"."
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssetLabel"
+            }
+          },
+          "count": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        },
+        "required": [
+          "type",
+          "data",
+          "count",
+          "status"
+        ]
+      },
+      "LabelIdsRequest": {
+        "type": "object",
+        "description": "Full replacement set of label ids. Send an empty array to clear all labels.",
+        "properties": {
+          "ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Ids of labels from the corresponding label catalog. Duplicates are de-duplicated."
+          }
+        },
+        "required": [
+          "ids"
+        ]
       },
       "Region": {
         "type": "object",

@@ -62,6 +62,26 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_ty
 
 La lecture d'un seul actif hydrate les compteurs de l'actif (enveloppe de type `ApiAssetWithMeter`), ce qui donne à vos techniciens le contexte de l'historique des compteurs avant une visite. Les quatre endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) sont en lecture seule avec pagination standard et filtres par champ.
 
+## Étiquettes d'actifs
+
+Les étiquettes d'actifs sont des marqueurs définis par l'acheteur sur les actifs (un nom et une couleur optionnelle). Elles appartiennent toujours à une entreprise acheteuse, alors l'accès via l'API Fournisseur est limité aux clés de l'équipe de service interne d'un acheteur : ces clés voient le catalogue de leur entreprise acheteuse, tandis que la clé d'un fournisseur tiers obtient une liste vide.
+
+```bash
+# Le catalogue (clés d'équipes de service internes seulement)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/asset_labels?no_pagination=true"
+
+# Remplacer les étiquettes sur un actif
+curl -X PUT "$BASE/v1/supplier/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+Le catalogue est en lecture seule (`GET /v1/supplier/asset/asset_labels` et `/{id}`); les étiquettes se créent et se modifient dans l'application OpenWrench. La liste est paginée à 10 par page par défaut, accepte les filtres `search` et `label` sur le texte de l'étiquette, et `no_pagination=true` retourne tout le catalogue.
+
+`PUT /v1/supplier/asset/assets/{assetId}/labels` remplace l'ensemble complet des étiquettes sur l'actif (`{ "ids": [...] }`; un tableau vide les efface toutes) et retourne les étiquettes désormais actives. L'écriture requiert la permission d'écriture sur les actifs, et chaque id doit être une étiquette active du catalogue de votre entreprise acheteuse. La clé d'un fournisseur tiers obtient `400` même lorsqu'elle détient la permission d'écriture sur les actifs. Un id d'actif inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
+
 ## Stratégie de cache
 
 Les données de référence changent lentement. Une configuration pratique :

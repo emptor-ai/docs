@@ -1,10 +1,10 @@
 ---
 title: "Work orders in the Buyer API"
 sidebarTitle: "Work orders"
-description: "Create, list, filter, reassign, and close out work orders with the OpenWrench Buyer API, including status actions, notes, and problem types."
+description: "Create, list, filter, reassign, and close out work orders with the OpenWrench Buyer API, including status actions, notes, labels, and problem types."
 ---
 
-Work orders are the center of the Buyer API. This guide covers the full surface under `/v1/buyer/work_order/`: creating work orders, querying them, the buyer-side status actions, the note thread, and problem types.
+Work orders are the center of the Buyer API. This guide covers the full surface under `/v1/buyer/work_order/`: creating work orders, querying them, the buyer-side status actions, the note thread, labels, and problem types.
 
 All examples assume these shell variables:
 
@@ -185,6 +185,32 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
 ```
 
 **Read** with `GET /v1/buyer/work_order/work_order_notes/{woId}`. This returns the root buyer–supplier thread only (contractor and internal threads are separate), and reading marks the notes as read for your contact. A denied read returns an empty list rather than an error.
+
+## Labels
+
+Labels are lightweight tags your team defines in the OpenWrench app (a name plus an optional color). Through the API you can read the catalog and replace the labels applied to a work order. Creating or editing the labels themselves stays in the app.
+
+**Browse the catalog** with `GET /v1/buyer/work_order/work_order_labels`, or fetch one with `GET /v1/buyer/work_order/work_order_labels/{id}`. The list is scoped to your company's labels and paginated 10 per page by default. It accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call (sorting still applies).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_order_labels?no_pagination=true"
+```
+
+**Replace a work order's labels** with `PUT /v1/buyer/work_order/work_orders/{woId}/labels`. The body is `{ "ids": [...] }` and it is a full replacement: labels not listed are removed, and an empty array clears them all. The response lists the label mappings now active on the work order.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Behavior to know:
+
+- A missing or non-array `ids`, or an id that is not a whole number, is rejected with `400`.
+- Every id must be a live label from your own catalog. Unknown or cross-tenant ids answer `400` with the offending ids listed.
+- The write requires work order write permission. An unknown, deleted, or foreign work order id answers the same `400` as a denied write, not a `404`.
 
 ## Problem types
 
