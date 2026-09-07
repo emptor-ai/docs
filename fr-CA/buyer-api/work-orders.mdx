@@ -62,7 +62,7 @@ Comportement à connaître :
 
 - **Statut initial.** Si `status` est omis, le statut initial est calculé à partir de la configuration de votre entreprise. Les demandes de service commencent généralement en `PendingApproval`; les bons de travail sont par défaut `Unassigned`. Si vous passez un `status`, il est tout de même résolu par rapport à la configuration de l'entreprise, alors le statut effectif peut différer de ce que vous avez envoyé.
 - **Répartition à la création.** Passer `supplierFacilityId` affecte le fournisseur immédiatement. Un `supplierFacilityId`, `assetId` ou `problemTypeId` inconnu est rejeté avec `400`.
-- **Sous-actifs.** `subAssetIds` est un tableau optionnel d'ids de sous-actifs attachés en plus de l'`assetId` principal. Les sous-actifs sont des actifs créés avec un `parentId` ; voir [Actifs](/fr-CA/buyer-api/assets-and-locations#actifs).
+- **Sous-actifs.** `subAssetIds` est un tableau optionnel d'ids de sous-actifs attachés en plus de l'`assetId` principal. Les sous-actifs sont des actifs créés avec un `parentId` ; voir [Actifs](/buyer-api/assets-and-locations#actifs).
 - **Drapeau d'approbation.** Le champ est `needApproval`, pas `needsApproval`. L'objet de réponse utilise `needsApproval`; la requête de création utilise `needApproval`.
 - **Liaison à une visite d'inspection.** `walkThroughId` et `siteSurveyTaskTitleId` doivent être fournis ensemble ou pas du tout. Voir [Visites d'inspection de site](/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Passer un `id` met à jour ce bon de travail existant au lieu d'en créer un nouveau.
