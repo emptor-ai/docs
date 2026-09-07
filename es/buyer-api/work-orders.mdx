@@ -62,6 +62,7 @@ Comportamiento a conocer:
 
 - **Estado inicial.** Si se omite `status`, el estado inicial se calcula a partir de la configuración de tu empresa. Las solicitudes de servicio típicamente empiezan en `PendingApproval`; las órdenes de trabajo por defecto en `Unassigned`. Si pasas un `status`, aún se resuelve contra la configuración de la empresa, así que el estado efectivo puede diferir del que enviaste.
 - **Despachar al crear.** Pasar `supplierFacilityId` asigna el proveedor de inmediato. Un `supplierFacilityId`, `assetId` o `problemTypeId` desconocido se rechaza con `400`.
+- **Subactivos.** `subAssetIds` es un arreglo opcional de ids de subactivos que se adjuntan junto al `assetId` principal. Los subactivos son activos creados con un `parentId`; ver [Activos](/buyer-api/assets-and-locations#activos).
 - **Flag de aprobación.** El campo es `needApproval`, no `needsApproval`. El objeto de respuesta usa `needsApproval`; la solicitud de creación no.
 - **Enlace a recorrido.** `walkThroughId` y `siteSurveyTaskTitleId` deben suministrarse juntos o no suministrarse. Ver [Recorridos de encuesta de sitio](/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Pasar un `id` actualiza esa orden de trabajo existente en lugar de crear una nueva.

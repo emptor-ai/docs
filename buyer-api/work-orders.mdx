@@ -64,6 +64,7 @@ Behavior to know:
 
 - **Initial status.** If `status` is omitted, the initial status is computed from your company's configuration. Service requests typically start in `PendingApproval`; work orders default to `Unassigned`. If you pass a `status`, it is still resolved against company configuration, so the effective status may differ from what you sent.
 - **Dispatching on create.** Passing `supplierFacilityId` assigns the supplier immediately. An unknown `supplierFacilityId`, `assetId`, or `problemTypeId` is rejected with `400`.
+- **Sub-assets.** `subAssetIds` is an optional array of sub-asset ids attached alongside the main `assetId`. Sub-assets are assets created with a `parentId`; see [Assets](/buyer-api/assets-and-locations#assets).
 - **Approval flag.** The field is `needApproval`, not `needsApproval`. The response object uses `needsApproval`; the create request does not.
 - **Walkthrough linkage.** `walkThroughId` and `siteSurveyTaskTitleId` must be provided together or not at all. See [Site survey walkthroughs](/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Passing an `id` updates that existing work order instead of creating a new one.

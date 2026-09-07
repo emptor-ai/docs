@@ -62,6 +62,7 @@ Beteende att känna till:
 
 - **Initial status.** Om `status` utelämnas beräknas den initiala statusen från ditt företags konfiguration. Serviceförfrågningar börjar oftast i `PendingApproval`; arbetsordrar utgår från `Unassigned`. Om du skickar en `status` löses den fortfarande mot företagets konfiguration, så den effektiva statusen kan skilja sig från vad du skickade.
 - **Utskick vid skapande.** Att skicka `supplierFacilityId` tilldelar leverantören omedelbart. Ett okänt `supplierFacilityId`, `assetId` eller `problemTypeId` avvisas med `400`.
+- **Underliggande tillgångar.** `subAssetIds` är en valfri array med ids för underliggande tillgångar som bifogas utöver huvud-`assetId`. Underliggande tillgångar är tillgångar skapade med ett `parentId`; se [Tillgångar](/buyer-api/assets-and-locations#tillgångar).
 - **Godkännandeflagga.** Fältet heter `needApproval`, inte `needsApproval`. Svarsobjektet använder `needsApproval`; själva skapa-förfrågan gör det inte.
 - **Koppling till genomgång.** `walkThroughId` och `siteSurveyTaskTitleId` måste anges tillsammans eller inte alls. Se [Platsbesiktningar](/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Att skicka ett `id` uppdaterar den befintliga arbetsordern istället för att skapa en ny.
