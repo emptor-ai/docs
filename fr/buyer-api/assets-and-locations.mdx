@@ -101,6 +101,32 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511
 
 `asset_lite` est le moyen économique de synchroniser un sélecteur d'actifs : lorsque vous ne passez aucun paramètre de pagination, il retourne l'**ensemble complet non paginé**, avec `count` égal au nombre d'éléments retournés. La lecture d'un actif unique enrichit les compteurs (le `type` de l'enveloppe indique `ApiAssetWithMeter`).
 
+## Étiquettes d'actifs
+
+Les étiquettes d'actifs sont des marqueurs légers que votre équipe définit dans l'application OpenWrench (un nom plus une couleur optionnelle), utiles pour découper la liste des actifs selon des axes que les champs intégrés ne couvrent pas. Via l'API, vous pouvez lire le catalogue et remplacer les étiquettes appliquées à un actif. La création et la modification des étiquettes elles-mêmes restent dans l'application.
+
+**Parcourez le catalogue** avec `GET /v1/buyer/asset/asset_labels`, ou récupérez-en une avec `GET /v1/buyer/asset/asset_labels/{id}`. La liste est limitée aux étiquettes de votre entreprise et paginée à 10 par page par défaut. Elle accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel (le tri s'applique toujours).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_labels?no_pagination=true"
+```
+
+**Remplacez les étiquettes d'un actif** avec `PUT /v1/buyer/asset/assets/{assetId}/labels`. Le corps est `{ "ids": [...] }` et il s'agit d'un remplacement complet : les étiquettes non listées sont retirées, et un tableau vide les efface toutes. La réponse liste les étiquettes désormais actives sur l'actif.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+Comportements à connaître :
+
+- Un `ids` manquant ou qui n'est pas un tableau, ou un identifiant qui n'est pas un nombre entier, est rejeté avec `400`.
+- Chaque identifiant doit être une étiquette active du catalogue de votre entreprise. Les identifiants inconnus ou d'un autre locataire répondent `400` avec la liste des identifiants fautifs.
+- L'écriture requiert la permission d'écriture sur les actifs. Un identifiant d'actif inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
+
 ## Modèles d'actifs
 
 Les modèles standardisent les spécifications et les manuels par type. `POST /v1/buyer/asset/asset_models` requiert `modelName` et `assetTypeId`, avec des pièces jointes `manuals` et `specs` optionnelles.

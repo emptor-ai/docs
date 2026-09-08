@@ -62,6 +62,26 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_ty
 
 Den enskilda tillgångsläsningen hydratiserar tillgångens mätare (höljestyp `ApiAssetWithMeter`), vilket ger dina tekniker mätarhistorikkontext före ett besök. Alla fyra slutpunkter (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) är skrivskyddade med standardpaginering och fältfilter.
 
+## Tillgångsetiketter
+
+Tillgångsetiketter är köpardefinierade taggar på tillgångar (ett namn plus en valfri färg). De tillhör alltid ett köparföretag, så åtkomst via Supplier API är begränsad till nycklar för en köpares interna serviceteam: dessa nycklar ser sitt köparföretags katalog, medan en tredjepartsleverantörs nyckel får en tom lista.
+
+```bash
+# Katalogen (endast nycklar för interna serviceteam)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/asset_labels?no_pagination=true"
+
+# Ersätt etiketterna på en tillgång
+curl -X PUT "$BASE/v1/supplier/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+Katalogen är skrivskyddad (`GET /v1/supplier/asset/asset_labels` och `/{id}`); etiketter skapas och redigeras i OpenWrench-appen. Listan pagineras med 10 per sida som standard, accepterar `search`- och `label`-filter på etikettexten, och `no_pagination=true` returnerar hela katalogen.
+
+`PUT /v1/supplier/asset/assets/{assetId}/labels` ersätter hela uppsättningen etiketter på tillgången (`{ "ids": [...] }`; en tom array rensar dem alla) och returnerar de etiketter som nu är aktiva. Skrivningen kräver skrivbehörighet för tillgångar, och varje id måste vara en levande etikett i ditt köparföretags katalog. En tredjepartsleverantörs nyckel får `400` även när den har skrivbehörighet för tillgångar. Ett okänt, raderat eller främmande tillgångs-id svarar med samma `400` som en nekad skrivning, inte en `404`.
+
 ## Cachingstrategi
 
 Referensdata ändras långsamt. En praktisk uppsättning:

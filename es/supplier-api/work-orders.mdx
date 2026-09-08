@@ -1,6 +1,6 @@
 # Trabajar órdenes de trabajo con la Supplier API
 
-> Recibe, acepta, rechaza y avanza órdenes de trabajo como proveedor: actualizaciones de estado, seguimiento de partes, fechas estimadas de finalización, adjuntos y notas.
+> Recibe, acepta, rechaza y avanza órdenes de trabajo como proveedor: actualizaciones de estado, seguimiento de partes, fechas estimadas de finalización, adjuntos, notas y etiquetas.
 
 Para una integración de proveedor, la cola de órdenes de trabajo es el inbox. Esta guía cubre los endpoints bajo `/v1/supplier/work_order/` para recibir trabajos, responder a ellos y mantener informados a los compradores mientras avanza el trabajo. Programar visitas y completar el trabajo se hace a través de las [llamadas de servicio](/supplier-api/service-calls).
 
@@ -103,6 +103,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
     ]
   }'
 ```
+
+## Etiquetas
+
+Las etiquetas de órdenes de trabajo son marcadores ligeros (un nombre más un color opcional) usados para segmentar la cola. A través de la API puedes leer el catálogo de etiquetas y reemplazar las etiquetas aplicadas a una orden de trabajo. La creación y edición de las etiquetas en sí permanece en la app de OpenWrench.
+
+Qué catálogo ves depende de tu clave: una clave que pertenece al equipo de servicio interno de un comprador ve el catálogo de esa empresa compradora, y la clave de un proveedor tercero ve el catálogo de su propia instalación.
+
+**Explora el catálogo** con `GET /v1/supplier/work_order/work_order_labels`, u obtén una con `GET /v1/supplier/work_order/work_order_labels/{id}`. El listado está paginado a 10 por página por defecto y acepta filtros `search` y `label` sobre el texto de la etiqueta. Pasa `no_pagination=true` para traer el catálogo completo en una sola llamada.
+
+**Reemplaza las etiquetas de una orden de trabajo** con `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. El cuerpo es `{ "ids": [...] }` y es un reemplazo completo: las etiquetas no listadas se eliminan, y un array vacío las borra todas. La respuesta lista los mapeos de etiquetas ahora activos en la orden de trabajo.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Comportamiento a conocer:
+
+- Cada id debe ser una etiqueta viva de tu propio catálogo; un `ids` ausente o que no sea un array, un id no entero, y los ids desconocidos o de otro inquilino se rechazan todos con `400`.
+- La escritura requiere permiso de escritura de órdenes de trabajo: una clave que solo puede ver la orden de trabajo (un postor, o una instalación con visibilidad de solo lectura) recibe `400`. En una orden de trabajo sin asignar, solo una instalación con visibilidad de lectura-escritura puede etiquetarla.
+- Un id de orden de trabajo desconocido, eliminado o ajeno responde el mismo `400` que una escritura denegada, no un `404`.
 
 ## Crear una orden de trabajo iniciada por el proveedor
 

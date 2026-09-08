@@ -101,6 +101,32 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511
 
 `asset_lite` är det billiga sättet att synka en tillgångsväljare: när du inte skickar några pagineringsparametrar returnerar den den **opaginerade fulla mängden**, med `count` lika med antalet returnerade poster. Den enskilda tillgångsläsningen hydratiserar mätare (höljets `type` läser `ApiAssetWithMeter`).
 
+## Tillgångsetiketter
+
+Tillgångsetiketter är lätta taggar som ditt team definierar i OpenWrench-appen (ett namn plus en valfri färg), användbara för att dela upp tillgångslistan på sätt som de inbyggda fälten inte täcker. Via API:et kan du läsa katalogen och ersätta etiketterna som är applicerade på en tillgång. Att skapa eller redigera själva etiketterna sker fortfarande i appen.
+
+**Bläddra i katalogen** med `GET /v1/buyer/asset/asset_labels`, eller hämta en med `GET /v1/buyer/asset/asset_labels/{id}`. Listan är avgränsad till ditt företags etiketter och pagineras med 10 per sida som standard. Den accepterar `search`- och `label`-filter på etikettexten. Skicka `no_pagination=true` för att hämta hela katalogen i ett anrop (sorteringen gäller fortfarande).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_labels?no_pagination=true"
+```
+
+**Ersätt en tillgångs etiketter** med `PUT /v1/buyer/asset/assets/{assetId}/labels`. Kroppen är `{ "ids": [...] }` och det är en fullständig ersättning: etiketter som inte listas tas bort, och en tom array rensar dem alla. Svaret listar de etiketter som nu är aktiva på tillgången.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+Beteende att känna till:
+
+- Ett saknat `ids` eller ett `ids` som inte är en array, eller ett id som inte är ett heltal, avvisas med `400`.
+- Varje id måste vara en levande etikett från ditt företags katalog. Okända eller tenantöverskridande id:n svarar `400` med de felande id:na listade.
+- Skrivningen kräver skrivbehörighet för tillgångar. Ett okänt, raderat eller främmande tillgångs-id svarar med samma `400` som en nekad skrivning, inte en `404`.
+
 ## Tillgångsmodeller
 
 Modeller standardiserar specifikationer och manualer per typ. `POST /v1/buyer/asset/asset_models` kräver `modelName` och `assetTypeId`, med valfria `manuals`- och `specs`-bilagor.

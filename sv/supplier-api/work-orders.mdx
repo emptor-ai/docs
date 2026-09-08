@@ -1,6 +1,6 @@
 # Arbeta med arbetsordrar via Supplier API
 
-> Ta emot, acceptera, avvisa och driva arbetsordrar som leverantör: statusuppdateringar, reservdelsspårning, uppskattade slutdatum, bilagor och anteckningar.
+> Ta emot, acceptera, avvisa och driva arbetsordrar som leverantör: statusuppdateringar, reservdelsspårning, uppskattade slutdatum, bilagor, anteckningar och etiketter.
 
 För en leverantörsintegration är arbetsorderkön inkorgen. Den här guiden täcker slutpunkterna under `/v1/supplier/work_order/` för att ta emot jobb, svara på dem och hålla köpare informerade medan arbetet pågår. Att schemalägga besök och slutföra arbete sker via [servicebesök](/supplier-api/service-calls).
 
@@ -103,6 +103,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
     ]
   }'
 ```
+
+## Etiketter
+
+Arbetsorderetiketter är lätta taggar (ett namn plus en valfri färg) som används för att dela upp kön. Via API:et kan du läsa etikettkatalogen och ersätta etiketterna som är applicerade på en arbetsorder. Att skapa eller redigera själva etiketterna sker fortfarande i OpenWrench-appen.
+
+Vilken katalog du ser beror på din nyckel: en nyckel som tillhör en köpares interna serviceteam ser det köparföretagets katalog, och en tredjepartsleverantörs nyckel ser sin egen anläggnings katalog.
+
+**Bläddra i katalogen** med `GET /v1/supplier/work_order/work_order_labels`, eller hämta en med `GET /v1/supplier/work_order/work_order_labels/{id}`. Listan pagineras med 10 per sida som standard och accepterar `search`- och `label`-filter på etikettexten. Skicka `no_pagination=true` för att hämta hela katalogen i ett anrop.
+
+**Ersätt en arbetsorders etiketter** med `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. Kroppen är `{ "ids": [...] }` och det är en fullständig ersättning: etiketter som inte listas tas bort, och en tom array rensar dem alla. Svaret listar de etikettmappningar som nu är aktiva på arbetsordern.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Beteende att känna till:
+
+- Varje id måste vara en levande etikett från din egen katalog; ett saknat `ids` eller ett `ids` som inte är en array, ett id som inte är ett heltal, och okända eller tenantöverskridande id:n avvisas alla med `400`.
+- Skrivningen kräver skrivbehörighet för arbetsordrar: en nyckel som endast kan se arbetsordern (en budgivare, eller en anläggning med skrivskyddad synlighet) får `400`. På en otilldelad arbetsorder får endast en anläggning med läs- och skrivsynlighet sätta etiketter på den.
+- Ett okänt, raderat eller främmande arbetsorder-id svarar med samma `400` som en nekad skrivning, inte en `404`.
 
 ## Skapa en leverantörsinitierad arbetsorder
 

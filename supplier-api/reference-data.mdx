@@ -64,6 +64,26 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_ty
 
 The single-asset read hydrates the asset's meters (envelope type `ApiAssetWithMeter`), which gives your techs meter history context before a visit. All four endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) are read-only with standard pagination and field filters.
 
+## Asset labels
+
+Asset labels are buyer-defined tags on assets (a name plus an optional color). They always belong to a buyer company, so access through the Supplier API is limited to keys of a buyer's internal service team: those keys see their buyer company's catalog, while a third-party supplier's key gets an empty list.
+
+```bash
+# The catalog (internal service team keys only)
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/asset/asset_labels?no_pagination=true"
+
+# Replace the labels on an asset
+curl -X PUT "$BASE/v1/supplier/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+The catalog is read-only (`GET /v1/supplier/asset/asset_labels` and `/{id}`); labels are created and edited in the OpenWrench app. The list is paginated 10 per page by default, accepts `search` and `label` filters on the label text, and `no_pagination=true` returns the whole catalog.
+
+`PUT /v1/supplier/asset/assets/{assetId}/labels` replaces the full set of labels on the asset (`{ "ids": [...] }`; an empty array clears them all) and returns the labels now active. The write requires asset write permission, and every id must be a live label of your buyer company's catalog. A third-party supplier's key gets `400` even when it holds asset write permission. An unknown, deleted, or foreign asset id answers the same `400` as a denied write, not a `404`.
+
 ## Caching strategy
 
 Reference data changes slowly. A practical setup:
