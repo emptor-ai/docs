@@ -1,7 +1,7 @@
 ---
 title: "Webhooks en la Supplier API"
 sidebarTitle: "Webhooks"
-description: "Entérate en el momento en que se te asigna una orden de trabajo, cambia su estado o el comprador añade una nota, en lugar de sondear la Supplier API de OpenWrench."
+description: "Entérate al instante cuando se te asigna una orden de trabajo, cambia su estado o el comprador añade una nota, sin sondear la Supplier API de OpenWrench."
 ---
 
 Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: llegó trabajo nuevo para tu instalación, cambió el estado de una orden de trabajo o se añadió una nota a su hilo. Cada entrega identifica la orden de trabajo y lo que ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a `workorder.create` en el sustituto natural del sondeo de tu cola: el evento es la señal de que una orden de trabajo ha llegado a tu cola, normalmente esperando a que la [aceptes o rechaces](/es/supplier-api/work-orders#aceptar-o-rechazar).

@@ -1,7 +1,7 @@
 ---
 title: "Webhooks dans l'API Acheteur"
 sidebarTitle: "Webhooks"
-description: "Recevez sur votre propre endpoint les événements de création de bon de travail, de changement de statut et de nouvelle note, au lieu de sonder l'API Acheteur OpenWrench."
+description: "Recevez sur votre endpoint les événements de création de bon de travail, changement de statut et nouvelle note, sans sonder l'API Acheteur OpenWrench."
 ---
 
 Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : un bon de travail a été créé, son statut a changé, ou une note lui a été ajoutée. Chaque livraison vous indique quel bon de travail a changé et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait des webhooks le déclencheur naturel d'une intégration de dispatch : réagissez à `workorder.create` et `workorder.status_update` au moment où ils se produisent, et ne gardez le [sondage](/fr-CA/buyer-api/work-orders#assembler-le-tout) que comme filet de sécurité pour la réconciliation.
