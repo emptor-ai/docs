@@ -189,6 +189,26 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Etiqueta personas** añadiendo `elements` a la nota. `elements` es el contenido estructurado de la nota: las entradas `{ "type": "text", "value": "..." }` llevan fragmentos de texto plano y las entradas `{ "type": "user", "value": "<email>" }` etiquetan a una persona, igual que una @mención en la aplicación de OpenWrench. Mantén `text` como la versión en texto plano de toda la nota. Cada persona etiquetada recibe una notificación de la nota y, cuando el correo pertenece a un usuario activo de OpenWrench con acceso a la orden de trabajo (un contacto del comprador, o un contacto del proveedor en una instalación asignada a la orden de trabajo o con visibilidad sobre ella), se añade a la lista de suscriptores de la orden de trabajo para que también reciba las actualizaciones posteriores. Un correo que no coincide con ningún contacto de ese tipo se guarda en la nota pero no añade a nadie a la lista de suscriptores. Al volver a leer el hilo, cada elemento `user` incluye el contacto correspondiente en `userObject`.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "@Jane Doe can you confirm the ETA for the roof leak?",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00",
+      "elements": [
+        { "type": "user", "value": "jane.doe@example.com" },
+        { "type": "text", "value": " can you confirm the ETA for the roof leak?" }
+      ]
+    }
+  }'
+```
+
 **Añade fotos en bloque** con `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Úsalo cuando tengas un lote de fotos que publicar (el conjunto de antes/después de un técnico, por ejemplo): los suscriptores reciben una única notificación agrupada en lugar de una notificación por foto. El cuerpo es `{ "id": <woId>, "notes": [ ... ] }` con de 1 a 25 notas, y cada nota debe llevar una URL en `photo` y ningún otro contenido: `text` debe estar vacío y `video`, `audio`, `otherFile` y `elements` deben estar ausentes. Repetir la misma URL de foto dentro de una solicitud se rechaza con `400`. El servidor marca cada nota del lote con el mismo `noteAddedAt` y conserva el orden en que las enviaste.
 
 ```bash

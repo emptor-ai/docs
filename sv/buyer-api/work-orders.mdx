@@ -189,6 +189,26 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Tagga personer** genom att lägga till `elements` i anteckningen. `elements` är anteckningens strukturerade innehåll: poster av formen `{ "type": "text", "value": "..." }` bär löpande text och poster av formen `{ "type": "user", "value": "<email>" }` taggar en person, på samma sätt som ett @omnämnande i OpenWrench-appen. Behåll `text` som en ren textversion av hela anteckningen. Varje taggad person aviseras om anteckningen och, när e-postadressen tillhör en aktiv OpenWrench-användare med åtkomst till arbetsordern (en köparkontakt, eller en leverantörskontakt vid en anläggning som är tilldelad arbetsordern eller har insyn i den), läggs till i arbetsorderns prenumerantlista så att de även får senare uppdateringar. En e-postadress som inte matchar någon sådan kontakt sparas i anteckningen men lägger inte till någon i prenumerantlistan. När du läser tillbaka tråden bär varje `user`-element den matchande kontakten i `userObject`.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "@Jane Doe can you confirm the ETA for the roof leak?",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00",
+      "elements": [
+        { "type": "user", "value": "jane.doe@example.com" },
+        { "type": "text", "value": " can you confirm the ETA for the roof leak?" }
+      ]
+    }
+  }'
+```
+
 **Lägg till foton i bulk** med `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Använd den när du har en uppsättning foton att publicera (en teknikers före/efter-bilder, till exempel): prenumeranter får en enda grupperad avisering istället för en avisering per foto. Kroppen är `{ "id": <woId>, "notes": [ ... ] }` med 1–25 anteckningar, och varje anteckning måste bära en `photo`-URL och inget annat innehåll: `text` måste vara tomt och `video`, `audio`, `otherFile` och `elements` måste utelämnas. Att upprepa samma foto-URL i en begäran avvisas med `400`. Servern stämplar varje anteckning i batchen med samma `noteAddedAt` och bevarar ordningen du skickade dem i.
 
 ```bash

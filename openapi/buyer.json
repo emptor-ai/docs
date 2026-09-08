@@ -3544,7 +3544,7 @@
         "tags": [
           "Work Order Notes"
         ],
-        "description": "Appends a note to the work order's buyer\u2194supplier thread and sends note notifications. The note's noteAddedAt is overwritten with the current server time, and the note's noteAddedBy email is added to the work order's buyer subscriber list.",
+        "description": "Appends a note to the work order's buyer\u2194supplier thread and sends note notifications. The note's noteAddedAt is overwritten with the current server time, and the note's noteAddedBy email is added to the work order's buyer subscriber list. To tag people, include note.elements entries of type \"user\" whose value is the person's email: each tagged person is notified and, when the email belongs to an active contact with access to the work order, added to the subscriber list.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3565,7 +3565,7 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The note to append (text and noteAddedBy required; noteAddedAt is replaced server-side). Technically optional \u2014 omitting it makes the call a no-op save."
+                    "description": "The note to append (text and noteAddedBy required; noteAddedAt is replaced server-side). Add elements of type \"user\" to tag people by email. Technically optional \u2014 omitting it makes the call a no-op save."
                   }
                 },
                 "required": [
@@ -7145,16 +7145,19 @@
       },
       "NoteElement": {
         "type": "object",
+        "description": "One segment of a note's structured content. A \"text\" element is a run of plain text; a \"user\" element tags a person by email, the same as an @mention in the OpenWrench app. Tagged people are notified about the note and, when the email belongs to an active contact with access to the work order, added to its subscriber list.",
         "properties": {
           "type": {
             "type": "string",
             "enum": [
               "text",
               "user"
-            ]
+            ],
+            "description": "\"text\" for a run of plain text, \"user\" to tag a person."
           },
           "value": {
-            "type": "string"
+            "type": "string",
+            "description": "The text run for a \"text\" element, or the tagged person's email for a \"user\" element."
           },
           "userObject": {
             "anyOf": [
@@ -7164,7 +7167,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Read-only. For a \"user\" element, the contact matching value, hydrated when the thread is read. Ignored on write."
           }
         },
         "required": [
@@ -7243,7 +7247,8 @@
             ],
             "items": {
               "$ref": "#/components/schemas/NoteElement"
-            }
+            },
+            "description": "Structured content of the note. Include elements of type \"user\" to tag people by email; keep text as the plain-text version of the whole note."
           },
           "noteReadDetails": {
             "type": [
