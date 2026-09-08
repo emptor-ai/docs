@@ -129,7 +129,7 @@ Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den först
 
 ## Typisk integrationsloop
 
-1. Polla kön för nytilldelat arbete (`sort_by=assignedAt`), eller jämför på `statusChangedAt`.
+1. Ta emot nytt arbete via [webhooks](/supplier-api/webhooks) (`workorder.create`), eller polla kön (`sort_by=assignedAt`) och jämför på `statusChangedAt`.
 2. `confirm` eller `decline` inom din SLA.
 3. Schemalägg besöket via [servicebesök](/supplier-api/service-calls); posta reservdelsstatusar och ett ECD när saker utvecklas.
 4. Slutför via utcheckning och fakturera sedan via [offerter och fakturering](/supplier-api/quotes-and-invoicing).

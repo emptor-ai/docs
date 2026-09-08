@@ -167,7 +167,7 @@ Valores de `status` que verás y que establecerás a través de la API:
 | `WorkUnsatisfactory` | Comprador | Rechazaste el trabajo completado. |
 | `CancelledWithReason` | Comprador | Cancelada. |
 
-Las transiciones propiedad del proveedor llegan a través de la integración del propio proveedor o de las apps de OpenWrench; tu lado las observa mediante sondeo (`statusChangedAt`, `statusChanges`) y actúa sobre las que son propiedad del comprador.
+Las transiciones propiedad del proveedor llegan a través de la integración del propio proveedor o de las apps de OpenWrench; tu lado las observa mediante [webhooks](/buyer-api/webhooks) o por sondeo (`statusChangedAt`, `statusChanges`) y actúa sobre las que son propiedad del comprador.
 
 ## Notas
 
@@ -221,6 +221,6 @@ Una integración de despacho típica:
 
 1. Cachea `me`, tipos de problema y ubicaciones al arrancar.
 2. Crea la orden de trabajo con `supplierFacilityId` establecido (o créala sin asignar, luego jerarquiza proveedores y haz `PATCH` de la asignación).
-3. Consulta `GET /work_orders?statusChangedAt=...` o vuelve a obtenerla por id para hacer seguimiento del progreso del proveedor.
+3. Sigue el progreso del proveedor mediante [webhooks](/buyer-api/webhooks) (`workorder.status_update`), con `GET /work_orders?statusChangedAt=...` como sondeo de respaldo.
 4. Cuando el proveedor alcance `WaitingForReview`, verifica el trabajo (ver [Llamadas de servicio](/buyer-api/service-calls) para la evidencia de la visita) y publica `work_reviewed_and_completed`, o `work_unsatisfactory` con una nota.
 5. Concilia el lado monetario mediante [Cotizaciones y propuestas](/buyer-api/quotes-and-proposals) y [Facturas](/buyer-api/invoices).

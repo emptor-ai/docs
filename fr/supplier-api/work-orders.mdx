@@ -129,7 +129,7 @@ Valeurs par défaut si omises : `problemTypeId` revient au premier type de probl
 
 ## Boucle d'intégration typique
 
-1. Interrogez la file d'attente pour les travaux nouvellement assignés (`sort_by=assignedAt`), ou différez sur `statusChangedAt`.
+1. Recevez les nouveaux travaux via les [webhooks](/supplier-api/webhooks) (`workorder.create`), ou interrogez la file d'attente (`sort_by=assignedAt`) et comparez sur `statusChangedAt`.
 2. `confirm` ou `decline` dans les limites de votre SLA.
 3. Planifiez la visite via les [visites de service](/supplier-api/service-calls) ; publiez les statuts des pièces et une ECD au fur et à mesure de l'évolution.
 4. Complétez via le pointage de sortie, puis facturez via [Soumissions et facturation](/supplier-api/quotes-and-invoicing).

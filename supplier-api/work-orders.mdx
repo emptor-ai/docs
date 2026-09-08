@@ -131,7 +131,7 @@ Defaults when omitted: `problemTypeId` falls back to the first leaf problem type
 
 ## Typical integration loop
 
-1. Poll the queue for newly assigned work (`sort_by=assignedAt`), or diff on `statusChangedAt`.
+1. Receive new work through [webhooks](/supplier-api/webhooks) (`workorder.create`), or poll the queue (`sort_by=assignedAt`) and diff on `statusChangedAt`.
 2. `confirm` or `decline` within your SLA.
 3. Schedule the visit via [service calls](/supplier-api/service-calls); post parts statuses and an ECD as things develop.
 4. Complete via check-out, then bill via [quotes and invoicing](/supplier-api/quotes-and-invoicing).

@@ -167,7 +167,7 @@ Valeurs de `status` que vous verrez et pourrez définir via l'API :
 | `WorkUnsatisfactory` | Acheteur | Vous avez refusé le travail terminé. |
 | `CancelledWithReason` | Acheteur | Annulé. |
 
-Les transitions détenues par le fournisseur arrivent via l'intégration propre du fournisseur ou les applications OpenWrench ; votre côté les observe par interrogation (`statusChangedAt`, `statusChanges`) et agit sur celles détenues par l'acheteur.
+Les transitions détenues par le fournisseur arrivent via l'intégration propre du fournisseur ou les applications OpenWrench ; votre côté les observe via les [webhooks](/buyer-api/webhooks) ou par interrogation (`statusChangedAt`, `statusChanges`) et agit sur celles détenues par l'acheteur.
 
 ## Notes
 
@@ -221,6 +221,6 @@ Une intégration de répartition typique :
 
 1. Mettez en cache `me`, les types de problème et les emplacements au démarrage.
 2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez sans assignation, puis classez les fournisseurs et `PATCH` l'assignation).
-3. Interrogez `GET /work_orders?statusChangedAt=...` ou récupérez à nouveau par identifiant pour suivre la progression du fournisseur.
+3. Suivez la progression du fournisseur via les [webhooks](/buyer-api/webhooks) (`workorder.status_update`), avec `GET /work_orders?statusChangedAt=...` comme interrogation de repli.
 4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Visites de service](/buyer-api/service-calls) pour les preuves de visite) et publiez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
 5. Rapprochez le volet financier via [Soumissions et propositions](/buyer-api/quotes-and-proposals) et [Factures](/buyer-api/invoices).

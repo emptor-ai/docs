@@ -169,7 +169,7 @@ When your integration receives this `409`, wait for the technician to check out 
 | `WorkUnsatisfactory` | Buyer | You rejected the completed work. |
 | `CancelledWithReason` | Buyer | Cancelled. |
 
-The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps; your side observes them via polling (`statusChangedAt`, `statusChanges`) and acts on the buyer-owned ones.
+The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps; your side observes them through [webhooks](/buyer-api/webhooks) or by polling (`statusChangedAt`, `statusChanges`) and acts on the buyer-owned ones.
 
 ## Notes
 
@@ -223,6 +223,6 @@ A typical dispatch integration:
 
 1. Cache `me`, problem types, and locations at startup.
 2. Create the work order with `supplierFacilityId` set (or create unassigned, then rank suppliers and `PATCH` the assignment).
-3. Poll `GET /work_orders?statusChangedAt=...` or re-fetch by id to track supplier progress.
+3. Track supplier progress through [webhooks](/buyer-api/webhooks) (`workorder.status_update`), with `GET /work_orders?statusChangedAt=...` as a polling fallback.
 4. When the supplier reaches `WaitingForReview`, verify the work (see [Service calls](/buyer-api/service-calls) for visit evidence) and post `work_reviewed_and_completed`, or `work_unsatisfactory` with a note.
 5. Reconcile the money side through [Quotes and proposals](/buyer-api/quotes-and-proposals) and [Invoices](/buyer-api/invoices).

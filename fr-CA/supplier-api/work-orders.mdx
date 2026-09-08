@@ -129,7 +129,7 @@ Valeurs par défaut lorsqu'omises : `problemTypeId` retombe sur le premier type 
 
 ## Boucle d'intégration typique
 
-1. Sondez la file pour les travaux nouvellement affectés (`sort_by=assignedAt`), ou faites un delta sur `statusChangedAt`.
+1. Recevez les nouveaux travaux via les [webhooks](/supplier-api/webhooks) (`workorder.create`), ou sondez la file (`sort_by=assignedAt`) et faites un delta sur `statusChangedAt`.
 2. `confirm` ou `decline` dans votre entente de service.
 3. Planifiez la visite via les [appels de service](/supplier-api/service-calls); publiez des statuts de pièces et une ECD au fil des développements.
 4. Complétez via le départ, puis facturez via [soumissions et facturation](/supplier-api/quotes-and-invoicing).
