@@ -2,7 +2,7 @@
 
 > Soyez prévenu dès qu'un bon de travail vous est assigné, que son statut change ou que l'acheteur ajoute une note, au lieu d'interroger l'API Fournisseur OpenWrench.
 
-Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : de nouveaux travaux sont arrivés pour votre établissement, le statut d'un bon de travail a changé, ou une note a été ajoutée à son fil. Chaque livraison identifie le bon de travail et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait de `workorder.create` le remplaçant naturel de l'interrogation de votre file d'attente : l'événement est le signal qu'un bon de travail attend que vous l'[acceptiez ou le refusiez](/supplier-api/work-orders#accept-or-decline).
+Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : de nouveaux travaux sont arrivés pour votre établissement, le statut d'un bon de travail a changé, ou une note a été ajoutée à son fil. Chaque livraison identifie le bon de travail et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait de `workorder.create` le remplaçant naturel de l'interrogation de votre file d'attente : l'événement est le signal qu'un bon de travail est arrivé dans votre file d'attente, le plus souvent en attente que vous l'[acceptiez ou le refusiez](/supplier-api/work-orders#accept-or-decline).
 
 {/* Relecteur : les points à confirmer avant fusion (enregistrement, en-tête de signature, nouvelles tentatives) sont annotés dans la page en anglais. */}
 
@@ -123,6 +123,6 @@ Les lectures de l'API externe sont servies par un réplica de lecture, si bien q
 La [boucle d'intégration typique](/supplier-api/work-orders#typical-integration-loop), pilotée par les webhooks :
 
 1. Enregistrez un endpoint pour `workorder.create` et `workorder.status_update` (ajoutez `workorder.new_note` si vous répliquez la conversation).
-2. Sur `workorder.create`, récupérez le bon de travail, créez le job dans votre système, puis faites `confirm` ou `decline` dans votre SLA.
+2. Sur `workorder.create`, récupérez le bon de travail et créez le job dans votre système. Puis distinguez selon `newStatus` : `PendingConfirmationByServiceProvider` signifie que l'acheteur vous attend, faites donc `confirm` ou `decline` dans votre SLA ; `SupplierInitiatedPendingApproval` signifie que votre propre demande attend l'acheteur, ne faites donc rien tant qu'un `workorder.status_update` n'a pas rapporté l'issue ; tout autre statut signifie que le bon de travail est déjà à vous, passez donc directement à la planification.
 3. Sur `workorder.status_update`, récupérez le bon de travail. `WorkUnsatisfactory` et `WorkReviewedAndCompleted` vous donnent le verdict de l'acheteur ; `CancelledWithReason` clôt le job ; `PaymentMade` clôt le volet financier.
 4. Exécutez une interrogation périodique sur `assignedAt` ou `statusChangedAt` comme filet de sécurité pour tout ce que le chemin des webhooks aurait manqué, y compris les travaux réaffectés à un autre fournisseur.

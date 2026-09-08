@@ -4,7 +4,7 @@ sidebarTitle: "Webhooks"
 description: "Get notified the moment a work order is assigned to you, its status changes, or the buyer adds a note, instead of polling the OpenWrench Supplier API."
 ---
 
-Webhooks push three work order events to an HTTPS endpoint you own: new work arrived for your facility, a work order's status changed, or a note was added to its thread. Each delivery identifies the work order and what happened. Your integration then fetches the work order through the API. That makes `workorder.create` the natural replacement for polling your queue: the event is the signal that a work order is waiting for you to [accept or decline](/supplier-api/work-orders#accept-or-decline).
+Webhooks push three work order events to an HTTPS endpoint you own: new work arrived for your facility, a work order's status changed, or a note was added to its thread. Each delivery identifies the work order and what happened. Your integration then fetches the work order through the API. That makes `workorder.create` the natural replacement for polling your queue: the event is the signal that a work order has landed in your queue, usually waiting for you to [accept or decline](/supplier-api/work-orders#accept-or-decline) it.
 
 {/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl.getSupplierFacilityWebhooks) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
 
@@ -133,6 +133,6 @@ External API reads are served from a read replica, so a work order assigned a mo
 The [typical integration loop](/supplier-api/work-orders#typical-integration-loop), driven by webhooks:
 
 1. Register an endpoint for `workorder.create` and `workorder.status_update` (add `workorder.new_note` if you mirror the conversation).
-2. On `workorder.create`, fetch the work order, create the job in your system, and `confirm` or `decline` within your SLA.
+2. On `workorder.create`, fetch the work order and create the job in your system. Then branch on `newStatus`: `PendingConfirmationByServiceProvider` means the buyer is waiting on you, so `confirm` or `decline` within your SLA; `SupplierInitiatedPendingApproval` means your own request is waiting on the buyer, so do nothing until a `workorder.status_update` reports the outcome; any other status means the work order is already yours, so go straight to scheduling.
 3. On `workorder.status_update`, fetch the work order. `WorkUnsatisfactory` and `WorkReviewedAndCompleted` tell you the buyer's verdict; `CancelledWithReason` closes the job; `PaymentMade` closes the money side.
 4. Run a periodic poll on `assignedAt` or `statusChangedAt` as a safety net for anything the webhook path missed, including work reassigned away from you.

@@ -2,7 +2,7 @@
 
 > Få besked i samma stund som en arbetsorder tilldelas dig, dess status ändras eller köparen lägger till en anteckning, i stället för att polla OpenWrench Supplier API.
 
-Webhooks skickar tre arbetsorderhändelser till en HTTPS-slutpunkt som du äger: nytt arbete kom in till din anläggning, en arbetsorders status ändrades, eller en anteckning lades till i dess tråd. Varje leverans identifierar arbetsordern och vad som hände. Din integration hämtar sedan arbetsordern via API:et. Det gör `workorder.create` till den naturliga ersättningen för att polla din kö: händelsen är signalen om att en arbetsorder väntar på att du ska [acceptera eller avvisa](/supplier-api/work-orders#accept-or-decline) den.
+Webhooks skickar tre arbetsorderhändelser till en HTTPS-slutpunkt som du äger: nytt arbete kom in till din anläggning, en arbetsorders status ändrades, eller en anteckning lades till i dess tråd. Varje leverans identifierar arbetsordern och vad som hände. Din integration hämtar sedan arbetsordern via API:et. Det gör `workorder.create` till den naturliga ersättningen för att polla din kö: händelsen är signalen om att en arbetsorder har landat i din kö, oftast i väntan på att du ska [acceptera eller avvisa](/supplier-api/work-orders#accept-or-decline) den.
 
 {/* Granskare: punkterna som ska bekräftas före sammanslagning (registrering, signaturhuvud, omförsök) är noterade på den engelska sidan. */}
 
@@ -123,6 +123,6 @@ Läsningar i det externa API:et serveras från en läs-replika, så en arbetsord
 Den [typiska integrationsloopen](/supplier-api/work-orders#typical-integration-loop), driven av webhooks:
 
 1. Registrera en slutpunkt för `workorder.create` och `workorder.status_update` (lägg till `workorder.new_note` om du speglar konversationen).
-2. Vid `workorder.create`, hämta arbetsordern, skapa jobbet i ditt system och gör `confirm` eller `decline` inom din SLA.
+2. Vid `workorder.create`, hämta arbetsordern och skapa jobbet i ditt system. Förgrena sedan på `newStatus`: `PendingConfirmationByServiceProvider` betyder att köparen väntar på dig, så gör `confirm` eller `decline` inom din SLA; `SupplierInitiatedPendingApproval` betyder att din egen begäran väntar på köparen, så gör ingenting tills en `workorder.status_update` rapporterar utfallet; alla andra statusar betyder att arbetsordern redan är din, så gå direkt till schemaläggning.
 3. Vid `workorder.status_update`, hämta arbetsordern. `WorkUnsatisfactory` och `WorkReviewedAndCompleted` ger dig köparens utlåtande; `CancelledWithReason` stänger jobbet; `PaymentMade` stänger den ekonomiska delen.
 4. Kör en periodisk polling på `assignedAt` eller `statusChangedAt` som skyddsnät för allt som webhook-vägen kan ha missat, inklusive arbete som tilldelats om bort från dig.

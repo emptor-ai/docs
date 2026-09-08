@@ -2,7 +2,7 @@
 
 > Entérate en el momento en que se te asigna una orden de trabajo, cambia su estado o el comprador añade una nota, en lugar de sondear la Supplier API de OpenWrench.
 
-Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: llegó trabajo nuevo para tu instalación, cambió el estado de una orden de trabajo o se añadió una nota a su hilo. Cada entrega identifica la orden de trabajo y lo que ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a `workorder.create` en el sustituto natural del sondeo de tu cola: el evento es la señal de que hay una orden de trabajo esperando a que la [aceptes o rechaces](/supplier-api/work-orders#accept-or-decline).
+Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: llegó trabajo nuevo para tu instalación, cambió el estado de una orden de trabajo o se añadió una nota a su hilo. Cada entrega identifica la orden de trabajo y lo que ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a `workorder.create` en el sustituto natural del sondeo de tu cola: el evento es la señal de que una orden de trabajo ha llegado a tu cola, normalmente esperando a que la [aceptes o rechaces](/supplier-api/work-orders#accept-or-decline).
 
 {/* Revisor: los puntos por confirmar antes de fusionar (registro, cabecera de firma, reintentos) están anotados en la página en inglés. */}
 
@@ -123,6 +123,6 @@ Las lecturas de la API externa se sirven desde una réplica de lectura, así que
 El [ciclo de integración típico](/supplier-api/work-orders#typical-integration-loop), impulsado por webhooks:
 
 1. Registra un endpoint para `workorder.create` y `workorder.status_update` (añade `workorder.new_note` si replicas la conversación).
-2. En `workorder.create`, obtén la orden de trabajo, crea el trabajo en tu sistema y haz `confirm` o `decline` dentro de tu SLA.
+2. En `workorder.create`, obtén la orden de trabajo y crea el trabajo en tu sistema. Luego ramifica según `newStatus`: `PendingConfirmationByServiceProvider` significa que el comprador te espera, así que haz `confirm` o `decline` dentro de tu SLA; `SupplierInitiatedPendingApproval` significa que tu propia solicitud espera al comprador, así que no hagas nada hasta que un `workorder.status_update` informe el resultado; cualquier otro estado significa que la orden de trabajo ya es tuya, así que pasa directamente a la programación.
 3. En `workorder.status_update`, obtén la orden de trabajo. `WorkUnsatisfactory` y `WorkReviewedAndCompleted` te dan el veredicto del comprador; `CancelledWithReason` cierra el trabajo; `PaymentMade` cierra la parte económica.
 4. Ejecuta un sondeo periódico sobre `assignedAt` o `statusChangedAt` como red de seguridad para cualquier cosa que la ruta de webhooks haya perdido, incluido el trabajo reasignado fuera de ti.
