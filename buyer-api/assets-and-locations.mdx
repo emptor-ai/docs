@@ -103,6 +103,32 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511
 
 `asset_lite` is the cheap way to sync an asset picker: when you pass no pagination parameters it returns the **unpaginated full set**, with `count` equal to the number of items returned. The single-asset read hydrates meters (the envelope `type` reads `ApiAssetWithMeter`).
 
+## Asset labels
+
+Asset labels are lightweight tags your team defines in the OpenWrench app (a name plus an optional color), useful for slicing the asset list in ways the built-in fields don't cover. Through the API you can read the catalog and replace the labels applied to an asset. Creating or editing the labels themselves stays in the app.
+
+**Browse the catalog** with `GET /v1/buyer/asset/asset_labels`, or fetch one with `GET /v1/buyer/asset/asset_labels/{id}`. The list is scoped to your company's labels and paginated 10 per page by default. It accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call (sorting still applies).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/asset/asset_labels?no_pagination=true"
+```
+
+**Replace an asset's labels** with `PUT /v1/buyer/asset/assets/{assetId}/labels`. The body is `{ "ids": [...] }` and it is a full replacement: labels not listed are removed, and an empty array clears them all. The response lists the labels now active on the asset.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [7, 21] }'
+```
+
+Behavior to know:
+
+- A missing or non-array `ids`, or an id that is not a whole number, is rejected with `400`.
+- Every id must be a live label from your company's catalog. Unknown or cross-tenant ids answer `400` with the offending ids listed.
+- The write requires asset write permission. An unknown, deleted, or foreign asset id answers the same `400` as a denied write, not a `404`.
+
 ## Asset models
 
 Models standardize specs and manuals per type. `POST /v1/buyer/asset/asset_models` requires `modelName` and `assetTypeId`, with optional `manuals` and `specs` attachments.
