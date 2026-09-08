@@ -189,7 +189,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
-**Tagga personer** genom att lägga till `elements` i anteckningen. `elements` är anteckningens strukturerade innehåll: poster av formen `{ "type": "text", "value": "..." }` bär löpande text och poster av formen `{ "type": "user", "value": "<email>" }` taggar en person, på samma sätt som ett @omnämnande i OpenWrench-appen. Behåll `text` som en ren textversion av hela anteckningen. Varje taggad person aviseras om anteckningen och, när e-postadressen tillhör en aktiv OpenWrench-användare med åtkomst till arbetsordern (en köparkontakt, eller en leverantörskontakt vid en anläggning som är tilldelad arbetsordern eller har insyn i den), läggs till i arbetsorderns prenumerantlista så att de även får senare uppdateringar. En e-postadress som inte matchar någon sådan kontakt sparas i anteckningen men lägger inte till någon i prenumerantlistan. När du läser tillbaka tråden bär varje `user`-element den matchande kontakten i `userObject`.
+**Tagga personer** genom att skicka `taggedUsers`, en lista med e-postadresser, bredvid `note`. Servern gör om varje e-postadress till en post `{ "type": "user", "value": "<email>" }` i anteckningens `elements`, den struktur som OpenWrench-appen skriver för ett @omnämnande, och lägger därefter till ett `text`-element med anteckningens text, så håll namnen utanför `text`. Varje taggad person aviseras om anteckningen och, när e-postadressen tillhör en aktiv OpenWrench-användare med åtkomst till arbetsordern (en köparkontakt, eller en leverantörskontakt vid en anläggning som är tilldelad arbetsordern eller har insyn i den), läggs till i arbetsorderns prenumerantlista så att de även får senare uppdateringar. En e-postadress som inte matchar någon sådan kontakt sparas i anteckningen men lägger inte till någon i prenumerantlistan. En anteckning kan tagga upp till 25 personer; dubbletter slås ihop utan hänsyn till skiftläge och allt som inte är en e-postadress avvisas med `400`. Om du bygger `elements` själv lägger `taggedUsers` bara till de personer som inte redan är taggade. När du läser tillbaka tråden bär varje `user`-element den matchande kontakten i `userObject`.
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
@@ -198,14 +198,11 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   -d '{
     "id": 9001,
     "note": {
-      "text": "@Jane Doe can you confirm the ETA for the roof leak?",
+      "text": "Can you confirm the ETA for the roof leak?",
       "noteAddedBy": "ops@example.com",
-      "noteAddedAt": "2026-08-21T09:00:00.000-07:00",
-      "elements": [
-        { "type": "user", "value": "jane.doe@example.com" },
-        { "type": "text", "value": " can you confirm the ETA for the roof leak?" }
-      ]
-    }
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    },
+    "taggedUsers": ["jane.doe@example.com"]
   }'
 ```
 

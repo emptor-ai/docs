@@ -189,7 +189,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
-**Etiqueta personas** añadiendo `elements` a la nota. `elements` es el contenido estructurado de la nota: las entradas `{ "type": "text", "value": "..." }` llevan fragmentos de texto plano y las entradas `{ "type": "user", "value": "<email>" }` etiquetan a una persona, igual que una @mención en la aplicación de OpenWrench. Mantén `text` como la versión en texto plano de toda la nota. Cada persona etiquetada recibe una notificación de la nota y, cuando el correo pertenece a un usuario activo de OpenWrench con acceso a la orden de trabajo (un contacto del comprador, o un contacto del proveedor en una instalación asignada a la orden de trabajo o con visibilidad sobre ella), se añade a la lista de suscriptores de la orden de trabajo para que también reciba las actualizaciones posteriores. Un correo que no coincide con ningún contacto de ese tipo se guarda en la nota pero no añade a nadie a la lista de suscriptores. Al volver a leer el hilo, cada elemento `user` incluye el contacto correspondiente en `userObject`.
+**Etiqueta personas** enviando `taggedUsers`, una lista de direcciones de correo, junto a `note`. El servidor convierte cada correo en una entrada `{ "type": "user", "value": "<email>" }` dentro de `elements` de la nota, la estructura que la aplicación de OpenWrench escribe para una @mención, y añade después un elemento `text` con el texto de la nota, así que deja los nombres fuera de `text`. Cada persona etiquetada recibe una notificación de la nota y, cuando el correo pertenece a un usuario activo de OpenWrench con acceso a la orden de trabajo (un contacto del comprador, o un contacto del proveedor en una instalación asignada a la orden de trabajo o con visibilidad sobre ella), se añade a la lista de suscriptores de la orden de trabajo para que también reciba las actualizaciones posteriores. Un correo que no coincide con ningún contacto de ese tipo se guarda en la nota pero no añade a nadie a la lista de suscriptores. Una nota puede etiquetar hasta 25 personas; los duplicados se combinan sin distinguir mayúsculas y cualquier valor que no sea una dirección de correo se rechaza con `400`. Si construyes `elements` por tu cuenta, `taggedUsers` solo añade a las personas que aún no estén etiquetadas. Al volver a leer el hilo, cada elemento `user` incluye el contacto correspondiente en `userObject`.
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
@@ -198,14 +198,11 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   -d '{
     "id": 9001,
     "note": {
-      "text": "@Jane Doe can you confirm the ETA for the roof leak?",
+      "text": "Can you confirm the ETA for the roof leak?",
       "noteAddedBy": "ops@example.com",
-      "noteAddedAt": "2026-08-21T09:00:00.000-07:00",
-      "elements": [
-        { "type": "user", "value": "jane.doe@example.com" },
-        { "type": "text", "value": " can you confirm the ETA for the roof leak?" }
-      ]
-    }
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    },
+    "taggedUsers": ["jane.doe@example.com"]
   }'
 ```
 

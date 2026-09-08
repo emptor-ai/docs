@@ -1925,7 +1925,7 @@
       "patch": {
         "operationId": "appendWorkOrderNotes",
         "summary": "Append a note to a work order",
-        "description": "Appends a note to the work order's buyer-supplier note thread and sends note notifications. To tag people, include note.elements entries of type \"user\" whose value is the person's email: each tagged person is notified and, when the email belongs to an active contact with access to the work order, added to the subscriber list. Returns the updated work order.",
+        "description": "Appends a note to the work order's buyer-supplier note thread and sends note notifications. To tag people, send taggedUsers (a list of emails) beside the note, or include note.elements entries of type \"user\" yourself: each tagged person is notified and, when the email belongs to an active contact with access to the work order, added to the subscriber list. Returns the updated work order.",
         "tags": [
           "Work Orders"
         ],
@@ -1985,12 +1985,20 @@
                   },
                   "note": {
                     "$ref": "#/components/schemas/Note"
+                  },
+                  "taggedUsers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "description": "Emails of people to tag on the note, the simplest way to @mention through the API. Each becomes a note.elements entry of type \"user\"; when the note carries no elements of its own, a \"text\" element holding the note text follows them. Tagged people are notified and, when the email belongs to an active contact with access to the work order, added to the subscriber list. Up to 25, de-duplicated case-insensitively; a value that is not an email address is rejected with 400."
                   }
                 },
                 "required": [
                   "id"
                 ],
-                "description": "Verified payload: the work order id plus a single optional note object. note.text and note.noteAddedBy are required, and note.elements of type \"user\" tag people by email; noteAddedAt is overwritten with the server's current time, and the author's email is added to the work order's supplier subscriber list."
+                "description": "Verified payload: the work order id plus a single optional note object, with an optional taggedUsers list of emails. note.text and note.noteAddedBy are required, and taggedUsers (or note.elements of type \"user\") tag people by email; noteAddedAt is overwritten with the server's current time, and the author's email is added to the work order's supplier subscriber list."
               }
             }
           }
