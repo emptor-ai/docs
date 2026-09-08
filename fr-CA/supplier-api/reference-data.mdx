@@ -88,6 +88,6 @@ Le catalogue est en lecture seule (`GET /v1/supplier/asset/asset_labels` et `/{i
 
 Les données de référence changent lentement. Une configuration pratique :
 
-- Rafraîchir les entreprises acheteuses quotidiennement (un appel).
-- Synchroniser les emplacements et les actifs pour les bons de travail actifs à la demande, en mettant en cache par id.
+- Rafraîchissez les entreprises acheteuses quotidiennement (un appel).
+- Synchronisez les emplacements et les actifs pour les bons de travail actifs à la demande, en mettant en cache par id.
 - Traitez `400` sur une lecture unique comme « hors de votre portée » et `404` comme « n'existe pas », et attendez-vous à ce que des ids disparaissent de votre vue lorsqu'une relation acheteur se termine.

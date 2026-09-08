@@ -4,7 +4,7 @@ sidebarTitle: "Webhooks"
 description: "Recevez sur votre endpoint les événements de création de bon de travail, changement de statut et nouvelle note, sans sonder l'API Acheteur OpenWrench."
 ---
 
-Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : un bon de travail a été créé, son statut a changé, ou une note lui a été ajoutée. Chaque livraison vous indique quel bon de travail a changé et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait des webhooks le déclencheur naturel d'une intégration de dispatch : réagissez à `workorder.create` et `workorder.status_update` au moment où ils se produisent, et ne gardez le [sondage](/fr-CA/buyer-api/work-orders#assembler-le-tout) que comme filet de sécurité pour la réconciliation.
+Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : un bon de travail a été créé, son statut a changé, ou une note lui a été ajoutée. Chaque livraison vous indique quel bon de travail a changé et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait des webhooks le déclencheur naturel d'une intégration de répartition : réagissez à `workorder.create` et `workorder.status_update` au moment où ils se produisent, et ne gardez le [sondage](/fr-CA/buyer-api/work-orders#assembler-le-tout) que comme filet de sécurité pour la réconciliation.
 
 {/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
 
@@ -16,7 +16,7 @@ Les endpoints sont enregistrés par entreprise acheteuse et couvrent tous ses em
 - lesquels des trois événements vous voulez (`workorder.create`, `workorder.status_update`, `workorder.new_note`), et
 - si l'endpoint sert aux tests ou à la production.
 
-Le support enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à [vérifier les livraisons](#vérifier-les-livraisons). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
+Le soutien enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à [vérifier les livraisons](#vérifier-les-livraisons). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
 
 {/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
 
@@ -30,7 +30,7 @@ Le support enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et v
 
 Quelques précisions sur chacun :
 
-- **`workorder.create`** se déclenche à chaque création, quel qu'en soit l'auteur : votre propre `POST /v1/buyer/work_order/work_orders`, un utilisateur des applications web ou mobile OpenWrench, un calendrier de maintenance planifiée, une visite d'inspection de site, ou un fournisseur qui ouvre un bon de travail sur l'un de vos emplacements (`SupplierInitiatedPendingApproval`). La charge utile porte le statut initial, ce qui vous permet de distinguer une demande de service en attente d'approbation d'un bon de travail dispatché dès sa création.
+- **`workorder.create`** se déclenche à chaque création, quel qu'en soit l'auteur : votre propre `POST /v1/buyer/work_order/work_orders`, un utilisateur des applications web ou mobile OpenWrench, un calendrier de maintenance planifiée, une visite d'inspection de site, ou un fournisseur qui ouvre un bon de travail sur l'un de vos emplacements (`SupplierInitiatedPendingApproval`). La charge utile porte le statut initial, ce qui vous permet de distinguer une demande de service en attente d'approbation d'un bon de travail réparti dès sa création.
 - **`workorder.status_update`** se déclenche à chaque transition du [modèle de statut](/fr-CA/buyer-api/work-orders#le-modèle-de-statut), pour les statuts détenus par l'un ou l'autre côté. Les modifications qui ne touchent pas `status` (un changement de priorité, une nouvelle date d'achèvement estimée, une réaffectation alors que le bon de travail est encore en attente de confirmation) n'en émettent pas. Quand un bon de travail passe d'un fournisseur à un autre, vous pouvez recevoir une mise à jour intermédiaire dont le `newStatus` est `Rejected`, qui clôt l'affectation précédente, suivie de la mise à jour vers le nouveau statut.
 - **`workorder.new_note`** se déclenche pour les notes du fil racine acheteur–fournisseur venant de l'un ou l'autre côté, y compris les notes publiées par votre propre intégration, les envois groupés de photos et la note jointe à une action de statut. Les notes internes des fournisseurs et les fils de sous-traitance n'émettent jamais d'événement.
 
@@ -96,7 +96,7 @@ La charge utile n'inclut pas le reste du fil. Lisez-le avec `GET /v1/buyer/work_
 
 ## Vérifier les livraisons
 
-Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de la requête avec le secret de signature de votre endpoint et l'envoie dans un en-tête de signature. Lorsque le support enregistre votre endpoint, il vous communique le secret, le nom de l'en-tête et l'algorithme de hachage. Vérifiez la signature sur les octets bruts du corps avant de l'analyser, et rejetez tout ce qui ne correspond pas. Le secret étant propre à chaque endpoint, sa rotation passe par une demande au support : demandez un nouveau secret, déployez-le, puis demandez au support de basculer l'endpoint.
+Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de la requête avec le secret de signature de votre endpoint et l'envoie dans un en-tête de signature. Lorsque le soutien enregistre votre endpoint, il vous communique le secret, le nom de l'en-tête et l'algorithme de hachage. Vérifiez la signature sur les octets bruts du corps avant de l'analyser, et rejetez tout ce qui ne correspond pas. Le secret étant propre à chaque endpoint, sa rotation passe par une demande au soutien : demandez un nouveau secret, déployez-le, puis demandez au soutien de basculer l'endpoint.
 
 {/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
 
@@ -124,9 +124,9 @@ Les lectures de l'API externe sont servies par un réplica de lecture, si bien q
 
 ## Assembler le tout
 
-Une intégration de dispatch pilotée par les webhooks :
+Une intégration de répartition pilotée par les webhooks :
 
 1. Enregistrez un endpoint pour `workorder.create` et `workorder.status_update` (ajoutez `workorder.new_note` si vous répliquez la conversation).
-2. Sur `workorder.create`, récupérez le bon de travail et créez l'enregistrement correspondant dans votre système. Si vous dispatchez de votre côté, faites un `PATCH` du `supplierFacilityId` comme décrit dans [Bons de travail](/fr-CA/buyer-api/work-orders#réaffecter-un-fournisseur).
+2. Sur `workorder.create`, récupérez le bon de travail et créez l'enregistrement correspondant dans votre système. Si vous répartissez de votre côté, faites un `PATCH` du `supplierFacilityId` comme décrit dans [Bons de travail](/fr-CA/buyer-api/work-orders#réaffecter-un-fournisseur).
 3. Sur `workorder.status_update`, récupérez le bon de travail. Quand `newStatus` vaut `WaitingForReview`, lancez votre flux de revue et publiez `work_reviewed_and_completed` ou `work_unsatisfactory`.
 4. Exécutez un sondage périodique sur `statusChangedAt` comme filet de sécurité pour tout ce que le chemin des webhooks aurait manqué.
