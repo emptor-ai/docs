@@ -32,6 +32,16 @@ Keys do not expire on their own. To rotate one, request a new key/shared-secret 
 
 10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
 
+## Keeping work orders in sync
+
+Most supplier integrations exist to mirror the OpenWrench work order queue into another system. Build that on push, not polling:
+
+1. Register a [webhook](/supplier-api/webhooks) endpoint. OpenWrench sends `workorder.create`, `workorder.status_update`, and `workorder.new_note` events as they happen.
+2. On each event, fetch that one work order with `GET /v1/supplier/work_order/work_orders/{id}`.
+3. Use `GET /v1/supplier/work_order/work_orders` only for the one-time initial load and for occasional reconciliation, with a narrow filter and a small page.
+
+Do not poll the list endpoint on a schedule to find new or changed work. It is the most expensive read in the API, it is slow on large queues, and it competes with your real work for the rate limit. See [Work orders](/supplier-api/work-orders#reading-your-queue) for the details.
+
 ## Response envelope
 
 Single-entity responses:

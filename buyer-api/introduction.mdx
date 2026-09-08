@@ -36,6 +36,16 @@ The **Internal Teams API** section further down this tab uses a **separate partn
 
 10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
 
+## Keeping work orders in sync
+
+If your integration mirrors work orders into another system (a ticketing tool, an ERP, a data warehouse), build it on push, not polling:
+
+1. Register a [webhook](/buyer-api/webhooks) endpoint. OpenWrench sends `workorder.create`, `workorder.status_update`, and `workorder.new_note` events as they happen.
+2. On each event, fetch that one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
+3. Use `GET /v1/buyer/work_order/work_orders` for ad-hoc queries, the one-time initial load, and occasional reconciliation, with a narrow filter and a small page.
+
+Do not poll the list endpoint on a schedule to find new or changed work orders. It is the most expensive read in the API, it is slow on large accounts, and it competes with your real work for the rate limit. See [Work orders](/buyer-api/work-orders#list-filter-and-count) for the details.
+
 ## Response envelope
 
 Single-entity responses:

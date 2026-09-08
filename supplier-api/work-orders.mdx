@@ -16,21 +16,34 @@ export SECRET="<shared-secret>"    # OW-KEY header
 
 ## Reading your queue
 
+<Warning>
+  **Do not build your integration on the list endpoint.** `GET /v1/supplier/work_order/work_orders` is the most expensive read in the Supplier API, and polling it to discover new or changed work orders is the wrong pattern: it is slow on large queues, it burns your [rate limit](/supplier-api/introduction#rate-limits), and it still misses changes between polls. Use [webhooks](/supplier-api/webhooks) to learn that a work order was assigned to you, changed status, or received a note, then fetch that one work order by id. Reserve the list for a one-time initial load and occasional reconciliation, with a narrow filter and a small page.
+</Warning>
+
+The pattern that scales is push, then fetch by id:
+
 ```bash
-# Newly assigned work, oldest first
-curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=assignedAt&order=asc"
+# 1. A webhook delivery tells you which work order changed:
+#    { "event_type": "workorder.create", "data": { "workOrderId": 9001, ... } }
 
-# Count by filter
-curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
-
-# One work order
+# 2. Fetch that work order
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter filters on the entity's indexed columns. Everything is tenant-scoped to your facility. Two things to remember:
+The list and count endpoints are for the two moments a webhook cannot cover, the first load of work that already existed before your endpoint was registered, and a periodic check that nothing was missed:
+
+```bash
+# Initial load or reconciliation: filter narrowly, page small, walk with offset
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=assignedAt&order=asc"
+
+# Count by filter, without fetching rows
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+```
+
+Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter filters on the entity's indexed columns. Everything is tenant-scoped to your facility. If a list call is slow, narrow the filter (a status, a `statusChangedAt` or `assignedAt` window) rather than retrying it unchanged; an unfiltered list over a large queue can time out. Two more things to remember:
 
 - **Reads come from a read replica**, so your own just-written change can lag a moment in list results.
 - **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
@@ -154,7 +167,7 @@ Defaults when omitted: `problemTypeId` falls back to the first leaf problem type
 
 ## Typical integration loop
 
-1. Receive new work through [webhooks](/supplier-api/webhooks) (`workorder.create`), or poll the queue (`sort_by=assignedAt`) and diff on `statusChangedAt`.
+1. Register a [webhook](/supplier-api/webhooks) endpoint for `workorder.create` and `workorder.status_update`. On each delivery, fetch the work order by id. Do the one-time initial load from the list endpoint, and keep it out of the steady-state loop except as an infrequent, narrowly filtered safety-net poll.
 2. `confirm` or `decline` within your SLA.
 3. Schedule the visit via [service calls](/supplier-api/service-calls); post parts statuses and an ECD as things develop.
 4. Complete via check-out, then bill via [quotes and invoicing](/supplier-api/quotes-and-invoicing).
