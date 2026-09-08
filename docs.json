@@ -22,50 +22,86 @@
     ]
   },
   "navigation": {
-    "tabs": [
+    "languages": [
       {
-        "tab": "Buyer API",
-        "groups": [
+        "language": "en",
+        "tabs": [
           {
-            "group": "Getting Started",
-            "pages": [
-              "buyer-api/introduction"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "buyer-api/work-orders",
-              "buyer-api/webhooks",
-              "buyer-api/service-calls",
-              "buyer-api/assets-and-locations",
-              "buyer-api/invoices",
-              "buyer-api/quotes-and-proposals",
-              "buyer-api/planned-maintenance",
-              "buyer-api/supplier-network",
-              "buyer-api/site-survey-walkthroughs",
-              "buyer-api/files-and-attachments",
-              "buyer-api/account-and-utilities"
-            ]
-          },
-          {
-            "group": "API Reference",
-            "openapi": {
-              "source": "openapi/buyer.json",
-              "directory": "buyer-reference"
-            }
-          },
-          {
-            "group": "Internal Teams API",
-            "pages": [
-              "partners-api/introduction",
-              "partners-api/purchasing-flow",
-              "partners-api/catalog-and-stock",
+            "tab": "Buyer API",
+            "groups": [
               {
-                "group": "Endpoints",
+                "group": "Getting Started",
+                "pages": [
+                  "buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "buyer-api/work-orders",
+                  "buyer-api/webhooks",
+                  "buyer-api/service-calls",
+                  "buyer-api/assets-and-locations",
+                  "buyer-api/invoices",
+                  "buyer-api/quotes-and-proposals",
+                  "buyer-api/planned-maintenance",
+                  "buyer-api/supplier-network",
+                  "buyer-api/site-survey-walkthroughs",
+                  "buyer-api/files-and-attachments",
+                  "buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "API Reference",
                 "openapi": {
-                  "source": "openapi/partners.json",
-                  "directory": "internal-teams-reference"
+                  "source": "openapi/buyer.json",
+                  "directory": "buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "partners-api/introduction",
+                  "partners-api/purchasing-flow",
+                  "partners-api/catalog-and-stock",
+                  {
+                    "group": "Endpoints",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "internal-teams-reference"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "Getting Started",
+                "pages": [
+                  "supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "supplier-api/work-orders",
+                  "supplier-api/webhooks",
+                  "supplier-api/service-calls",
+                  "supplier-api/wrenchmode",
+                  "supplier-api/quotes-and-invoicing",
+                  "supplier-api/purchasing-and-inventory",
+                  "supplier-api/reference-data",
+                  "supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "API Reference",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "supplier-reference"
                 }
               }
             ]
@@ -73,33 +109,257 @@
         ]
       },
       {
-        "tab": "Supplier API",
-        "groups": [
+        "language": "es",
+        "tabs": [
           {
-            "group": "Getting Started",
-            "pages": [
-              "supplier-api/introduction"
+            "tab": "Buyer API",
+            "groups": [
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guías",
+                "pages": [
+                  "es/buyer-api/work-orders",
+                  "es/buyer-api/webhooks",
+                  "es/buyer-api/service-calls",
+                  "es/buyer-api/assets-and-locations",
+                  "es/buyer-api/invoices",
+                  "es/buyer-api/quotes-and-proposals",
+                  "es/buyer-api/planned-maintenance",
+                  "es/buyer-api/supplier-network",
+                  "es/buyer-api/site-survey-walkthroughs",
+                  "es/buyer-api/files-and-attachments",
+                  "es/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "Referencia de la API",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "es/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "es/partners-api/introduction",
+                  "es/partners-api/purchasing-flow",
+                  "es/partners-api/catalog-and-stock",
+                  {
+                    "group": "Endpoints",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "es/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
-            "group": "Guides",
-            "pages": [
-              "supplier-api/work-orders",
-              "supplier-api/webhooks",
-              "supplier-api/service-calls",
-              "supplier-api/wrenchmode",
-              "supplier-api/quotes-and-invoicing",
-              "supplier-api/purchasing-and-inventory",
-              "supplier-api/reference-data",
-              "supplier-api/files-and-users"
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "Primeros pasos",
+                "pages": [
+                  "es/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guías",
+                "pages": [
+                  "es/supplier-api/work-orders",
+                  "es/supplier-api/webhooks",
+                  "es/supplier-api/service-calls",
+                  "es/supplier-api/wrenchmode",
+                  "es/supplier-api/quotes-and-invoicing",
+                  "es/supplier-api/purchasing-and-inventory",
+                  "es/supplier-api/reference-data",
+                  "es/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "Referencia de la API",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "es/supplier-reference"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "fr-CA",
+        "tabs": [
+          {
+            "tab": "API Acheteur",
+            "groups": [
+              {
+                "group": "Premiers pas",
+                "pages": [
+                  "fr-CA/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr-CA/buyer-api/work-orders",
+                  "fr-CA/buyer-api/webhooks",
+                  "fr-CA/buyer-api/service-calls",
+                  "fr-CA/buyer-api/assets-and-locations",
+                  "fr-CA/buyer-api/invoices",
+                  "fr-CA/buyer-api/quotes-and-proposals",
+                  "fr-CA/buyer-api/planned-maintenance",
+                  "fr-CA/buyer-api/supplier-network",
+                  "fr-CA/buyer-api/site-survey-walkthroughs",
+                  "fr-CA/buyer-api/files-and-attachments",
+                  "fr-CA/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "Référence de l’API",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "fr-CA/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "fr-CA/partners-api/introduction",
+                  "fr-CA/partners-api/purchasing-flow",
+                  "fr-CA/partners-api/catalog-and-stock",
+                  {
+                    "group": "Points de terminaison",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "fr-CA/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
             ]
           },
           {
-            "group": "API Reference",
-            "openapi": {
-              "source": "openapi/supplier.json",
-              "directory": "supplier-reference"
-            }
+            "tab": "API Fournisseur",
+            "groups": [
+              {
+                "group": "Premiers pas",
+                "pages": [
+                  "fr-CA/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guides",
+                "pages": [
+                  "fr-CA/supplier-api/work-orders",
+                  "fr-CA/supplier-api/webhooks",
+                  "fr-CA/supplier-api/service-calls",
+                  "fr-CA/supplier-api/wrenchmode",
+                  "fr-CA/supplier-api/quotes-and-invoicing",
+                  "fr-CA/supplier-api/purchasing-and-inventory",
+                  "fr-CA/supplier-api/reference-data",
+                  "fr-CA/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "Référence de l’API",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "fr-CA/supplier-reference"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "language": "sv",
+        "tabs": [
+          {
+            "tab": "Buyer API",
+            "groups": [
+              {
+                "group": "Kom igång",
+                "pages": [
+                  "sv/buyer-api/introduction"
+                ]
+              },
+              {
+                "group": "Guider",
+                "pages": [
+                  "sv/buyer-api/work-orders",
+                  "sv/buyer-api/webhooks",
+                  "sv/buyer-api/service-calls",
+                  "sv/buyer-api/assets-and-locations",
+                  "sv/buyer-api/invoices",
+                  "sv/buyer-api/quotes-and-proposals",
+                  "sv/buyer-api/planned-maintenance",
+                  "sv/buyer-api/supplier-network",
+                  "sv/buyer-api/site-survey-walkthroughs",
+                  "sv/buyer-api/files-and-attachments",
+                  "sv/buyer-api/account-and-utilities"
+                ]
+              },
+              {
+                "group": "API-referens",
+                "openapi": {
+                  "source": "openapi/buyer.json",
+                  "directory": "sv/buyer-reference"
+                }
+              },
+              {
+                "group": "Internal Teams API",
+                "pages": [
+                  "sv/partners-api/introduction",
+                  "sv/partners-api/purchasing-flow",
+                  "sv/partners-api/catalog-and-stock",
+                  {
+                    "group": "Slutpunkter",
+                    "openapi": {
+                      "source": "openapi/partners.json",
+                      "directory": "sv/internal-teams-reference"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "tab": "Supplier API",
+            "groups": [
+              {
+                "group": "Kom igång",
+                "pages": [
+                  "sv/supplier-api/introduction"
+                ]
+              },
+              {
+                "group": "Guider",
+                "pages": [
+                  "sv/supplier-api/work-orders",
+                  "sv/supplier-api/webhooks",
+                  "sv/supplier-api/service-calls",
+                  "sv/supplier-api/wrenchmode",
+                  "sv/supplier-api/quotes-and-invoicing",
+                  "sv/supplier-api/purchasing-and-inventory",
+                  "sv/supplier-api/reference-data",
+                  "sv/supplier-api/files-and-users"
+                ]
+              },
+              {
+                "group": "API-referens",
+                "openapi": {
+                  "source": "openapi/supplier.json",
+                  "directory": "sv/supplier-reference"
+                }
+              }
+            ]
           }
         ]
       }

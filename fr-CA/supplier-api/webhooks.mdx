@@ -1,10 +1,12 @@
-# Webhooks dans l'API Fournisseur
+---
+title: "Webhooks dans l'API Fournisseur"
+sidebarTitle: "Webhooks"
+description: "Soyez prévenu dès qu'un bon de travail vous est affecté, que son statut change ou que l'acheteur ajoute une note, au lieu de sonder l'API Fournisseur OpenWrench."
+---
 
-> Soyez prévenu dès qu'un bon de travail vous est affecté, que son statut change ou que l'acheteur ajoute une note, au lieu de sonder l'API Fournisseur OpenWrench.
+Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : de nouveaux travaux sont arrivés pour votre établissement, le statut d'un bon de travail a changé, ou une note a été ajoutée à son fil. Chaque livraison identifie le bon de travail et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait de `workorder.create` le remplaçant naturel du sondage de votre file : l'événement est le signal qu'un bon de travail est arrivé dans votre file, le plus souvent en attente que vous l'[acceptiez ou le refusiez](/fr-CA/supplier-api/work-orders#accepter-ou-refuser).
 
-Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : de nouveaux travaux sont arrivés pour votre établissement, le statut d'un bon de travail a changé, ou une note a été ajoutée à son fil. Chaque livraison identifie le bon de travail et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait de `workorder.create` le remplaçant naturel du sondage de votre file : l'événement est le signal qu'un bon de travail est arrivé dans votre file, le plus souvent en attente que vous l'[acceptiez ou le refusiez](/supplier-api/work-orders#accept-or-decline).
-
-{/* Relecteur : les points à confirmer avant fusion (enregistrement, en-tête de signature, nouvelles tentatives) sont annotés dans la page en anglais. */}
+{/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl.getSupplierFacilityWebhooks) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
 
 ## Configurer un endpoint
 
@@ -14,7 +16,9 @@ Les endpoints sont enregistrés par établissement fournisseur. Une entreprise a
 - lesquels des trois événements vous voulez (`workorder.create`, `workorder.status_update`, `workorder.new_note`), et
 - si l'endpoint sert aux tests ou à la production.
 
-Le support enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à vérifier les livraisons (voir plus bas). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
+Le support enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à [vérifier les livraisons](#vérifier-les-livraisons). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
+
+{/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
 
 ## Événements
 
@@ -40,6 +44,8 @@ Vous recevez des événements pour les changements effectués par votre propre i
 ## Charge utile de la livraison
 
 Chaque livraison est un `POST` HTTP avec un corps JSON. Le corps comporte deux champs : `event_type` et `data`.
+
+{/* Reviewer: confirm against a real delivery that the endpoint receives exactly this body (the inner {event_type, data} object we hand to Convoy), and not the Convoy event envelope. */}
 
 ### Événements de création et de statut
 
@@ -98,6 +104,8 @@ La charge utile n'inclut pas le reste du fil. Lisez-le avec `GET /v1/supplier/wo
 
 Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de la requête avec le secret de signature de votre endpoint et l'envoie dans un en-tête de signature. Lorsque le support enregistre votre endpoint, il vous communique le secret, le nom de l'en-tête et l'algorithme de hachage. Vérifiez la signature sur les octets bruts du corps avant de l'analyser, et rejetez tout ce qui ne correspond pas. Le secret étant propre à chaque endpoint, sa rotation passe par une demande au support : demandez un nouveau secret, déployez-le, puis demandez au support de basculer l'endpoint.
 
+{/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
+
 ## Réponse, nouvelles tentatives et doublons
 
 - **Accusez réception rapidement.** Renvoyez un `2xx` dès que vous avez stocké l'événement, et effectuez le travail de suivi (récupération du bon de travail, mise à jour de votre système) de manière asynchrone. Une réponse autre que `2xx` ou un dépassement de délai compte comme une livraison échouée.
@@ -106,21 +114,23 @@ Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de
 - **L'ordre n'est pas garanti.** Deux événements pour le même bon de travail peuvent arriver dans le désordre. Ne déduisez pas l'état de la séquence d'événements; récupérez le bon de travail et fiez-vous à son `status`.
 - **Les événements périmés sont abandonnés, pas livrés en retard.** Un événement qui n'a pas été transmis à la passerelle dans les trois heures suivant le changement est écarté. Après une panne côté OpenWrench, ou si votre endpoint est resté indisponible plus longtemps que la fenêtre de nouvelles tentatives, réconciliez en sondant `GET /v1/supplier/work_order/work_orders?statusChangedAt=...` sur la période manquée.
 
+{/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
+
 ## Réagir à un événement
 
 Le gestionnaire recommandé est court : vérifier, stocker, accuser réception, puis récupérer.
 
 ```bash
-# Récupérer le bon de travail désigné par l'événement
+# Fetch the work order named in the event
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Les lectures de l'API externe sont servies par un réplica de lecture, si bien qu'un bon de travail affecté à l'instant peut brièvement revenir vide. Réessayez la récupération après une seconde avant de le considérer comme absent. La récupération compte dans la [limite de débit](/supplier-api/introduction#rate-limits); regroupez donc les rafales d'événements d'un même bon de travail en une seule récupération. Rappelez-vous que les champs privés de l'acheteur sont [masqués](/supplier-api/reference-data#data-masking) pour les fournisseurs tiers.
+Les lectures de l'API externe sont servies par un réplica de lecture, si bien qu'un bon de travail affecté à l'instant peut brièvement revenir vide. Réessayez la récupération après une seconde avant de le considérer comme absent. La récupération compte dans la [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit); regroupez donc les rafales d'événements d'un même bon de travail en une seule récupération. Rappelez-vous que les champs privés de l'acheteur sont [masqués](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les fournisseurs tiers.
 
 ## Assembler le tout
 
-La [boucle d'intégration typique](/supplier-api/work-orders#typical-integration-loop), pilotée par les webhooks :
+La [boucle d'intégration typique](/fr-CA/supplier-api/work-orders#boucle-dintégration-typique), pilotée par les webhooks :
 
 1. Enregistrez un endpoint pour `workorder.create` et `workorder.status_update` (ajoutez `workorder.new_note` si vous répliquez la conversation).
 2. Sur `workorder.create`, récupérez le bon de travail et créez le job dans votre système. Puis distinguez selon `newStatus` : `PendingConfirmationByServiceProvider` signifie que l'acheteur vous attend, faites donc `confirm` ou `decline` dans votre SLA; `SupplierInitiatedPendingApproval` signifie que votre propre demande attend l'acheteur, ne faites donc rien tant qu'un `workorder.status_update` n'a pas rapporté l'issue; tout autre statut signifie que le bon de travail est déjà à vous, passez donc directement à la planification.
