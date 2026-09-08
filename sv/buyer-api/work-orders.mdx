@@ -146,7 +146,7 @@ Varje statusåtgärd returnerar den uppdaterade arbetsordern i standardhöljet.
 | `WorkUnsatisfactory` | Köparen | Du har avvisat det utförda arbetet. |
 | `CancelledWithReason` | Köparen | Avbrutet. |
 
-De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via polling (`statusChangedAt`, `statusChanges`) och agerar på de köparägda.
+De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via [webhooks](/buyer-api/webhooks) eller polling (`statusChangedAt`, `statusChanges`) och agerar på de köparägda.
 
 ## Anteckningar
 
@@ -200,6 +200,6 @@ En typisk utskicksintegration:
 
 1. Cacha `me`, problemtyper och platser vid start.
 2. Skapa arbetsordern med `supplierFacilityId` satt (eller skapa otilldelad, rangordna sedan leverantörer och `PATCH` tilldelningen).
-3. Polla `GET /work_orders?statusChangedAt=...` eller hämta om via id för att följa leverantörens framsteg.
+3. Följ leverantörens framsteg via [webhooks](/buyer-api/webhooks) (`workorder.status_update`), med `GET /work_orders?statusChangedAt=...` som polling-reserv.
 4. När leverantören når `WaitingForReview`, verifiera arbetet (se [Servicebesök](/buyer-api/service-calls) för besöksbevis) och posta `work_reviewed_and_completed`, eller `work_unsatisfactory` med en anteckning.
 5. Stäm av pengasidan genom [Offerter och förslag](/buyer-api/quotes-and-proposals) och [Fakturor](/buyer-api/invoices).

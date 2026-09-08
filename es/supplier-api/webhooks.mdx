@@ -1,0 +1,128 @@
+# Webhooks en la Supplier API
+
+> Entérate en el momento en que se te asigna una orden de trabajo, cambia su estado o el comprador añade una nota, en lugar de sondear la Supplier API de OpenWrench.
+
+Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: llegó trabajo nuevo para tu instalación, cambió el estado de una orden de trabajo o se añadió una nota a su hilo. Cada entrega identifica la orden de trabajo y lo que ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a `workorder.create` en el sustituto natural del sondeo de tu cola: el evento es la señal de que hay una orden de trabajo esperando a que la [aceptes o rechaces](/supplier-api/work-orders#accept-or-decline).
+
+{/* Revisor: los puntos por confirmar antes de fusionar (registro, cabecera de firma, reintentos) están anotados en la página en inglés. */}
+
+## Configurar un endpoint
+
+Los endpoints se registran por instalación del proveedor. Una empresa con varias instalaciones registra cada una que tenga su propia integración. Todavía no hay una API de autoservicio para esto: escribe a [support@useopenwrench.com](mailto:support@useopenwrench.com) con
+
+- la URL HTTPS que debe recibir las entregas,
+- cuáles de los tres eventos quieres (`workorder.create`, `workorder.status_update`, `workorder.new_note`), y
+- si el endpoint es de pruebas o de producción.
+
+Soporte registra el endpoint en la pasarela de webhooks de OpenWrench y te devuelve el secreto de firma que usarás para verificar las entregas (ver más abajo). Puedes registrar varios endpoints, por ejemplo una URL por tipo de evento, o la misma URL para los tres.
+
+## Eventos
+
+| `event_type` | Se dispara cuando |
+| --- | --- |
+| `workorder.create` | Hay una orden de trabajo esperando a tu instalación. |
+| `workorder.status_update` | Una orden de trabajo asignada a ti pasa a uno de los estados listados abajo. |
+| `workorder.new_note` | Se añade una nota al hilo comprador–proveedor de una orden de trabajo asignada a ti. |
+
+Algunos detalles de cada uno:
+
+- **`workorder.create`** significa "trabajo nuevo para ti", no solo "se creó una fila nueva". Se dispara cuando se crea una orden de trabajo con tu instalación asignada, cuando un comprador te reasigna una orden de trabajo existente (entra en `PendingConfirmationByServiceProvider`) y cuando tú mismo abres una orden de trabajo iniciada por el proveedor (`SupplierInitiatedPendingApproval`). Una orden de trabajo creada para ti que primero necesita la aprobación interna del comprador emite `workorder.create` cuando alcanza `PendingConfirmationByServiceProvider`, no cuando el aprobador del comprador la ve por primera vez.
+- **`workorder.status_update`** se dispara cuando una orden de trabajo asignada a ti entra en `ConfirmedByServiceProvider`, `TechAssigned`, `TechScheduled`, `TechRescheduled`, `WorkIncompleteWithReason` (salvo que venga directamente de `TechWorkingOnSite`, que es un check-out), `WorkUnsatisfactory`, `WorkReviewedAndCompleted`, `CancelledWithReason` o `PaymentMade`. Eso cubre tu propia aceptación, la programación que hacen tus técnicos en las apps de OpenWrench y las decisiones del comprador sobre tu trabajo. Los estados de partes, `TechEnRoute`, `TechWaitingOnSite`, `TechWorkingOnSite`, `WaitingForReview` y los estados de cotización y propuesta no emiten eventos.
+- **`workorder.new_note`** se dispara para las notas del hilo raíz comprador–proveedor de cualquiera de los dos lados, incluidas las notas publicadas por tu propia integración, las publicaciones masivas de fotos y la nota adjunta a una acción de estado. Tus notas internas y los hilos de las órdenes de trabajo que subcontratas nunca emiten eventos.
+
+Dos cosas por las que **no** recibes evento:
+
+- **Reasignación fuera de ti.** Si el comprador mueve una orden de trabajo a otro proveedor, simplemente desaparece de tu cola. Concilia contra `GET /v1/supplier/work_order/work_orders` si eso te importa.
+- **Órdenes de trabajo que solo puedes ver.** Si tu instalación está en la lista de visibilidad de una orden de trabajo en lugar de asignada a ella, recibes sus eventos solo si OpenWrench ha habilitado los webhooks de visibilidad para tu empresa. Pregunta a soporte si lo necesitas.
+
+Recibes eventos por los cambios que hace tu propia integración. Lleva un registro de las escrituras que hiciste y omite los eventos correspondientes, o trata cada evento como una señal para volver a obtener y comparar.
+
+## Payload de la entrega
+
+Cada entrega es un `POST` HTTP con cuerpo JSON. El cuerpo tiene dos campos: `event_type` y `data`.
+
+### Eventos de creación y de estado
+
+```json
+{
+  "event_type": "workorder.create",
+  "data": {
+    "workOrderId": 9001,
+    "customer": "Acme Grocery",
+    "location": "Store 1204 - Denver",
+    "newStatus": "PendingConfirmationByServiceProvider",
+    "changedBy": "Sam Rivera",
+    "changedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Campo | Notas |
+| --- | --- |
+| `workOrderId` | El `id` numérico de la orden de trabajo. Úsalo con `GET /v1/supplier/work_order/work_orders/{id}`. |
+| `customer` | El nombre para mostrar de la empresa compradora. |
+| `location` | El nombre para mostrar de la ubicación. |
+| `oldStatus` | El estado anterior. Ausente en `workorder.create` y siempre que `newStatus` sea `PendingConfirmationByServiceProvider` o `SupplierInitiatedPendingApproval`. |
+| `newStatus` | El estado actual. |
+| `changedBy` | Nombre para mostrar de la persona o el sistema que hizo el cambio. |
+| `changedAt` | Marca de tiempo ISO 8601 con desfase horario. |
+
+`workorder.status_update` usa la misma forma de `data` con `oldStatus` informado.
+
+### Eventos de nota
+
+```json
+{
+  "event_type": "workorder.new_note",
+  "data": {
+    "workOrderId": 9001,
+    "newNote": "Access code for the back door is 4417.",
+    "addedBy": "Sam Rivera",
+    "addedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Campo | Notas |
+| --- | --- |
+| `workOrderId` | El `id` numérico de la orden de trabajo. |
+| `newNote` | El texto de la nota. Vacío en las notas que solo llevan foto. |
+| `photo`, `video` | URL del medio adjunto a la nota, cuando existe. |
+| `photos` | Presente en las publicaciones masivas de fotos: todas las URL de fotos del lote, en orden. |
+| `addedBy` | Nombre para mostrar del autor. |
+| `addedAt` | Marca de tiempo ISO 8601 con desfase horario. |
+
+El payload no incluye el resto del hilo. Léelo con `GET /v1/supplier/work_order/work_order_notes/{woId}` si necesitas contexto.
+
+## Verificar las entregas
+
+Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la petición con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
+
+## Respuesta, reintentos y duplicados
+
+- **Confirma rápido.** Devuelve un `2xx` en cuanto hayas almacenado el evento, y haz el trabajo posterior (obtener la orden de trabajo, actualizar tu sistema) de forma asíncrona. Una respuesta distinta de `2xx` o un tiempo de espera agotado cuentan como entrega fallida.
+- **Las entregas fallidas se reintentan** desde la pasarela con un esquema de espera creciente. Haz que tu manejador sea idempotente para que un reintento tras un éxito parcial no cause daño.
+- **Las entregas son al menos una vez.** El mismo evento puede llegar más de una vez incluso sin un fallo de tu lado. Deduplica con `event_type` más `workOrderId` más `changedAt` (o `addedAt` para las notas).
+- **El orden no está garantizado.** Dos eventos de la misma orden de trabajo pueden llegar desordenados. No derives el estado de la secuencia de eventos; obtén la orden de trabajo y confía en su `status`.
+- **Los eventos antiguos se descartan, no se entregan tarde.** Un evento que no se haya pasado a la pasarela dentro de las tres horas siguientes al cambio se descarta. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia sondeando `GET /v1/supplier/work_order/work_orders?statusChangedAt=...` para el periodo que te perdiste.
+
+## Reaccionar a un evento
+
+El manejador recomendado es pequeño: verificar, almacenar, confirmar y luego obtener.
+
+```bash
+# Obtener la orden de trabajo indicada en el evento
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo asignada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/supplier-api/introduction#rate-limits), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención. Recuerda que los campos privados del comprador están [enmascarados](/supplier-api/reference-data#data-masking) para los proveedores externos.
+
+## Juntándolo todo
+
+El [ciclo de integración típico](/supplier-api/work-orders#typical-integration-loop), impulsado por webhooks:
+
+1. Registra un endpoint para `workorder.create` y `workorder.status_update` (añade `workorder.new_note` si replicas la conversación).
+2. En `workorder.create`, obtén la orden de trabajo, crea el trabajo en tu sistema y haz `confirm` o `decline` dentro de tu SLA.
+3. En `workorder.status_update`, obtén la orden de trabajo. `WorkUnsatisfactory` y `WorkReviewedAndCompleted` te dan el veredicto del comprador; `CancelledWithReason` cierra el trabajo; `PaymentMade` cierra la parte económica.
+4. Ejecuta un sondeo periódico sobre `assignedAt` o `statusChangedAt` como red de seguridad para cualquier cosa que la ruta de webhooks haya perdido, incluido el trabajo reasignado fuera de ti.

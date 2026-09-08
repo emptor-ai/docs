@@ -1,0 +1,128 @@
+# Webhooks i Supplier API
+
+> Få besked i samma stund som en arbetsorder tilldelas dig, dess status ändras eller köparen lägger till en anteckning, i stället för att polla OpenWrench Supplier API.
+
+Webhooks skickar tre arbetsorderhändelser till en HTTPS-slutpunkt som du äger: nytt arbete kom in till din anläggning, en arbetsorders status ändrades, eller en anteckning lades till i dess tråd. Varje leverans identifierar arbetsordern och vad som hände. Din integration hämtar sedan arbetsordern via API:et. Det gör `workorder.create` till den naturliga ersättningen för att polla din kö: händelsen är signalen om att en arbetsorder väntar på att du ska [acceptera eller avvisa](/supplier-api/work-orders#accept-or-decline) den.
+
+{/* Granskare: punkterna som ska bekräftas före sammanslagning (registrering, signaturhuvud, omförsök) är noterade på den engelska sidan. */}
+
+## Sätta upp en slutpunkt
+
+Slutpunkter registreras per leverantörsanläggning. Ett företag med flera anläggningar registrerar var och en som har en egen integration. Det finns ännu inget självbetjänings-API för detta: mejla [support@useopenwrench.com](mailto:support@useopenwrench.com) med
+
+- HTTPS-URL:en som ska ta emot leveranserna,
+- vilka av de tre händelserna du vill ha (`workorder.create`, `workorder.status_update`, `workorder.new_note`), och
+- om slutpunkten är för test eller produktion.
+
+Supporten registrerar slutpunkten på OpenWrenchs webhook-gateway och skickar tillbaka signeringshemligheten som du använder för att verifiera leveranser (se nedan). Du kan registrera flera slutpunkter, till exempel en URL per händelsetyp, eller samma URL för alla tre.
+
+## Händelser
+
+| `event_type` | Utlöses när |
+| --- | --- |
+| `workorder.create` | En arbetsorder väntar på din anläggning. |
+| `workorder.status_update` | En arbetsorder tilldelad dig går över till en av statusarna nedan. |
+| `workorder.new_note` | En anteckning läggs till i tråden mellan köpare och leverantör på en arbetsorder tilldelad dig. |
+
+Lite mer om var och en:
+
+- **`workorder.create`** betyder "nytt arbete för dig", inte bara "en ny rad skapades". Den utlöses när en arbetsorder skapas med din anläggning tilldelad, när en köpare tilldelar om en befintlig arbetsorder till dig (den går in i `PendingConfirmationByServiceProvider`), och när du själv öppnar en leverantörsinitierad arbetsorder (`SupplierInitiatedPendingApproval`). En arbetsorder som skapas för dig men först behöver köparens interna godkännande ger `workorder.create` när den når `PendingConfirmationByServiceProvider`, inte när köparens godkännare ser den första gången.
+- **`workorder.status_update`** utlöses när en arbetsorder tilldelad dig går in i `ConfirmedByServiceProvider`, `TechAssigned`, `TechScheduled`, `TechRescheduled`, `WorkIncompleteWithReason` (om den inte kommer direkt från `TechWorkingOnSite`, vilket är en utcheckning), `WorkUnsatisfactory`, `WorkReviewedAndCompleted`, `CancelledWithReason` eller `PaymentMade`. Det täcker ditt eget accepterande, schemaläggning som dina tekniker gör i OpenWrench-apparna, och köparens beslut om ditt arbete. Reservdelsstatusarna, `TechEnRoute`, `TechWaitingOnSite`, `TechWorkingOnSite`, `WaitingForReview` samt offert- och förslagsstatusarna ger inga händelser.
+- **`workorder.new_note`** utlöses för anteckningar i rottråden mellan köpare och leverantör från endera sidan, inklusive anteckningar som din egen integration postar, massuppladdningar av foton och anteckningen som bifogas en statusåtgärd. Dina interna anteckningar och trådarna på arbetsordrar som du lägger ut på underleverantör ger aldrig händelser.
+
+Två saker du **inte** får någon händelse för:
+
+- **Omtilldelning bort från dig.** Om köparen flyttar en arbetsorder till en annan leverantör försvinner den helt enkelt ur din kö. Stäm av mot `GET /v1/supplier/work_order/work_orders` om det spelar roll för dig.
+- **Arbetsordrar du bara kan se.** Om din anläggning finns på en arbetsorders synlighetslista i stället för att vara tilldelad den får du dess händelser bara om OpenWrench har aktiverat synlighets-webhooks för ditt företag. Fråga supporten om du behöver det.
+
+Du får händelser för ändringar som din egen integration gör. Håll reda på de skrivningar du gjort och hoppa över de matchande händelserna, eller behandla varje händelse som en signal att hämta om och jämföra.
+
+## Leveransens nyttolast
+
+Varje leverans är en HTTP `POST` med en JSON-kropp. Kroppen har två fält: `event_type` och `data`.
+
+### Skapande- och statushändelser
+
+```json
+{
+  "event_type": "workorder.create",
+  "data": {
+    "workOrderId": 9001,
+    "customer": "Acme Grocery",
+    "location": "Store 1204 - Denver",
+    "newStatus": "PendingConfirmationByServiceProvider",
+    "changedBy": "Sam Rivera",
+    "changedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Fält | Anteckningar |
+| --- | --- |
+| `workOrderId` | Arbetsorderns numeriska `id`. Använd det med `GET /v1/supplier/work_order/work_orders/{id}`. |
+| `customer` | Köparföretagets visningsnamn. |
+| `location` | Platsens visningsnamn. |
+| `oldStatus` | Föregående status. Saknas på `workorder.create` och alltid när `newStatus` är `PendingConfirmationByServiceProvider` eller `SupplierInitiatedPendingApproval`. |
+| `newStatus` | Nuvarande status. |
+| `changedBy` | Visningsnamn för personen eller systemet som gjorde ändringen. |
+| `changedAt` | ISO 8601-tidsstämpel med tidszonsförskjutning. |
+
+`workorder.status_update` använder samma `data`-form med `oldStatus` ifyllt.
+
+### Anteckningshändelser
+
+```json
+{
+  "event_type": "workorder.new_note",
+  "data": {
+    "workOrderId": 9001,
+    "newNote": "Access code for the back door is 4417.",
+    "addedBy": "Sam Rivera",
+    "addedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Fält | Anteckningar |
+| --- | --- |
+| `workOrderId` | Arbetsorderns numeriska `id`. |
+| `newNote` | Anteckningstexten. Tom för anteckningar som bara innehåller ett foto. |
+| `photo`, `video` | Media-URL på anteckningen, när sådan finns. |
+| `photos` | Finns på massuppladdningar av foton: alla foto-URL:er i satsen, i ordning. |
+| `addedBy` | Författarens visningsnamn. |
+| `addedAt` | ISO 8601-tidsstämpel med tidszonsförskjutning. |
+
+Nyttolasten innehåller inte resten av tråden. Läs den med `GET /v1/supplier/work_order/work_order_notes/{woId}` om du behöver sammanhang.
+
+## Verifiera leveranser
+
+Varje leverans är signerad. Gatewayen beräknar en HMAC över den råa förfrågningskroppen med din slutpunkts signeringshemlighet och skickar den i ett signaturhuvud. När supporten registrerar din slutpunkt ger de dig hemligheten, huvudets namn och hash-algoritmen. Verifiera signaturen mot kroppens råa bytes innan du tolkar den, och avvisa allt som inte stämmer. Eftersom hemligheten är per slutpunkt är rotation en supportförfrågan: be om en ny hemlighet, driftsätt den, och be sedan supporten byta över slutpunkten.
+
+## Svar, omförsök och dubbletter
+
+- **Bekräfta snabbt.** Returnera `2xx` så snart du har lagrat händelsen, och gör uppföljningsarbetet (hämta arbetsordern, uppdatera ditt system) asynkront. Ett svar som inte är `2xx` eller en timeout räknas som en misslyckad leverans.
+- **Misslyckade leveranser görs om** av gatewayen enligt ett schema med ökande väntetid. Gör din hanterare idempotent så att ett omförsök efter en delvis lyckad körning inte gör skada.
+- **Leveranser sker minst en gång.** Samma händelse kan komma mer än en gång även utan något fel på din sida. Deduplicera på `event_type` plus `workOrderId` plus `changedAt` (eller `addedAt` för anteckningar).
+- **Ordningen garanteras inte.** Två händelser för samma arbetsorder kan komma i fel ordning. Härled inte tillståndet ur händelsesekvensen; hämta arbetsordern och lita på dess `status`.
+- **Gamla händelser kastas, de levereras inte sent.** En händelse som inte har lämnats över till gatewayen inom tre timmar från ändringen kastas. Efter ett avbrott på OpenWrenchs sida, eller om din slutpunkt var nere längre än omförsöksfönstret, stäm av genom att polla `GET /v1/supplier/work_order/work_orders?statusChangedAt=...` för perioden du missade.
+
+## Reagera på en händelse
+
+Den rekommenderade hanteraren är liten: verifiera, lagra, bekräfta, hämta sedan.
+
+```bash
+# Hämta arbetsordern som händelsen pekar på
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Läsningar i det externa API:et serveras från en läs-replika, så en arbetsorder som nyss tilldelades kan kortvarigt komma tillbaka tom. Försök hämta igen efter en sekund innan du betraktar den som saknad. Hämtningen räknas mot [hastighetsgränsen](/supplier-api/introduction#rate-limits), så slå ihop skurar av händelser för samma arbetsorder till en enda hämtning. Kom ihåg att köparens privata fält är [maskerade](/supplier-api/reference-data#data-masking) för tredjepartsleverantörer.
+
+## Sätta ihop det hela
+
+Den [typiska integrationsloopen](/supplier-api/work-orders#typical-integration-loop), driven av webhooks:
+
+1. Registrera en slutpunkt för `workorder.create` och `workorder.status_update` (lägg till `workorder.new_note` om du speglar konversationen).
+2. Vid `workorder.create`, hämta arbetsordern, skapa jobbet i ditt system och gör `confirm` eller `decline` inom din SLA.
+3. Vid `workorder.status_update`, hämta arbetsordern. `WorkUnsatisfactory` och `WorkReviewedAndCompleted` ger dig köparens utlåtande; `CancelledWithReason` stänger jobbet; `PaymentMade` stänger den ekonomiska delen.
+4. Kör en periodisk polling på `assignedAt` eller `statusChangedAt` som skyddsnät för allt som webhook-vägen kan ha missat, inklusive arbete som tilldelats om bort från dig.

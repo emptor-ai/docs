@@ -1,0 +1,128 @@
+# Webhooks dans l'API Fournisseur
+
+> Soyez prévenu dès qu'un bon de travail vous est affecté, que son statut change ou que l'acheteur ajoute une note, au lieu de sonder l'API Fournisseur OpenWrench.
+
+Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : de nouveaux travaux sont arrivés pour votre établissement, le statut d'un bon de travail a changé, ou une note a été ajoutée à son fil. Chaque livraison identifie le bon de travail et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait de `workorder.create` le remplaçant naturel de le sondage de votre file : l'événement est le signal qu'un bon de travail attend que vous l'[acceptiez ou le refusiez](/supplier-api/work-orders#accept-or-decline).
+
+{/* Relecteur : les points à confirmer avant fusion (enregistrement, en-tête de signature, nouvelles tentatives) sont annotés dans la page en anglais. */}
+
+## Configurer un endpoint
+
+Les endpoints sont enregistrés par établissement fournisseur. Une entreprise ayant plusieurs établissements enregistre chacun de ceux qui ont leur propre intégration. Il n'existe pas encore d'API en libre-service pour cela : écrivez à [support@useopenwrench.com](mailto:support@useopenwrench.com) en précisant
+
+- l'URL HTTPS qui doit recevoir les livraisons,
+- lesquels des trois événements vous voulez (`workorder.create`, `workorder.status_update`, `workorder.new_note`), et
+- si l'endpoint sert aux tests ou à la production.
+
+Le support enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à vérifier les livraisons (voir plus bas). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
+
+## Événements
+
+| `event_type` | Se déclenche quand |
+| --- | --- |
+| `workorder.create` | Un bon de travail attend votre établissement. |
+| `workorder.status_update` | Un bon de travail qui vous est affecté passe à l'un des statuts listés ci-dessous. |
+| `workorder.new_note` | Une note est ajoutée au fil acheteur–fournisseur d'un bon de travail qui vous est affecté. |
+
+Quelques précisions sur chacun :
+
+- **`workorder.create`** signifie « nouveau travail pour vous », et pas seulement « une nouvelle ligne a été créée ». Il se déclenche quand un bon de travail est créé avec votre établissement affecté, quand un acheteur vous réaffecte un bon de travail existant (il entre en `PendingConfirmationByServiceProvider`), et quand vous ouvrez vous-même un bon de travail à l'initiative du fournisseur (`SupplierInitiatedPendingApproval`). Un bon de travail créé pour vous mais qui nécessite d'abord l'approbation interne de l'acheteur émet `workorder.create` lorsqu'il atteint `PendingConfirmationByServiceProvider`, pas au moment où l'approbateur de l'acheteur le voit pour la première fois.
+- **`workorder.status_update`** se déclenche quand un bon de travail qui vous est affecté entre en `ConfirmedByServiceProvider`, `TechAssigned`, `TechScheduled`, `TechRescheduled`, `WorkIncompleteWithReason` (sauf s'il vient directement de `TechWorkingOnSite`, ce qui correspond à un check-out), `WorkUnsatisfactory`, `WorkReviewedAndCompleted`, `CancelledWithReason` ou `PaymentMade`. Cela couvre votre propre acceptation, la planification faite par vos techniciens dans les applications OpenWrench, et les décisions de l'acheteur sur votre travail. Les statuts de pièces, `TechEnRoute`, `TechWaitingOnSite`, `TechWorkingOnSite`, `WaitingForReview` et les statuts de devis et de proposition n'émettent pas d'événement.
+- **`workorder.new_note`** se déclenche pour les notes du fil racine acheteur–fournisseur venant de l'un ou l'autre côté, y compris les notes publiées par votre propre intégration, les envois groupés de photos et la note jointe à une action de statut. Vos notes internes et les fils des bons de travail que vous sous-traitez n'émettent jamais d'événement.
+
+Deux cas pour lesquels vous ne recevez **pas** d'événement :
+
+- **Réaffectation à un autre fournisseur.** Si l'acheteur déplace un bon de travail vers un autre fournisseur, il disparaît simplement de votre file. Réconciliez avec `GET /v1/supplier/work_order/work_orders` si cela vous importe.
+- **Bons de travail que vous pouvez seulement consulter.** Si votre établissement figure dans la liste de visibilité d'un bon de travail sans y être affecté, vous ne recevez ses événements que si OpenWrench a activé les webhooks de visibilité pour votre entreprise. Demandez au support si vous en avez besoin.
+
+Vous recevez des événements pour les changements effectués par votre propre intégration. Gardez une trace des écritures que vous avez faites et ignorez les événements correspondants, ou traitez chaque événement comme un signal pour récupérer à nouveau et comparer.
+
+## Charge utile de la livraison
+
+Chaque livraison est un `POST` HTTP avec un corps JSON. Le corps comporte deux champs : `event_type` et `data`.
+
+### Événements de création et de statut
+
+```json
+{
+  "event_type": "workorder.create",
+  "data": {
+    "workOrderId": 9001,
+    "customer": "Acme Grocery",
+    "location": "Store 1204 - Denver",
+    "newStatus": "PendingConfirmationByServiceProvider",
+    "changedBy": "Sam Rivera",
+    "changedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Champ | Notes |
+| --- | --- |
+| `workOrderId` | L'`id` numérique du bon de travail. Utilisez-le avec `GET /v1/supplier/work_order/work_orders/{id}`. |
+| `customer` | Le nom d'affichage de l'entreprise acheteuse. |
+| `location` | Le nom d'affichage de l'emplacement. |
+| `oldStatus` | Le statut précédent. Absent sur `workorder.create` et chaque fois que `newStatus` vaut `PendingConfirmationByServiceProvider` ou `SupplierInitiatedPendingApproval`. |
+| `newStatus` | Le statut actuel. |
+| `changedBy` | Nom d'affichage de la personne ou du système à l'origine du changement. |
+| `changedAt` | Horodatage ISO 8601 avec décalage. |
+
+`workorder.status_update` utilise la même forme de `data`, avec `oldStatus` renseigné.
+
+### Événements de note
+
+```json
+{
+  "event_type": "workorder.new_note",
+  "data": {
+    "workOrderId": 9001,
+    "newNote": "Access code for the back door is 4417.",
+    "addedBy": "Sam Rivera",
+    "addedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Champ | Notes |
+| --- | --- |
+| `workOrderId` | L'`id` numérique du bon de travail. |
+| `newNote` | Le texte de la note. Vide pour les notes ne contenant qu'une photo. |
+| `photo`, `video` | URL du média joint à la note, le cas échéant. |
+| `photos` | Présent sur les envois groupés de photos : toutes les URL de photos du lot, dans l'ordre. |
+| `addedBy` | Nom d'affichage de l'auteur. |
+| `addedAt` | Horodatage ISO 8601 avec décalage. |
+
+La charge utile n'inclut pas le reste du fil. Lisez-le avec `GET /v1/supplier/work_order/work_order_notes/{woId}` si vous avez besoin de contexte.
+
+## Vérifier les livraisons
+
+Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de la requête avec le secret de signature de votre endpoint et l'envoie dans un en-tête de signature. Lorsque le support enregistre votre endpoint, il vous communique le secret, le nom de l'en-tête et l'algorithme de hachage. Vérifiez la signature sur les octets bruts du corps avant de l'analyser, et rejetez tout ce qui ne correspond pas. Le secret étant propre à chaque endpoint, sa rotation passe par une demande au support : demandez un nouveau secret, déployez-le, puis demandez au support de basculer l'endpoint.
+
+## Réponse, nouvelles tentatives et doublons
+
+- **Accusez réception rapidement.** Renvoyez un `2xx` dès que vous avez stocké l'événement, et effectuez le travail de suivi (récupération du bon de travail, mise à jour de votre système) de manière asynchrone. Une réponse autre que `2xx` ou un dépassement de délai compte comme une livraison échouée.
+- **Les livraisons échouées sont retentées** par la passerelle selon un calendrier d'attente croissante. Rendez votre gestionnaire idempotent pour qu'une nouvelle tentative après un succès partiel soit sans effet.
+- **Les livraisons sont au moins une fois.** Le même événement peut arriver plus d'une fois, même sans échec de votre côté. Dédoublonnez sur `event_type` plus `workOrderId` plus `changedAt` (ou `addedAt` pour les notes).
+- **L'ordre n'est pas garanti.** Deux événements pour le même bon de travail peuvent arriver dans le désordre. Ne déduisez pas l'état de la séquence d'événements; récupérez le bon de travail et fiez-vous à son `status`.
+- **Les événements périmés sont abandonnés, pas livrés en retard.** Un événement qui n'a pas été transmis à la passerelle dans les trois heures suivant le changement est écarté. Après une panne côté OpenWrench, ou si votre endpoint est resté indisponible plus longtemps que la fenêtre de nouvelles tentatives, réconciliez en sondant `GET /v1/supplier/work_order/work_orders?statusChangedAt=...` sur la période manquée.
+
+## Réagir à un événement
+
+Le gestionnaire recommandé est court : vérifier, stocker, accuser réception, puis récupérer.
+
+```bash
+# Récupérer le bon de travail désigné par l'événement
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Les lectures de l'API externe sont servies par un réplica de lecture, si bien qu'un bon de travail affecté à l'instant peut brièvement revenir vide. Réessayez la récupération après une seconde avant de le considérer comme absent. La récupération compte dans la [limite de débit](/supplier-api/introduction#rate-limits); regroupez donc les rafales d'événements d'un même bon de travail en une seule récupération. Rappelez-vous que les champs privés de l'acheteur sont [masqués](/supplier-api/reference-data#data-masking) pour les fournisseurs tiers.
+
+## Assembler le tout
+
+La [boucle d'intégration typique](/supplier-api/work-orders#typical-integration-loop), pilotée par les webhooks :
+
+1. Enregistrez un endpoint pour `workorder.create` et `workorder.status_update` (ajoutez `workorder.new_note` si vous répliquez la conversation).
+2. Sur `workorder.create`, récupérez le bon de travail, créez le job dans votre système, puis faites `confirm` ou `decline` dans votre SLA.
+3. Sur `workorder.status_update`, récupérez le bon de travail. `WorkUnsatisfactory` et `WorkReviewedAndCompleted` vous donnent le verdict de l'acheteur; `CancelledWithReason` clôt le job; `PaymentMade` clôt le volet financier.
+4. Exécutez un sondage périodique sur `assignedAt` ou `statusChangedAt` comme filet de sécurité pour tout ce que le chemin des webhooks aurait manqué, y compris les travaux réaffectés à un autre fournisseur.

@@ -36,6 +36,7 @@
             "group": "Guides",
             "pages": [
               "buyer-api/work-orders",
+              "buyer-api/webhooks",
               "buyer-api/service-calls",
               "buyer-api/assets-and-locations",
               "buyer-api/invoices",
@@ -84,6 +85,7 @@
             "group": "Guides",
             "pages": [
               "supplier-api/work-orders",
+              "supplier-api/webhooks",
               "supplier-api/service-calls",
               "supplier-api/wrenchmode",
               "supplier-api/quotes-and-invoicing",
@@ -130,7 +132,7 @@
     },
     {
       "source": "/buyer-guides/webhooks",
-      "destination": "/buyer-api/introduction"
+      "destination": "/buyer-api/webhooks"
     },
     {
       "source": "/buyer-guides/errors-and-rate-limits",

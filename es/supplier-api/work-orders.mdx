@@ -129,7 +129,7 @@ Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de prob
 
 ## Ciclo de integración típico
 
-1. Consulta la cola por sondeo para trabajo recién asignado (`sort_by=assignedAt`), o compara sobre `statusChangedAt`.
+1. Recibe el trabajo nuevo mediante [webhooks](/supplier-api/webhooks) (`workorder.create`), o consulta la cola por sondeo (`sort_by=assignedAt`) y compara sobre `statusChangedAt`.
 2. `confirm` o `decline` dentro de tu SLA.
 3. Programa la visita vía [llamadas de servicio](/supplier-api/service-calls); publica estados de partes y una ECD a medida que las cosas evolucionan.
 4. Completa vía check-out, luego factura mediante [cotizaciones y facturación](/supplier-api/quotes-and-invoicing).
