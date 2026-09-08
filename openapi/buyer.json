@@ -1991,7 +1991,7 @@
     "/v1/buyer/asset/asset_labels/{id}": {
       "get": {
         "operationId": "getBuyerAssetLabel",
-        "summary": "Get a asset label",
+        "summary": "Get an asset label",
         "tags": [
           "Asset Labels"
         ],
