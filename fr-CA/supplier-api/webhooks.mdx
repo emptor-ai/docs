@@ -1,7 +1,7 @@
 ---
 title: "Webhooks dans l'API Fournisseur"
 sidebarTitle: "Webhooks"
-description: "Soyez prévenu dès qu'un bon de travail vous est affecté, que son statut change ou que l'acheteur ajoute une note, au lieu de sonder l'API Fournisseur OpenWrench."
+description: "Soyez prévenu dès qu'un bon de travail vous est affecté, que son statut change ou que l'acheteur ajoute une note, sans sonder l'API Fournisseur."
 ---
 
 Les webhooks poussent trois événements de bon de travail vers un endpoint HTTPS qui vous appartient : de nouveaux travaux sont arrivés pour votre établissement, le statut d'un bon de travail a changé, ou une note a été ajoutée à son fil. Chaque livraison identifie le bon de travail et ce qui s'est passé. Votre intégration récupère ensuite le bon de travail via l'API. Cela fait de `workorder.create` le remplaçant naturel du sondage de votre file : l'événement est le signal qu'un bon de travail est arrivé dans votre file, le plus souvent en attente que vous l'[acceptiez ou le refusiez](/fr-CA/supplier-api/work-orders#accepter-ou-refuser).

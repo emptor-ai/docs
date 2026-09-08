@@ -1,7 +1,7 @@
 ---
 title: "Webhooks i Supplier API"
 sidebarTitle: "Webhooks"
-description: "Få besked i samma stund som en arbetsorder tilldelas dig, dess status ändras eller köparen lägger till en anteckning, i stället för att polla OpenWrench Supplier API."
+description: "Få besked direkt när en arbetsorder tilldelas dig, statusen ändras eller köparen lägger till en anteckning, utan att polla OpenWrench Supplier API."
 ---
 
 Webhooks skickar tre arbetsorderhändelser till en HTTPS-slutpunkt som du äger: nytt arbete kom in till din anläggning, en arbetsorders status ändrades, eller en anteckning lades till i dess tråd. Varje leverans identifierar arbetsordern och vad som hände. Din integration hämtar sedan arbetsordern via API:et. Det gör `workorder.create` till den naturliga ersättningen för att polla din kö: händelsen är signalen om att en arbetsorder har landat i din kö, oftast i väntan på att du ska [acceptera eller avvisa](/sv/supplier-api/work-orders#acceptera-eller-avvisa) den.
