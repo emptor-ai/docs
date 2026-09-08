@@ -182,9 +182,9 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readi
 
 Anteckningar:
 
-- `valueType`, `valueUnit` och `locationId` läses **inte** från body vid skapande av mätare — de härleds server-sidan från den refererade tillgången och mätartypen, så att skicka dem har ingen effekt.
+- `valueType`, `valueUnit` och `locationId` läses **inte** från kroppen vid skapande av mätare — de härleds på serversidan från den refererade tillgången och mätartypen, så att skicka dem har ingen effekt.
 - `readingMode` (omdöpt från `seriesType`) är antingen `direct_reading`, `change_from_baseline` eller `compare_to_target`; standardvärdet är `direct_reading` om det utelämnas.
-- Listnings- och räkningsändpunkterna för avläsningar är inte begränsade till en enda mätare — de omfattar alla avläsningar för hela ditt köparföretag om du inte filtrerar med `meterId`.
+- Listnings- och räkningsslutpunkterna för avläsningar är inte begränsade till en enda mätare — de omfattar alla avläsningar för hela ditt köparföretag om du inte filtrerar med `meterId`.
 - När en mätares `readingMode` är `change_from_baseline` beräknas en hämtad avläsnings `lastBaselineValue` från den senaste tidigare avläsningen markerad `isBaseline` på den mätaren, per `recordedAt`; för övriga lägen är det `null`.
 
 ## Synkroniseringsstrategi

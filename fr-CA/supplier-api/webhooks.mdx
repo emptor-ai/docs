@@ -16,7 +16,7 @@ Les endpoints sont enregistrés par établissement fournisseur. Une entreprise a
 - lesquels des trois événements vous voulez (`workorder.create`, `workorder.status_update`, `workorder.new_note`), et
 - si l'endpoint sert aux tests ou à la production.
 
-Le support enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à [vérifier les livraisons](#vérifier-les-livraisons). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
+Le soutien enregistre l'endpoint sur la passerelle de webhooks d'OpenWrench et vous renvoie le secret de signature qui vous servira à [vérifier les livraisons](#vérifier-les-livraisons). Vous pouvez enregistrer plusieurs endpoints, par exemple une URL par type d'événement, ou la même URL pour les trois.
 
 {/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
 
@@ -37,7 +37,7 @@ Quelques précisions sur chacun :
 Deux cas pour lesquels vous ne recevez **pas** d'événement :
 
 - **Réaffectation à un autre fournisseur.** Si l'acheteur déplace un bon de travail vers un autre fournisseur, il disparaît simplement de votre file. Réconciliez avec `GET /v1/supplier/work_order/work_orders` si cela vous importe.
-- **Bons de travail que vous pouvez seulement consulter.** Si votre établissement figure dans la liste de visibilité d'un bon de travail sans y être affecté, vous ne recevez ses événements que si OpenWrench a activé les webhooks de visibilité pour votre entreprise. Demandez au support si vous en avez besoin.
+- **Bons de travail que vous pouvez seulement consulter.** Si votre établissement figure dans la liste de visibilité d'un bon de travail sans y être affecté, vous ne recevez ses événements que si OpenWrench a activé les webhooks de visibilité pour votre entreprise. Demandez au soutien si vous en avez besoin.
 
 Vous recevez des événements pour les changements effectués par votre propre intégration. Gardez une trace des écritures que vous avez faites et ignorez les événements correspondants, ou traitez chaque événement comme un signal pour récupérer à nouveau et comparer.
 
@@ -102,7 +102,7 @@ La charge utile n'inclut pas le reste du fil. Lisez-le avec `GET /v1/supplier/wo
 
 ## Vérifier les livraisons
 
-Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de la requête avec le secret de signature de votre endpoint et l'envoie dans un en-tête de signature. Lorsque le support enregistre votre endpoint, il vous communique le secret, le nom de l'en-tête et l'algorithme de hachage. Vérifiez la signature sur les octets bruts du corps avant de l'analyser, et rejetez tout ce qui ne correspond pas. Le secret étant propre à chaque endpoint, sa rotation passe par une demande au support : demandez un nouveau secret, déployez-le, puis demandez au support de basculer l'endpoint.
+Chaque livraison est signée. La passerelle calcule un HMAC sur le corps brut de la requête avec le secret de signature de votre endpoint et l'envoie dans un en-tête de signature. Lorsque le soutien enregistre votre endpoint, il vous communique le secret, le nom de l'en-tête et l'algorithme de hachage. Vérifiez la signature sur les octets bruts du corps avant de l'analyser, et rejetez tout ce qui ne correspond pas. Le secret étant propre à chaque endpoint, sa rotation passe par une demande au soutien : demandez un nouveau secret, déployez-le, puis demandez au soutien de basculer l'endpoint.
 
 {/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
 
@@ -133,6 +133,6 @@ Les lectures de l'API externe sont servies par un réplica de lecture, si bien q
 La [boucle d'intégration typique](/fr-CA/supplier-api/work-orders#boucle-dintégration-typique), pilotée par les webhooks :
 
 1. Enregistrez un endpoint pour `workorder.create` et `workorder.status_update` (ajoutez `workorder.new_note` si vous répliquez la conversation).
-2. Sur `workorder.create`, récupérez le bon de travail et créez le job dans votre système. Puis distinguez selon `newStatus` : `PendingConfirmationByServiceProvider` signifie que l'acheteur vous attend, faites donc `confirm` ou `decline` dans votre SLA; `SupplierInitiatedPendingApproval` signifie que votre propre demande attend l'acheteur, ne faites donc rien tant qu'un `workorder.status_update` n'a pas rapporté l'issue; tout autre statut signifie que le bon de travail est déjà à vous, passez donc directement à la planification.
-3. Sur `workorder.status_update`, récupérez le bon de travail. `WorkUnsatisfactory` et `WorkReviewedAndCompleted` vous donnent le verdict de l'acheteur; `CancelledWithReason` clôt le job; `PaymentMade` clôt le volet financier.
+2. Sur `workorder.create`, récupérez le bon de travail et créez le travail dans votre système. Puis distinguez selon `newStatus` : `PendingConfirmationByServiceProvider` signifie que l'acheteur vous attend, faites donc `confirm` ou `decline` dans votre entente de service; `SupplierInitiatedPendingApproval` signifie que votre propre demande attend l'acheteur, ne faites donc rien tant qu'un `workorder.status_update` n'a pas rapporté l'issue; tout autre statut signifie que le bon de travail est déjà à vous, passez donc directement à la planification.
+3. Sur `workorder.status_update`, récupérez le bon de travail. `WorkUnsatisfactory` et `WorkReviewedAndCompleted` vous donnent le verdict de l'acheteur; `CancelledWithReason` clôt le travail; `PaymentMade` clôt le volet financier.
 4. Exécutez un sondage périodique sur `assignedAt` ou `statusChangedAt` comme filet de sécurité pour tout ce que le chemin des webhooks aurait manqué, y compris les travaux réaffectés à un autre fournisseur.

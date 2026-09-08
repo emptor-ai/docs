@@ -98,7 +98,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
 
 Dos trampas:
 
-- `supplierPrimaryContactEmail` solo aplica como parte de una reasignación. Enviarlo sin un cambio de facility de proveedor hace que todo el patch sea un no-op: nada se persiste y se devuelve la orden de trabajo actual.
+- `supplierPrimaryContactEmail` solo aplica como parte de una reasignación. Enviarlo sin un cambio de instalación de proveedor hace que todo el patch sea un no-op: nada se persiste y se devuelve la orden de trabajo actual.
 - Un id inexistente y una denegación de permiso devuelven la misma respuesta `400` unauthorized, así que no uses este endpoint para sondear si una orden de trabajo existe.
 
 Para elegir el proveedor correcto de forma programática, consulta [Red de proveedores](/es/buyer-api/supplier-network), que cubre el endpoint jerarquizado de red privada.

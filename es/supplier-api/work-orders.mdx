@@ -5,7 +5,6 @@ description: "Recibe, acepta, rechaza y avanza órdenes de trabajo como proveedo
 ---
 
 Para una integración de proveedor, la cola de órdenes de trabajo es el inbox. Esta guía cubre los endpoints bajo `/v1/supplier/work_order/` para recibir trabajos, responder a ellos y mantener informados a los compradores mientras avanza el trabajo. Programar visitas y completar el trabajo se hace a través de las [llamadas de servicio](/es/supplier-api/service-calls).
-Para una integración de proveedor, la cola de órdenes de trabajo es el inbox. Esta guía cubre los endpoints bajo `/v1/supplier/work_order/` para recibir trabajos, responder a ellos y mantener informados a los compradores mientras avanza el trabajo. Programar visitas y completar el trabajo se hace a través de las [llamadas de servicio](/es/supplier-api/service-calls).
 
 Todos los ejemplos asumen:
 
@@ -54,7 +53,7 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
   }'
 ```
 
-**Rechaza** con `POST .../status_update/decline`. Solo los contactos de la facility de proveedor asignada a la orden de trabajo pueden rechazar. La orden de trabajo abandona tu cola a través del flujo de cambio de proveedor: su estado vuelve a `PendingApproval`, o se elige automáticamente un proveedor de red privada, según la configuración del comprador. El `text` de la nota se registra como motivo del rechazo y se refleja en lo que el comprador ve, así que hazlo específico.
+**Rechaza** con `POST .../status_update/decline`. Solo los contactos de la instalación de proveedor asignada a la orden de trabajo pueden rechazar. La orden de trabajo abandona tu cola a través del flujo de cambio de proveedor: su estado vuelve a `PendingApproval`, o se elige automáticamente un proveedor de red privada, según la configuración del comprador. El `text` de la nota se registra como motivo del rechazo y se refleja en lo que el comprador ve, así que hazlo específico.
 
 Ambas llamadas toman `{ "id": ..., "note": { ... } }` y devuelven la orden de trabajo actualizada.
 
