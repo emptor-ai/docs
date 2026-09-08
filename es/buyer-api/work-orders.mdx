@@ -1,6 +1,8 @@
-# Órdenes de trabajo en la Buyer API
-
-> Crea, lista, filtra, reasigna y cierra órdenes de trabajo con la Buyer API de OpenWrench, incluidas acciones de estado, notas y tipos de problema.
+---
+title: "Órdenes de trabajo en la Buyer API"
+sidebarTitle: "Órdenes de trabajo"
+description: "Crea, lista, filtra, reasigna y cierra órdenes de trabajo con la Buyer API de OpenWrench, incluidas acciones de estado, notas y tipos de problema."
+---
 
 Las órdenes de trabajo son el centro de la Buyer API. Esta guía cubre la superficie completa bajo `/v1/buyer/work_order/`: creación de órdenes de trabajo, consulta, acciones de estado del lado del comprador, el hilo de notas y los tipos de problema.
 
@@ -27,15 +29,15 @@ Una orden de trabajo devuelta por la API lleva, entre otros campos:
 | `nte`, `price`, `currencyId` | Monto not-to-exceed y precios. |
 | `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Fechas clave. |
 | `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | El hilo de notas comprador-proveedor. `lastNoteAddedAt` está en milisegundos desde epoch. |
-| `associatedServiceCalls`, `lastServiceCall` | Visitas registradas por el proveedor. Ver [Llamadas de servicio](/buyer-api/service-calls). |
+| `associatedServiceCalls`, `lastServiceCall` | Visitas registradas por el proveedor. Ver [Llamadas de servicio](/es/buyer-api/service-calls). |
 | `statusChanges` | Historial completo de estados. |
-| `buyerAttachments`, `supplierAttachments` | Referencias a archivos. Ver [Archivos y adjuntos](/buyer-api/files-and-attachments). |
+| `buyerAttachments`, `supplierAttachments` | Referencias a archivos. Ver [Archivos y adjuntos](/es/buyer-api/files-and-attachments). |
 | `isPM`, `plannedMaintenanceScheduleId` | Se establecen cuando la orden de trabajo fue generada desde un cronograma de PM. |
 | `walkThroughId` | Se establece cuando la orden de trabajo salió de un recorrido de encuesta de sitio. |
 
 ## Crear una orden de trabajo
 
-`POST /v1/buyer/work_order/work_orders` requiere más que los campos obvios. A diferencia de la mayoría de endpoints del comprador, **`buyerFacilityId`, `buyerCompanyId` y `createdBy` deben suministrarse en el cuerpo**; no se derivan de tu clave de API en este endpoint. Usa [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) para consultar tus ids de empresa e instalación una vez y cachéalos.
+`POST /v1/buyer/work_order/work_orders` requiere más que los campos obvios. A diferencia de la mayoría de endpoints del comprador, **`buyerFacilityId`, `buyerCompanyId` y `createdBy` deben suministrarse en el cuerpo**; no se derivan de tu clave de API en este endpoint. Usa [`GET /v1/buyer/me`](/es/buyer-api/account-and-utilities) para consultar tus ids de empresa e instalación una vez y cachéalos.
 
 Campos requeridos: `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` y `createdBy` (el correo del contacto que crea).
 
@@ -62,9 +64,9 @@ Comportamiento a conocer:
 
 - **Estado inicial.** Si se omite `status`, el estado inicial se calcula a partir de la configuración de tu empresa. Las solicitudes de servicio típicamente empiezan en `PendingApproval`; las órdenes de trabajo por defecto en `Unassigned`. Si pasas un `status`, aún se resuelve contra la configuración de la empresa, así que el estado efectivo puede diferir del que enviaste.
 - **Despachar al crear.** Pasar `supplierFacilityId` asigna el proveedor de inmediato. Un `supplierFacilityId`, `assetId` o `problemTypeId` desconocido se rechaza con `400`.
-- **Subactivos.** `subAssetIds` es un arreglo opcional de ids de subactivos que se adjuntan junto al `assetId` principal. Los subactivos son activos creados con un `parentId`; ver [Activos](/buyer-api/assets-and-locations#activos).
+- **Subactivos.** `subAssetIds` es un arreglo opcional de ids de subactivos que se adjuntan junto al `assetId` principal. Los subactivos son activos creados con un `parentId`; ver [Activos](/es/buyer-api/assets-and-locations#activos).
 - **Flag de aprobación.** El campo es `needApproval`, no `needsApproval`. El objeto de respuesta usa `needsApproval`; la solicitud de creación no.
-- **Enlace a recorrido.** `walkThroughId` y `siteSurveyTaskTitleId` deben suministrarse juntos o no suministrarse. Ver [Recorridos de encuesta de sitio](/buyer-api/site-survey-walkthroughs).
+- **Enlace a recorrido.** `walkThroughId` y `siteSurveyTaskTitleId` deben suministrarse juntos o no suministrarse. Ver [Recorridos de encuesta de sitio](/es/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Pasar un `id` actualiza esa orden de trabajo existente en lugar de crear una nueva.
 
 ## Listar, filtrar y contar
@@ -99,7 +101,7 @@ Dos trampas:
 - `supplierPrimaryContactEmail` solo aplica como parte de una reasignación. Enviarlo sin un cambio de facility de proveedor hace que todo el patch sea un no-op: nada se persiste y se devuelve la orden de trabajo actual.
 - Un id inexistente y una denegación de permiso devuelven la misma respuesta `400` unauthorized, así que no uses este endpoint para sondear si una orden de trabajo existe.
 
-Para elegir el proveedor correcto de forma programática, consulta [Red de proveedores](/buyer-api/supplier-network), que cubre el endpoint jerarquizado de red privada.
+Para elegir el proveedor correcto de forma programática, consulta [Red de proveedores](/es/buyer-api/supplier-network), que cubre el endpoint jerarquizado de red privada.
 
 ## Acciones de estado del comprador
 
@@ -108,7 +110,7 @@ Cuatro endpoints dedicados mueven una orden de trabajo por las partes del ciclo 
 | Endpoint | Estado resultante | Efectos secundarios |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Puede publicar la factura en borrador del proveedor (según la configuración del proveedor) y cumplir las solicitudes de compra enlazadas. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | Se rechaza con `409` mientras un técnico tiene check-in activo, si tu empresa habilita el bloqueo de cancelación descrito más abajo. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Se rechaza con `409` mientras un técnico tiene check-in activo, si tu empresa habilita el [bloqueo de cancelación](#bloqueo-de-cancelación-mientras-un-técnico-tiene-check-in-activo). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envía la nota adjunta al proveedor. |
 | `POST .../status_update/reopen` | Reabierta | Envía la nota adjunta. |
 
@@ -167,7 +169,7 @@ Valores de `status` que verás y que establecerás a través de la API:
 | `WorkUnsatisfactory` | Comprador | Rechazaste el trabajo completado. |
 | `CancelledWithReason` | Comprador | Cancelada. |
 
-Las transiciones propiedad del proveedor llegan a través de la integración del propio proveedor o de las apps de OpenWrench; tu lado las observa mediante [webhooks](/buyer-api/webhooks) o por sondeo (`statusChangedAt`, `statusChanges`) y actúa sobre las que son propiedad del comprador.
+Las transiciones propiedad del proveedor llegan a través de la integración del propio proveedor o de las apps de OpenWrench; tu lado las observa mediante [webhooks](/es/buyer-api/webhooks) o por sondeo (`statusChangedAt`, `statusChanges`) y actúa sobre las que son propiedad del comprador.
 
 ## Notas
 
@@ -221,6 +223,6 @@ Una integración de despacho típica:
 
 1. Cachea `me`, tipos de problema y ubicaciones al arrancar.
 2. Crea la orden de trabajo con `supplierFacilityId` establecido (o créala sin asignar, luego jerarquiza proveedores y haz `PATCH` de la asignación).
-3. Sigue el progreso del proveedor mediante [webhooks](/buyer-api/webhooks) (`workorder.status_update`), con `GET /work_orders?statusChangedAt=...` como sondeo de respaldo.
-4. Cuando el proveedor alcance `WaitingForReview`, verifica el trabajo (ver [Llamadas de servicio](/buyer-api/service-calls) para la evidencia de la visita) y publica `work_reviewed_and_completed`, o `work_unsatisfactory` con una nota.
-5. Concilia el lado monetario mediante [Cotizaciones y propuestas](/buyer-api/quotes-and-proposals) y [Facturas](/buyer-api/invoices).
+3. Sigue el progreso del proveedor mediante [webhooks](/es/buyer-api/webhooks) (`workorder.status_update`), con `GET /work_orders?statusChangedAt=...` como sondeo de respaldo.
+4. Cuando el proveedor alcance `WaitingForReview`, verifica el trabajo (ver [Llamadas de servicio](/es/buyer-api/service-calls) para la evidencia de la visita) y publica `work_reviewed_and_completed`, o `work_unsatisfactory` con una nota.
+5. Concilia el lado monetario mediante [Cotizaciones y propuestas](/es/buyer-api/quotes-and-proposals) y [Facturas](/es/buyer-api/invoices).

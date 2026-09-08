@@ -1,10 +1,12 @@
-# Webhooks en la Buyer API
+---
+title: "Webhooks en la Buyer API"
+sidebarTitle: "Webhooks"
+description: "Recibe en tu propio endpoint los eventos de orden de trabajo creada, cambio de estado y nueva nota, en lugar de sondear la Buyer API de OpenWrench."
+---
 
-> Recibe en tu propio endpoint los eventos de orden de trabajo creada, cambio de estado y nueva nota, en lugar de sondear la Buyer API de OpenWrench.
+Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: se creó una orden de trabajo, cambió su estado o se le añadió una nota. Cada entrega te dice qué orden de trabajo cambió y qué ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a los webhooks en el disparador natural de una integración de despacho: reacciona a `workorder.create` y `workorder.status_update` en el momento en que ocurren, y conserva el [sondeo](/es/buyer-api/work-orders#juntándolo-todo) solo como respaldo de conciliación.
 
-Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: se creó una orden de trabajo, cambió su estado o se le añadió una nota. Cada entrega te dice qué orden de trabajo cambió y qué ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a los webhooks en el disparador natural de una integración de despacho: reacciona a `workorder.create` y `workorder.status_update` en el momento en que ocurren, y conserva el [sondeo](/buyer-api/work-orders#putting-it-together) solo como respaldo de conciliación.
-
-{/* Revisor: los puntos por confirmar antes de fusionar (registro, cabecera de firma, reintentos) están anotados en la página en inglés. */}
+{/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
 
 ## Configurar un endpoint
 
@@ -14,7 +16,9 @@ Los endpoints se registran por empresa compradora y cubren todas sus ubicaciones
 - cuáles de los tres eventos quieres (`workorder.create`, `workorder.status_update`, `workorder.new_note`), y
 - si el endpoint es de pruebas o de producción.
 
-Soporte registra el endpoint en la pasarela de webhooks de OpenWrench y te devuelve el secreto de firma que usarás para verificar las entregas (ver más abajo). Puedes registrar varios endpoints, por ejemplo una URL por tipo de evento, o la misma URL para los tres.
+Soporte registra el endpoint en la pasarela de webhooks de OpenWrench y te devuelve el secreto de firma que usarás para [verificar las entregas](#verificar-las-entregas). Puedes registrar varios endpoints, por ejemplo una URL por tipo de evento, o la misma URL para los tres.
+
+{/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
 
 ## Eventos
 
@@ -27,7 +31,7 @@ Soporte registra el endpoint en la pasarela de webhooks de OpenWrench y te devue
 Algunos detalles de cada uno:
 
 - **`workorder.create`** se dispara en cada creación, sin importar quién la haga: tu propio `POST /v1/buyer/work_order/work_orders`, un usuario en las apps web o móvil de OpenWrench, un cronograma de mantenimiento preventivo, un recorrido de encuesta de sitio, o un proveedor que abre una orden de trabajo en una de tus ubicaciones (`SupplierInitiatedPendingApproval`). El payload lleva el estado inicial, así que puedes distinguir una solicitud de servicio pendiente de aprobación de una orden de trabajo despachada al crearse.
-- **`workorder.status_update`** se dispara en cada transición de [el modelo de estados](/buyer-api/work-orders#the-status-model), para estados propiedad de cualquiera de los dos lados. Las ediciones que no tocan `status` (un cambio de prioridad, una nueva fecha estimada de finalización, una reasignación mientras la orden sigue pendiente de confirmación) no emiten uno. Cuando una orden de trabajo pasa de un proveedor a otro puedes recibir una actualización intermedia cuyo `newStatus` es `Rejected`, que cierra la asignación anterior, seguida de la actualización con el estado nuevo.
+- **`workorder.status_update`** se dispara en cada transición de [el modelo de estados](/es/buyer-api/work-orders#el-modelo-de-estados), para estados propiedad de cualquiera de los dos lados. Las ediciones que no tocan `status` (un cambio de prioridad, una nueva fecha estimada de finalización, una reasignación mientras la orden sigue pendiente de confirmación) no emiten uno. Cuando una orden de trabajo pasa de un proveedor a otro puedes recibir una actualización intermedia cuyo `newStatus` es `Rejected`, que cierra la asignación anterior, seguida de la actualización con el estado nuevo.
 - **`workorder.new_note`** se dispara para las notas del hilo raíz comprador–proveedor de cualquiera de los dos lados, incluidas las notas publicadas por tu propia integración, las publicaciones masivas de fotos y la nota adjunta a una acción de estado. Las notas internas de los proveedores y los hilos de subcontratación nunca emiten eventos.
 
 Recibes eventos por los cambios que hace tu propia integración. Si replicas órdenes de trabajo en otro sistema, lleva un registro de las escrituras que hiciste y omite los eventos correspondientes, o trata cada evento como una señal para volver a obtener y comparar.
@@ -35,6 +39,8 @@ Recibes eventos por los cambios que hace tu propia integración. Si replicas ór
 ## Payload de la entrega
 
 Cada entrega es un `POST` HTTP con cuerpo JSON. El cuerpo tiene dos campos: `event_type` y `data`.
+
+{/* Reviewer: confirm against a real delivery that the endpoint receives exactly this body (the inner {event_type, data} object we hand to Convoy), and not the Convoy event envelope. */}
 
 ### Eventos de creación y de estado
 
@@ -92,6 +98,8 @@ El payload no incluye el resto del hilo. Léelo con `GET /v1/buyer/work_order/wo
 
 Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la petición con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
 
+{/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
+
 ## Respuesta, reintentos y duplicados
 
 - **Confirma rápido.** Devuelve un `2xx` en cuanto hayas almacenado el evento, y haz el trabajo posterior (obtener la orden de trabajo, actualizar tu sistema) de forma asíncrona. Una respuesta distinta de `2xx` o un tiempo de espera agotado cuentan como entrega fallida.
@@ -99,6 +107,8 @@ Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la
 - **Las entregas son al menos una vez.** El mismo evento puede llegar más de una vez incluso sin un fallo de tu lado. Deduplica con `event_type` más `workOrderId` más `changedAt` (o `addedAt` para las notas).
 - **El orden no está garantizado.** Dos eventos de la misma orden de trabajo pueden llegar desordenados. No derives el estado de la secuencia de eventos; obtén la orden de trabajo y confía en su `status`.
 - **Los eventos antiguos se descartan, no se entregan tarde.** Un evento que no se haya pasado a la pasarela dentro de las tres horas siguientes al cambio se descarta. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia sondeando `GET /v1/buyer/work_order/work_orders?statusChangedAt=...` para el periodo que te perdiste.
+
+{/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 
 ## Reaccionar a un evento
 
@@ -110,13 +120,13 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/9001"
 ```
 
-Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo creada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/buyer-api/introduction#rate-limits), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención.
+Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo creada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/es/buyer-api/introduction#límites-de-tasa), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención.
 
 ## Juntándolo todo
 
 Una integración de despacho impulsada por webhooks:
 
 1. Registra un endpoint para `workorder.create` y `workorder.status_update` (añade `workorder.new_note` si replicas la conversación).
-2. En `workorder.create`, obtén la orden de trabajo y crea el registro correspondiente en tu sistema. Si despachas desde tu lado, haz `PATCH` del `supplierFacilityId` como se describe en [Órdenes de trabajo](/buyer-api/work-orders#reassign-a-supplier).
+2. En `workorder.create`, obtén la orden de trabajo y crea el registro correspondiente en tu sistema. Si despachas desde tu lado, haz `PATCH` del `supplierFacilityId` como se describe en [Órdenes de trabajo](/es/buyer-api/work-orders#reasignar-un-proveedor).
 3. En `workorder.status_update`, obtén la orden de trabajo. Cuando `newStatus` sea `WaitingForReview`, ejecuta tu flujo de revisión y publica `work_reviewed_and_completed` o `work_unsatisfactory`.
 4. Ejecuta un sondeo periódico sobre `statusChangedAt` como red de seguridad para cualquier cosa que la ruta de webhooks haya perdido.

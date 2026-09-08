@@ -1,6 +1,8 @@
-# Bons de travail dans l'API Acheteur
-
-> Créez, listez, filtrez, réaffectez et clôturez des bons de travail avec l'API Acheteur OpenWrench, incluant les actions de statut, les notes et les types de problèmes.
+---
+title: "Bons de travail dans l'API Acheteur"
+sidebarTitle: "Bons de travail"
+description: "Créez, listez, filtrez, réaffectez et clôturez des bons de travail avec l'API Acheteur OpenWrench, incluant les actions de statut, les notes et les types de problèmes."
+---
 
 Les bons de travail sont au centre de l'API Acheteur. Ce guide couvre l'ensemble de la surface sous `/v1/buyer/work_order/` : la création de bons de travail, leur interrogation, les actions de statut côté acheteur, le fil de notes et les types de problèmes.
 
@@ -8,8 +10,8 @@ Tous les exemples supposent ces variables shell :
 
 ```bash
 export BASE="https://api.useopenwrench.com/api/external"
-export KEY="<your-api-key>"        # en-tête X-API-KEY
-export SECRET="<shared-secret>"    # en-tête OW-KEY
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
 ```
 
 ## L'objet bon de travail
@@ -27,15 +29,15 @@ Un bon de travail retourné par l'API porte, entre autres champs :
 | `nte`, `price`, `currencyId` | Montant à ne pas dépasser et tarification. |
 | `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Dates clés. |
 | `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | Fil de notes acheteur-fournisseur. `lastNoteAddedAt` est en millisecondes epoch. |
-| `associatedServiceCalls`, `lastServiceCall` | Visites enregistrées par le fournisseur. Voir [Appels de service](/buyer-api/service-calls). |
+| `associatedServiceCalls`, `lastServiceCall` | Visites enregistrées par le fournisseur. Voir [Appels de service](/fr-CA/buyer-api/service-calls). |
 | `statusChanges` | Historique complet des statuts. |
-| `buyerAttachments`, `supplierAttachments` | Références de fichiers. Voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments). |
+| `buyerAttachments`, `supplierAttachments` | Références de fichiers. Voir [Fichiers et pièces jointes](/fr-CA/buyer-api/files-and-attachments). |
 | `isPM`, `plannedMaintenanceScheduleId` | Défini lorsque le bon de travail a été généré à partir d'un calendrier d'entretien préventif. |
 | `walkThroughId` | Défini lorsque le bon de travail est issu d'une visite d'inspection de site. |
 
 ## Créer un bon de travail
 
-`POST /v1/buyer/work_order/work_orders` exige plus que les champs évidents. Contrairement à la plupart des endpoints acheteur, **`buyerFacilityId`, `buyerCompanyId` et `createdBy` doivent être fournis dans le corps**; ils ne sont pas dérivés de votre clé d'API sur cet endpoint. Utilisez [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) pour rechercher une fois vos ids d'entreprise et d'établissement et les mettre en cache.
+`POST /v1/buyer/work_order/work_orders` exige plus que les champs évidents. Contrairement à la plupart des endpoints acheteur, **`buyerFacilityId`, `buyerCompanyId` et `createdBy` doivent être fournis dans le corps**; ils ne sont pas dérivés de votre clé d'API sur cet endpoint. Utilisez [`GET /v1/buyer/me`](/fr-CA/buyer-api/account-and-utilities) pour rechercher une fois vos ids d'entreprise et d'établissement et les mettre en cache.
 
 Champs requis : `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` et `createdBy` (le courriel du contact créateur).
 
@@ -62,19 +64,19 @@ Comportement à connaître :
 
 - **Statut initial.** Si `status` est omis, le statut initial est calculé à partir de la configuration de votre entreprise. Les demandes de service commencent généralement en `PendingApproval`; les bons de travail sont par défaut `Unassigned`. Si vous passez un `status`, il est tout de même résolu par rapport à la configuration de l'entreprise, alors le statut effectif peut différer de ce que vous avez envoyé.
 - **Répartition à la création.** Passer `supplierFacilityId` affecte le fournisseur immédiatement. Un `supplierFacilityId`, `assetId` ou `problemTypeId` inconnu est rejeté avec `400`.
-- **Sous-actifs.** `subAssetIds` est un tableau optionnel d'ids de sous-actifs attachés en plus de l'`assetId` principal. Les sous-actifs sont des actifs créés avec un `parentId`; voir [Actifs](/buyer-api/assets-and-locations#actifs).
-- **Drapeau d'approbation.** Le champ est `needApproval`, pas `needsApproval`. L'objet de réponse utilise `needsApproval`; la requête de création utilise `needApproval`.
-- **Liaison à une visite d'inspection.** `walkThroughId` et `siteSurveyTaskTitleId` doivent être fournis ensemble ou pas du tout. Voir [Visites d'inspection de site](/buyer-api/site-survey-walkthroughs).
+- **Sous-actifs.** `subAssetIds` est un tableau optionnel d'ids de sous-actifs attachés en plus de l'`assetId` principal. Les sous-actifs sont des actifs créés avec un `parentId`; voir [Actifs](/fr-CA/buyer-api/assets-and-locations#actifs).
+- **Drapeau d'approbation.** Le champ est `needApproval`, pas `needsApproval`. L'objet de réponse utilise `needsApproval`; la requête de création, non.
+- **Liaison à une visite d'inspection.** `walkThroughId` et `siteSurveyTaskTitleId` doivent être fournis ensemble ou pas du tout. Voir [Visites d'inspection de site](/fr-CA/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Passer un `id` met à jour ce bon de travail existant au lieu d'en créer un nouveau.
 
 ## Lister, filtrer et compter
 
 ```bash
-# Bons de travail les plus récents pour un emplacement
+# Most recent work orders for one location
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders?locationId=1204&limit=25&sort_by=createdAt&order=desc"
 
-# Combien correspondent, sans les récupérer
+# How many match, without fetching them
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
@@ -99,7 +101,7 @@ Deux pièges :
 - `supplierPrimaryContactEmail` ne s'applique que dans le cadre d'une réaffectation. L'envoyer sans changement d'établissement fournisseur rend l'ensemble du patch inopérant : rien n'est enregistré et le bon de travail courant est retourné.
 - Un id inexistant et un refus de permission renvoient tous deux la même réponse `400` non autorisée, alors n'utilisez pas cet endpoint pour sonder l'existence d'un bon de travail.
 
-Pour choisir le bon fournisseur de manière programmatique, voir [Réseau de fournisseurs](/buyer-api/supplier-network), qui couvre l'endpoint classé du réseau privé.
+Pour choisir le bon fournisseur de manière programmatique, voir [Réseau de fournisseurs](/fr-CA/buyer-api/supplier-network), qui couvre l'endpoint classé du réseau privé.
 
 ## Actions de statut acheteur
 
@@ -108,7 +110,7 @@ Quatre endpoints dédiés font progresser un bon de travail à travers les parti
 | Endpoint | Statut résultant | Effets secondaires |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Peut publier le brouillon de facture du fournisseur (selon les paramètres du fournisseur) et remplir les demandes d'achat liées. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejetée avec `409` pendant qu'un technicien est sur place, si votre entreprise active le verrou d'annulation décrit plus bas. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejetée avec `409` pendant qu'un technicien est sur place, si votre entreprise active le [verrou d'annulation](#verrou-dannulation-pendant-quun-technicien-est-sur-place). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envoie la note jointe au fournisseur. |
 | `POST .../status_update/reopen` | Rouvert | Envoie la note jointe. |
 
@@ -167,7 +169,7 @@ Valeurs de `status` que vous verrez et définirez via l'API :
 | `WorkUnsatisfactory` | Acheteur | Vous avez refusé le travail complété. |
 | `CancelledWithReason` | Acheteur | Annulé. |
 
-Les transitions appartenant au fournisseur arrivent via sa propre intégration ou les applications OpenWrench; votre côté les observe via les [webhooks](/buyer-api/webhooks) ou le sondage (`statusChangedAt`, `statusChanges`) et agit sur celles qui vous appartiennent.
+Les transitions appartenant au fournisseur arrivent via sa propre intégration ou les applications OpenWrench; votre côté les observe via les [webhooks](/fr-CA/buyer-api/webhooks) ou le sondage (`statusChangedAt`, `statusChanges`) et agit sur celles qui vous appartiennent.
 
 ## Notes
 
@@ -221,6 +223,6 @@ Une intégration de répartition typique :
 
 1. Mettez en cache `me`, les types de problèmes et les emplacements au démarrage.
 2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez non assigné, puis classez les fournisseurs et effectuez l'assignation par `PATCH`).
-3. Suivez la progression du fournisseur via les [webhooks](/buyer-api/webhooks) (`workorder.status_update`), avec `GET /work_orders?statusChangedAt=...` comme sondage de repli.
-4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Appels de service](/buyer-api/service-calls) pour les preuves de visite) et postez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
-5. Réconciliez le côté monétaire via [Soumissions et propositions](/buyer-api/quotes-and-proposals) et [Factures](/buyer-api/invoices).
+3. Suivez la progression du fournisseur via les [webhooks](/fr-CA/buyer-api/webhooks) (`workorder.status_update`), avec `GET /work_orders?statusChangedAt=...` comme sondage de repli.
+4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Appels de service](/fr-CA/buyer-api/service-calls) pour les preuves de visite) et postez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
+5. Réconciliez le côté monétaire via [Soumissions et propositions](/fr-CA/buyer-api/quotes-and-proposals) et [Factures](/fr-CA/buyer-api/invoices).

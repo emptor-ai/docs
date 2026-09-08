@@ -1,10 +1,12 @@
-# Webhooks en la Supplier API
+---
+title: "Webhooks en la Supplier API"
+sidebarTitle: "Webhooks"
+description: "Entérate en el momento en que se te asigna una orden de trabajo, cambia su estado o el comprador añade una nota, en lugar de sondear la Supplier API de OpenWrench."
+---
 
-> Entérate en el momento en que se te asigna una orden de trabajo, cambia su estado o el comprador añade una nota, en lugar de sondear la Supplier API de OpenWrench.
+Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: llegó trabajo nuevo para tu instalación, cambió el estado de una orden de trabajo o se añadió una nota a su hilo. Cada entrega identifica la orden de trabajo y lo que ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a `workorder.create` en el sustituto natural del sondeo de tu cola: el evento es la señal de que una orden de trabajo ha llegado a tu cola, normalmente esperando a que la [aceptes o rechaces](/es/supplier-api/work-orders#aceptar-o-rechazar).
 
-Los webhooks envían tres eventos de orden de trabajo a un endpoint HTTPS de tu propiedad: llegó trabajo nuevo para tu instalación, cambió el estado de una orden de trabajo o se añadió una nota a su hilo. Cada entrega identifica la orden de trabajo y lo que ocurrió. Tu integración luego obtiene la orden de trabajo a través de la API. Eso convierte a `workorder.create` en el sustituto natural del sondeo de tu cola: el evento es la señal de que una orden de trabajo ha llegado a tu cola, normalmente esperando a que la [aceptes o rechaces](/supplier-api/work-orders#accept-or-decline).
-
-{/* Revisor: los puntos por confirmar antes de fusionar (registro, cabecera de firma, reintentos) están anotados en la página en inglés. */}
+{/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl.getSupplierFacilityWebhooks) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
 
 ## Configurar un endpoint
 
@@ -14,7 +16,9 @@ Los endpoints se registran por instalación del proveedor. Una empresa con varia
 - cuáles de los tres eventos quieres (`workorder.create`, `workorder.status_update`, `workorder.new_note`), y
 - si el endpoint es de pruebas o de producción.
 
-Soporte registra el endpoint en la pasarela de webhooks de OpenWrench y te devuelve el secreto de firma que usarás para verificar las entregas (ver más abajo). Puedes registrar varios endpoints, por ejemplo una URL por tipo de evento, o la misma URL para los tres.
+Soporte registra el endpoint en la pasarela de webhooks de OpenWrench y te devuelve el secreto de firma que usarás para [verificar las entregas](#verificar-las-entregas). Puedes registrar varios endpoints, por ejemplo una URL por tipo de evento, o la misma URL para los tres.
+
+{/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
 
 ## Eventos
 
@@ -40,6 +44,8 @@ Recibes eventos por los cambios que hace tu propia integración. Lleva un regist
 ## Payload de la entrega
 
 Cada entrega es un `POST` HTTP con cuerpo JSON. El cuerpo tiene dos campos: `event_type` y `data`.
+
+{/* Reviewer: confirm against a real delivery that the endpoint receives exactly this body (the inner {event_type, data} object we hand to Convoy), and not the Convoy event envelope. */}
 
 ### Eventos de creación y de estado
 
@@ -98,6 +104,8 @@ El payload no incluye el resto del hilo. Léelo con `GET /v1/supplier/work_order
 
 Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la petición con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
 
+{/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
+
 ## Respuesta, reintentos y duplicados
 
 - **Confirma rápido.** Devuelve un `2xx` en cuanto hayas almacenado el evento, y haz el trabajo posterior (obtener la orden de trabajo, actualizar tu sistema) de forma asíncrona. Una respuesta distinta de `2xx` o un tiempo de espera agotado cuentan como entrega fallida.
@@ -105,6 +113,8 @@ Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la
 - **Las entregas son al menos una vez.** El mismo evento puede llegar más de una vez incluso sin un fallo de tu lado. Deduplica con `event_type` más `workOrderId` más `changedAt` (o `addedAt` para las notas).
 - **El orden no está garantizado.** Dos eventos de la misma orden de trabajo pueden llegar desordenados. No derives el estado de la secuencia de eventos; obtén la orden de trabajo y confía en su `status`.
 - **Los eventos antiguos se descartan, no se entregan tarde.** Un evento que no se haya pasado a la pasarela dentro de las tres horas siguientes al cambio se descarta. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia sondeando `GET /v1/supplier/work_order/work_orders?statusChangedAt=...` para el periodo que te perdiste.
+
+{/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 
 ## Reaccionar a un evento
 
@@ -116,11 +126,11 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo asignada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/supplier-api/introduction#rate-limits), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención. Recuerda que los campos privados del comprador están [enmascarados](/supplier-api/reference-data#data-masking) para los proveedores externos.
+Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo asignada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/es/supplier-api/introduction#límites-de-tasa), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención. Recuerda que los campos privados del comprador están [enmascarados](/es/supplier-api/reference-data#enmascaramiento-de-datos) para los proveedores externos.
 
 ## Juntándolo todo
 
-El [ciclo de integración típico](/supplier-api/work-orders#typical-integration-loop), impulsado por webhooks:
+El [ciclo de integración típico](/es/supplier-api/work-orders#ciclo-de-integración-típico), impulsado por webhooks:
 
 1. Registra un endpoint para `workorder.create` y `workorder.status_update` (añade `workorder.new_note` si replicas la conversación).
 2. En `workorder.create`, obtén la orden de trabajo y crea el trabajo en tu sistema. Luego ramifica según `newStatus`: `PendingConfirmationByServiceProvider` significa que el comprador te espera, así que haz `confirm` o `decline` dentro de tu SLA; `SupplierInitiatedPendingApproval` significa que tu propia solicitud espera al comprador, así que no hagas nada hasta que un `workorder.status_update` informe el resultado; cualquier otro estado significa que la orden de trabajo ya es tuya, así que pasa directamente a la programación.

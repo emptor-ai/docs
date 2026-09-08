@@ -1,6 +1,8 @@
-# Arbetsordrar i Buyer API
-
-> Skapa, lista, filtrera, tilldela om och avsluta arbetsordrar med OpenWrench Buyer API, inklusive statusåtgärder, anteckningar och problemtyper.
+---
+title: "Arbetsordrar i Buyer API"
+sidebarTitle: "Arbetsordrar"
+description: "Skapa, lista, filtrera, tilldela om och avsluta arbetsordrar med OpenWrench Buyer API, inklusive statusåtgärder, anteckningar och problemtyper."
+---
 
 Arbetsordrar är i centrum för Buyer API. Den här guiden täcker hela ytan under `/v1/buyer/work_order/`: att skapa arbetsordrar, söka i dem, köparsidans statusåtgärder, anteckningstråden och problemtyperna.
 
@@ -27,15 +29,15 @@ En arbetsorder som returneras av API:et bär bland annat följande fält:
 | `nte`, `price`, `currencyId` | Ej-överskridande-belopp och prissättning. |
 | `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Viktiga datum. |
 | `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | Köpar–leverantör-anteckningstråden. `lastNoteAddedAt` är epokmillisekunder. |
-| `associatedServiceCalls`, `lastServiceCall` | Besök loggade av leverantören. Se [Servicebesök](/buyer-api/service-calls). |
+| `associatedServiceCalls`, `lastServiceCall` | Besök loggade av leverantören. Se [Servicebesök](/sv/buyer-api/service-calls). |
 | `statusChanges` | Fullständig statushistorik. |
-| `buyerAttachments`, `supplierAttachments` | Filreferenser. Se [Filer och bilagor](/buyer-api/files-and-attachments). |
+| `buyerAttachments`, `supplierAttachments` | Filreferenser. Se [Filer och bilagor](/sv/buyer-api/files-and-attachments). |
 | `isPM`, `plannedMaintenanceScheduleId` | Sätts när arbetsordern har genererats från ett PM-schema. |
 | `walkThroughId` | Sätts när arbetsordern kom från en genomgång vid en platsbesiktning. |
 
 ## Skapa en arbetsorder
 
-`POST /v1/buyer/work_order/work_orders` kräver mer än de uppenbara fälten. Till skillnad från de flesta köparslutpunkter måste **`buyerFacilityId`, `buyerCompanyId` och `createdBy` anges i kroppen**; de härleds inte från din API-nyckel på den här slutpunkten. Använd [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) för att slå upp ditt företags- och anläggnings-id en gång och cacha dem.
+`POST /v1/buyer/work_order/work_orders` kräver mer än de uppenbara fälten. Till skillnad från de flesta köparslutpunkter måste **`buyerFacilityId`, `buyerCompanyId` och `createdBy` anges i kroppen**; de härleds inte från din API-nyckel på den här slutpunkten. Använd [`GET /v1/buyer/me`](/sv/buyer-api/account-and-utilities) för att slå upp ditt företags- och anläggnings-id en gång och cacha dem.
 
 Obligatoriska fält: `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` och `createdBy` (e-postadressen till kontakten som skapar).
 
@@ -62,19 +64,19 @@ Beteende att känna till:
 
 - **Initial status.** Om `status` utelämnas beräknas den initiala statusen från ditt företags konfiguration. Serviceförfrågningar börjar oftast i `PendingApproval`; arbetsordrar utgår från `Unassigned`. Om du skickar en `status` löses den fortfarande mot företagets konfiguration, så den effektiva statusen kan skilja sig från vad du skickade.
 - **Utskick vid skapande.** Att skicka `supplierFacilityId` tilldelar leverantören omedelbart. Ett okänt `supplierFacilityId`, `assetId` eller `problemTypeId` avvisas med `400`.
-- **Underliggande tillgångar.** `subAssetIds` är en valfri array med ids för underliggande tillgångar som bifogas utöver huvud-`assetId`. Underliggande tillgångar är tillgångar skapade med ett `parentId`; se [Tillgångar](/buyer-api/assets-and-locations#tillgångar).
+- **Underliggande tillgångar.** `subAssetIds` är en valfri array med ids för underliggande tillgångar som bifogas utöver huvud-`assetId`. Underliggande tillgångar är tillgångar skapade med ett `parentId`; se [Tillgångar](/sv/buyer-api/assets-and-locations#tillgångar).
 - **Godkännandeflagga.** Fältet heter `needApproval`, inte `needsApproval`. Svarsobjektet använder `needsApproval`; själva skapa-förfrågan gör det inte.
-- **Koppling till genomgång.** `walkThroughId` och `siteSurveyTaskTitleId` måste anges tillsammans eller inte alls. Se [Platsbesiktningar](/buyer-api/site-survey-walkthroughs).
+- **Koppling till genomgång.** `walkThroughId` och `siteSurveyTaskTitleId` måste anges tillsammans eller inte alls. Se [Platsbesiktningar](/sv/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Att skicka ett `id` uppdaterar den befintliga arbetsordern istället för att skapa en ny.
 
 ## Lista, filtrera och räkna
 
 ```bash
-# De senaste arbetsordrarna för en plats
+# Most recent work orders for one location
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders?locationId=1204&limit=25&sort_by=createdAt&order=desc"
 
-# Hur många som matchar, utan att hämta dem
+# How many match, without fetching them
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
@@ -99,7 +101,7 @@ Två fallgropar:
 - `supplierPrimaryContactEmail` gäller endast som en del av en omtilldelning. Att skicka den utan en leverantörsanläggningsändring gör att hela patchen blir en no-op: inget sparas och den aktuella arbetsordern returneras.
 - Ett icke-existerande id och ett behörighetsavslag returnerar båda samma `400`-svar (unauthorized), så använd inte den här slutpunkten för att avgöra om en arbetsorder finns.
 
-För att välja rätt leverantör programmatiskt, se [Leverantörsnätverk](/buyer-api/supplier-network), som täcker den rangordnade slutpunkten för det privata nätverket.
+För att välja rätt leverantör programmatiskt, se [Leverantörsnätverk](/sv/buyer-api/supplier-network), som täcker den rangordnade slutpunkten för det privata nätverket.
 
 ## Köparens statusåtgärder
 
@@ -108,7 +110,7 @@ Fyra dedikerade slutpunkter flyttar en arbetsorder genom de köparägda delarna 
 | Slutpunkt | Resulterande status | Sidoeffekter |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Kan publicera leverantörens fakturautkast (enligt leverantörsinställningar) och uppfylla länkade inköpsförfrågningar. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | Avvisas med `409` medan en tekniker är incheckad, om ditt företag aktiverar avbokningslåset som beskrivs nedan. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Avvisas med `409` medan en tekniker är incheckad, om ditt företag aktiverar [avbokningslåset](#avbokningslås-medan-en-tekniker-är-incheckad). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Skickar den bifogade anteckningen till leverantören. |
 | `POST .../status_update/reopen` | Återöppnad | Skickar den bifogade anteckningen. |
 
@@ -167,7 +169,7 @@ När din integration får detta `409`, vänta tills teknikern checkar ut (eller 
 | `WorkUnsatisfactory` | Köparen | Du har avvisat det utförda arbetet. |
 | `CancelledWithReason` | Köparen | Avbrutet. |
 
-De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via [webhooks](/buyer-api/webhooks) eller polling (`statusChangedAt`, `statusChanges`) och agerar på de köparägda.
+De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via [webhooks](/sv/buyer-api/webhooks) eller polling (`statusChangedAt`, `statusChanges`) och agerar på de köparägda.
 
 ## Anteckningar
 
@@ -221,6 +223,6 @@ En typisk utskicksintegration:
 
 1. Cacha `me`, problemtyper och platser vid start.
 2. Skapa arbetsordern med `supplierFacilityId` satt (eller skapa otilldelad, rangordna sedan leverantörer och `PATCH` tilldelningen).
-3. Följ leverantörens framsteg via [webhooks](/buyer-api/webhooks) (`workorder.status_update`), med `GET /work_orders?statusChangedAt=...` som polling-reserv.
-4. När leverantören når `WaitingForReview`, verifiera arbetet (se [Servicebesök](/buyer-api/service-calls) för besöksbevis) och posta `work_reviewed_and_completed`, eller `work_unsatisfactory` med en anteckning.
-5. Stäm av pengasidan genom [Offerter och förslag](/buyer-api/quotes-and-proposals) och [Fakturor](/buyer-api/invoices).
+3. Följ leverantörens framsteg via [webhooks](/sv/buyer-api/webhooks) (`workorder.status_update`), med `GET /work_orders?statusChangedAt=...` som polling-reserv.
+4. När leverantören når `WaitingForReview`, verifiera arbetet (se [Servicebesök](/sv/buyer-api/service-calls) för besöksbevis) och posta `work_reviewed_and_completed`, eller `work_unsatisfactory` med en anteckning.
+5. Stäm av pengasidan genom [Offerter och förslag](/sv/buyer-api/quotes-and-proposals) och [Fakturor](/sv/buyer-api/invoices).

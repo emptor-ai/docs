@@ -1,10 +1,12 @@
-# Webhooks i Supplier API
+---
+title: "Webhooks i Supplier API"
+sidebarTitle: "Webhooks"
+description: "Få besked i samma stund som en arbetsorder tilldelas dig, dess status ändras eller köparen lägger till en anteckning, i stället för att polla OpenWrench Supplier API."
+---
 
-> Få besked i samma stund som en arbetsorder tilldelas dig, dess status ändras eller köparen lägger till en anteckning, i stället för att polla OpenWrench Supplier API.
+Webhooks skickar tre arbetsorderhändelser till en HTTPS-slutpunkt som du äger: nytt arbete kom in till din anläggning, en arbetsorders status ändrades, eller en anteckning lades till i dess tråd. Varje leverans identifierar arbetsordern och vad som hände. Din integration hämtar sedan arbetsordern via API:et. Det gör `workorder.create` till den naturliga ersättningen för att polla din kö: händelsen är signalen om att en arbetsorder har landat i din kö, oftast i väntan på att du ska [acceptera eller avvisa](/sv/supplier-api/work-orders#acceptera-eller-avvisa) den.
 
-Webhooks skickar tre arbetsorderhändelser till en HTTPS-slutpunkt som du äger: nytt arbete kom in till din anläggning, en arbetsorders status ändrades, eller en anteckning lades till i dess tråd. Varje leverans identifierar arbetsordern och vad som hände. Din integration hämtar sedan arbetsordern via API:et. Det gör `workorder.create` till den naturliga ersättningen för att polla din kö: händelsen är signalen om att en arbetsorder har landat i din kö, oftast i väntan på att du ska [acceptera eller avvisa](/supplier-api/work-orders#accept-or-decline) den.
-
-{/* Granskare: punkterna som ska bekräftas före sammanslagning (registrering, signaturhuvud, omförsök) är noterade på den engelska sidan. */}
+{/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl.getSupplierFacilityWebhooks) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
 
 ## Sätta upp en slutpunkt
 
@@ -14,7 +16,9 @@ Slutpunkter registreras per leverantörsanläggning. Ett företag med flera anl�
 - vilka av de tre händelserna du vill ha (`workorder.create`, `workorder.status_update`, `workorder.new_note`), och
 - om slutpunkten är för test eller produktion.
 
-Supporten registrerar slutpunkten på OpenWrenchs webhook-gateway och skickar tillbaka signeringshemligheten som du använder för att verifiera leveranser (se nedan). Du kan registrera flera slutpunkter, till exempel en URL per händelsetyp, eller samma URL för alla tre.
+Supporten registrerar slutpunkten på OpenWrenchs webhook-gateway och skickar tillbaka signeringshemligheten som du använder för att [verifiera leveranser](#verifiera-leveranser). Du kan registrera flera slutpunkter, till exempel en URL per händelsetyp, eller samma URL för alla tre.
+
+{/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
 
 ## Händelser
 
@@ -40,6 +44,8 @@ Du får händelser för ändringar som din egen integration gör. Håll reda på
 ## Leveransens nyttolast
 
 Varje leverans är en HTTP `POST` med en JSON-kropp. Kroppen har två fält: `event_type` och `data`.
+
+{/* Reviewer: confirm against a real delivery that the endpoint receives exactly this body (the inner {event_type, data} object we hand to Convoy), and not the Convoy event envelope. */}
 
 ### Skapande- och statushändelser
 
@@ -98,6 +104,8 @@ Nyttolasten innehåller inte resten av tråden. Läs den med `GET /v1/supplier/w
 
 Varje leverans är signerad. Gatewayen beräknar en HMAC över den råa förfrågningskroppen med din slutpunkts signeringshemlighet och skickar den i ett signaturhuvud. När supporten registrerar din slutpunkt ger de dig hemligheten, huvudets namn och hash-algoritmen. Verifiera signaturen mot kroppens råa bytes innan du tolkar den, och avvisa allt som inte stämmer. Eftersom hemligheten är per slutpunkt är rotation en supportförfrågan: be om en ny hemlighet, driftsätt den, och be sedan supporten byta över slutpunkten.
 
+{/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
+
 ## Svar, omförsök och dubbletter
 
 - **Bekräfta snabbt.** Returnera `2xx` så snart du har lagrat händelsen, och gör uppföljningsarbetet (hämta arbetsordern, uppdatera ditt system) asynkront. Ett svar som inte är `2xx` eller en timeout räknas som en misslyckad leverans.
@@ -106,21 +114,23 @@ Varje leverans är signerad. Gatewayen beräknar en HMAC över den råa förfrå
 - **Ordningen garanteras inte.** Två händelser för samma arbetsorder kan komma i fel ordning. Härled inte tillståndet ur händelsesekvensen; hämta arbetsordern och lita på dess `status`.
 - **Gamla händelser kastas, de levereras inte sent.** En händelse som inte har lämnats över till gatewayen inom tre timmar från ändringen kastas. Efter ett avbrott på OpenWrenchs sida, eller om din slutpunkt var nere längre än omförsöksfönstret, stäm av genom att polla `GET /v1/supplier/work_order/work_orders?statusChangedAt=...` för perioden du missade.
 
+{/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
+
 ## Reagera på en händelse
 
 Den rekommenderade hanteraren är liten: verifiera, lagra, bekräfta, hämta sedan.
 
 ```bash
-# Hämta arbetsordern som händelsen pekar på
+# Fetch the work order named in the event
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Läsningar i det externa API:et serveras från en läs-replika, så en arbetsorder som nyss tilldelades kan kortvarigt komma tillbaka tom. Försök hämta igen efter en sekund innan du betraktar den som saknad. Hämtningen räknas mot [hastighetsgränsen](/supplier-api/introduction#rate-limits), så slå ihop skurar av händelser för samma arbetsorder till en enda hämtning. Kom ihåg att köparens privata fält är [maskerade](/supplier-api/reference-data#data-masking) för tredjepartsleverantörer.
+Läsningar i det externa API:et serveras från en läs-replika, så en arbetsorder som nyss tilldelades kan kortvarigt komma tillbaka tom. Försök hämta igen efter en sekund innan du betraktar den som saknad. Hämtningen räknas mot [hastighetsgränsen](/sv/supplier-api/introduction#hastighetsgränser), så slå ihop skurar av händelser för samma arbetsorder till en enda hämtning. Kom ihåg att köparens privata fält är [maskerade](/sv/supplier-api/reference-data#datamaskering) för tredjepartsleverantörer.
 
 ## Sätta ihop det hela
 
-Den [typiska integrationsloopen](/supplier-api/work-orders#typical-integration-loop), driven av webhooks:
+Den [typiska integrationsloopen](/sv/supplier-api/work-orders#typisk-integrationsloop), driven av webhooks:
 
 1. Registrera en slutpunkt för `workorder.create` och `workorder.status_update` (lägg till `workorder.new_note` om du speglar konversationen).
 2. Vid `workorder.create`, hämta arbetsordern och skapa jobbet i ditt system. Förgrena sedan på `newStatus`: `PendingConfirmationByServiceProvider` betyder att köparen väntar på dig, så gör `confirm` eller `decline` inom din SLA; `SupplierInitiatedPendingApproval` betyder att din egen begäran väntar på köparen, så gör ingenting tills en `workorder.status_update` rapporterar utfallet; alla andra statusar betyder att arbetsordern redan är din, så gå direkt till schemaläggning.
