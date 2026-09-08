@@ -1088,7 +1088,7 @@
     "/v1/supplier/asset/asset_labels/{id}": {
       "get": {
         "operationId": "getSupplierAssetLabel",
-        "summary": "Get a asset label",
+        "summary": "Get an asset label",
         "tags": [
           "Asset Labels"
         ],
