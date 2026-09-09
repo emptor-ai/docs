@@ -86,7 +86,7 @@ List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `orde
 Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks) and fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (`statusChangedAt` window, small `limit`).
+  **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks). Fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (`statusChangedAt` window, small `limit`).
 </Warning>
 
 ## Reassign a supplier

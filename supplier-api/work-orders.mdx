@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Reading your queue
 
 <Warning>
-  **Do not build your integration on the list endpoint.** `GET /v1/supplier/work_order/work_orders` is the most expensive read in the Supplier API, and polling it to discover new or changed work orders is the wrong pattern: it is slow on large queues, it burns your [rate limit](/supplier-api/introduction#rate-limits), and it still misses changes between polls. Use [webhooks](/supplier-api/webhooks) to learn that a work order was assigned to you, changed status, or received a note, then fetch that one work order by id. Reserve the list for a one-time initial load and occasional reconciliation, with a narrow filter and a small page.
+  **Do not build your integration on the list endpoint.** `GET /v1/supplier/work_order/work_orders` is the most expensive read in the Supplier API, and polling it to discover new or changed work orders is the wrong pattern. It is slow on large queues, it burns your [rate limit](/supplier-api/introduction#rate-limits), and it still misses changes between polls. Use [webhooks](/supplier-api/webhooks) to learn that a work order was assigned to you, changed status, or received a note, then fetch that one work order by id. Reserve the list for a one-time initial load and occasional reconciliation, with a narrow filter and a small page.
 </Warning>
 
 The pattern that scales is push, then fetch by id:
@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-The list and count endpoints are for the two moments a webhook cannot cover: the first load of work that already existed before your endpoint was registered, and a periodic check that nothing was missed:
+The list and count endpoints are for the two moments a webhook cannot cover. Use them for the first load of work that already existed before your endpoint was registered. Also use them for a periodic check that nothing was missed:
 
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
@@ -43,7 +43,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter filters on the entity's indexed columns. Everything is tenant-scoped to your facility. If a list call is slow, narrow the filter (a status, a `statusChangedAt` or `assignedAt` window) rather than retrying it unchanged; an unfiltered list over a large queue can time out. Two more things to remember:
+Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter filters on the entity's indexed columns. Everything is tenant-scoped to your facility. If a list call is slow, narrow the filter (a status, a `statusChangedAt` or `assignedAt` window) rather than retrying it unchanged. An unfiltered list over a large queue can time out. Two more things to remember:
 
 - **Reads come from a read replica**, so your own just-written change can lag a moment in list results.
 - **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
