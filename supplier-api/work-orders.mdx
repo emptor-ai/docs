@@ -36,16 +36,23 @@ The list and count endpoints are for the two moments a webhook cannot cover. Use
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=assignedAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Count by filter, without fetching rows
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter filters on the entity's indexed columns. Everything is tenant-scoped to your facility. If a list call is slow, narrow the filter (a status, a `statusChangedAt` or `assignedAt` window) rather than retrying it unchanged. An unfiltered list over a large queue can time out. Two more things to remember:
+Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter acts as a field filter. Everything is tenant-scoped to your facility.
 
-- **Reads come from a read replica**, so your own just-written change can lag a moment in list results.
+The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. The count endpoint runs the same query as the list, so the two always agree. Behavior to know:
+
+- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, problem type name, and reference numbers such as the work order number, PO number, and asset serial number. Wrap the value in double quotes to require the exact phrase.
+- **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
+- **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
+- **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on a `statusChangedAt` window or other indexed columns instead.
+- **Freshness.** Search index and replica updates lag writes by a moment, so your own just-written change, or a work order assigned seconds ago, can be briefly absent from list results and counts.
+- **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
 - **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
 
 ## Accept or decline

@@ -81,7 +81,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`. Cualquier otro parámetro de consulta se trata como un filtro de campo contra las columnas indexadas de la entidad; separa un valor por coma para coincidir con cualquiera de varios (`status=Unassigned,PendingApproval`). Los filtros siempre se combinan con el alcance por inquilino derivado de tu clave, así que solo verás las órdenes de trabajo de tu empresa. Las lecturas se sirven desde una réplica de lectura, así que una orden de trabajo creada hace milisegundos puede tardar un momento en aparecer en los resultados de listado.
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`. Cualquier otro parámetro de consulta se trata como un filtro de campo; separa un valor por coma para coincidir con cualquiera de varios (`status=Unassigned,PendingApproval`). Los filtros siempre se combinan con el alcance por inquilino derivado de tu clave, así que solo verás las órdenes de trabajo de tu empresa.
+
+El listado y el conteo resuelven qué órdenes de trabajo coinciden en el índice de búsqueda de OpenWrench y luego cargan los registros completos desde la base de datos. Eso cambia algunos comportamientos:
+
+- **Búsqueda de texto completo.** `search=` coincide con palabras (con coincidencia por prefijo y por raíz) en el título, la descripción, el nombre de la ubicación, las notas, las notas de check-in y check-out de las llamadas de servicio, el nombre del tipo de problema y los números de referencia como el número de orden de trabajo, el número de PO y el número de serie del activo. Pon el valor entre comillas (`search="walk-in cooler"`) para exigir la frase exacta.
+- **Los filtros de activo incluyen los subactivos.** `assetId=` y `assetIds=` coinciden con órdenes de trabajo cuyo activo principal *o* cualquiera de sus subactivos es el id dado.
+- **Ordenamiento.** `sort_by` admite `createdAt`, `locationName`, `woPriority` (por el tiempo de resolución esperado de la prioridad) y `lastServiceCallServiceScheduledAt`. Cualquier otro valor, o la ausencia de `sort_by`, ordena por `createdAt` descendente.
+- **Los filtros no indexados se ignoran.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` y `walkthroughId` no están en el índice de búsqueda y ya no estrechan los resultados. Filtra en su lugar por ventanas de `statusChangedAt` u otras columnas indexadas.
+- **Frescura.** Las actualizaciones del índice de búsqueda y de la réplica van un momento por detrás de las escrituras, así que una orden de trabajo creada hace milisegundos puede estar brevemente ausente de los resultados de listado y de los conteos.
+- **Profundidad de paginación.** `offset + limit` no puede exceder la ventana de resultados de búsqueda de 10.000. Estrecha el filtro en lugar de paginar tan profundo.
+
+El endpoint de conteo ejecuta la misma consulta del índice de búsqueda que el listado, así que un conteo siempre concuerda con el listado que describe.
 
 Obtén una orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.
 

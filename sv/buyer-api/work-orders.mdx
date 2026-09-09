@@ -81,7 +81,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`. Varje annan frågeparameter behandlas som ett fältfilter mot entitetens indexerade kolumner; kommaseparera ett värde för att matcha något av flera (`status=Unassigned,PendingApproval`). Filter kombineras alltid med tenant-avgränsningen som härleds från din nyckel, så du ser bara ditt företags arbetsordrar. Läsningar serveras från en läs-replika, så en arbetsorder som skapades för millisekunder sedan kan dröja innan den dyker upp i listresultat.
+List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`. Varje annan frågeparameter behandlas som ett fältfilter; kommaseparera ett värde för att matcha något av flera (`status=Unassigned,PendingApproval`). Filter kombineras alltid med tenant-avgränsningen som härleds från din nyckel, så du ser bara ditt företags arbetsordrar.
+
+Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Det ändrar några beteenden:
+
+- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar, problemtypens namn och referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom citattecken (`search="walk-in cooler"`) för att kräva den exakta frasen.
+- **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
+- **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
+- **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på `statusChangedAt`-fönster eller andra indexerade kolumner.
+- **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick, så en arbetsorder som skapades för millisekunder sedan kan tillfälligt saknas i listresultat och räkningar.
+- **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
+
+Räkningsslutpunkten kör samma sökindexfråga som listan, så en räkning stämmer alltid överens med listan den beskriver.
 
 Hämta en enskild arbetsorder med `GET /v1/buyer/work_order/work_orders/{id}`.
 

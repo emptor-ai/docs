@@ -81,7 +81,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `order`. Every other query parameter is treated as a field filter against the entity's indexed columns; comma-separate a value to match any of several (`status=Unassigned,PendingApproval`). Filters always combine with the tenant scoping derived from your key, so you only ever see your company's work orders. Reads are served from a read replica, so a work order created milliseconds ago may take a moment to appear in list results.
+List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `order`. Every other query parameter is treated as a field filter; comma-separate a value to match any of several (`status=Unassigned,PendingApproval`). Filters always combine with the tenant scoping derived from your key, so you only ever see your company's work orders.
+
+The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. That changes a few behaviors:
+
+- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, problem type name, and reference numbers such as the work order number, PO number, and asset serial number. Quote the value (`search="walk-in cooler"`) to require the exact phrase.
+- **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
+- **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
+- **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on `statusChangedAt` windows or other indexed columns instead.
+- **Freshness.** Search index and replica updates lag writes by a moment, so a work order created milliseconds ago may be briefly absent from list results and counts.
+- **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
+
+The count endpoint runs the same search-index query as the list, so a count always agrees with the list it describes.
 
 Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
 
