@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Läsa din kö
 
 <Warning>
-  **Bygg inte din integration på list-slutpunkten.** `GET /v1/supplier/work_order/work_orders` är den dyraste läsningen i Supplier API, och att polla den för att upptäcka nya eller ändrade arbetsordrar är fel mönster: den är långsam på stora köer, den förbrukar din [hastighetsgräns](/sv/supplier-api/introduction#hastighetsgränser) och den missar ändå ändringar mellan pollningarna. Använd [webhooks](/sv/supplier-api/webhooks) för att få veta att en arbetsorder tilldelades dig, bytte status eller fick en anteckning, och hämta sedan just den arbetsordern via id. Reservera listan för en engångsvis initial laddning och tillfällig avstämning, med ett smalt filter och en liten sida.
+  **Bygg inte din integration på list-slutpunkten.** `GET /v1/supplier/work_order/work_orders` är den dyraste läsningen i Supplier API, och att polla den för att upptäcka nya eller ändrade arbetsordrar är fel mönster. Den är långsam på stora köer, den förbrukar din [hastighetsgräns](/sv/supplier-api/introduction#hastighetsgränser) och den missar ändå ändringar mellan pollningarna. Använd [webhooks](/sv/supplier-api/webhooks) för att få veta att en arbetsorder tilldelades dig, bytte status eller fick en anteckning, och hämta sedan just den arbetsordern via id. Reservera listan för en engångsvis initial laddning och tillfällig avstämning, med ett smalt filter och en liten sida.
 </Warning>
 
 Mönstret som skalar är push, sedan hämtning via id:
@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-List- och räkningsslutpunkterna är till för de två tillfällen en webhook inte kan täcka, den första laddningen av arbete som redan fanns innan din slutpunkt registrerades och en periodisk kontroll av att inget har missats:
+List- och räkningsslutpunkterna är till för de två tillfällen en webhook inte kan täcka. Använd dem för den första laddningen av arbete som redan fanns innan din slutpunkt registrerades. Använd dem också för en periodisk kontroll av att inget har missats:
 
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
@@ -43,7 +43,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter filtrerar på entitetens indexerade kolumner. Allt är tenant-avgränsat till din anläggning. Om ett listanrop är långsamt, smalna av filtret (en status, ett `statusChangedAt`- eller `assignedAt`-fönster) istället för att försöka igen oförändrat; en ofiltrerad lista över en stor kö kan få timeout. Två saker till att komma ihåg:
+Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter filtrerar på entitetens indexerade kolumner. Allt är tenant-avgränsat till din anläggning. Om ett listanrop är långsamt, smalna av filtret (en status, ett `statusChangedAt`- eller `assignedAt`-fönster) istället för att försöka igen oförändrat. En ofiltrerad lista över en stor kö kan få timeout. Två saker till att komma ihåg:
 
 - **Läsningar kommer från en läs-replika**, så en ändring du just skrivit kan släpa efter ett ögonblick i listresultat.
 - **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/sv/supplier-api/reference-data#datamaskering) för detaljer.

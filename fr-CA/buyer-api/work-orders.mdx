@@ -86,7 +86,7 @@ Les endpoints de liste prennent `offset`, `limit` (par défaut 10, maximum 25), 
 Récupérez un bon de travail avec `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Utilisez la liste pour interroger, pas pour surveiller les changements.** Si votre intégration doit savoir quand des bons de travail sont créés, changent de statut ou reçoivent une nouvelle note, enregistrez un [webhook](/fr-CA/buyer-api/webhooks) et récupérez par id le bon de travail nommé dans chaque événement. Sonder l'endpoint de liste selon un horaire est lent sur les gros comptes, dépense votre limite de débit et manque quand même les changements entre les sondages. Réservez les appels de liste aux requêtes ponctuelles, au chargement initial unique et à une réconciliation occasionnelle étroitement filtrée (fenêtre `statusChangedAt`, petit `limit`).
+  **Utilisez la liste pour interroger, pas pour surveiller les changements.** Si votre intégration doit savoir quand des bons de travail sont créés, changent de statut ou reçoivent une nouvelle note, enregistrez un [webhook](/fr-CA/buyer-api/webhooks). Récupérez par id le bon de travail nommé dans chaque événement. Sonder l'endpoint de liste selon un horaire est lent sur les gros comptes, dépense votre limite de débit et manque quand même les changements entre les sondages. Réservez les appels de liste aux requêtes ponctuelles, au chargement initial unique et à une réconciliation occasionnelle étroitement filtrée (fenêtre `statusChangedAt`, petit `limit`).
 </Warning>
 
 ## Réaffecter un fournisseur
