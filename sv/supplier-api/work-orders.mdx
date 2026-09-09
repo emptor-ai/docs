@@ -104,6 +104,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Lägg till i den delade köpar–leverantör-tråden med `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), och läs en arbetsorders tråd med `GET /v1/supplier/work_order/work_order_notes/{woId}`. Läsning uppdaterar läskvitton för din kontakt, och en nekad läsning returnerar en tom lista istället för ett fel.
 
+För att @omnämna personer i anteckningen, lägg till `taggedUsers` bredvid `note`: en lista med kontakters e-postadresser. OpenWrench viker in varje e-postadress i `note.elements` som ett `user`-element, samma form som apparna skriver för ett @omnämnande, så du behöver inte bygga `elements`-strukturen själv. Taggade kontakter läggs till i arbetsorderns prenumerantlista om de inte redan prenumererar.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Regler för `taggedUsers`:
+
+- E-postadresser trimmas och görs om till gemener innan matchning. En anteckning kan omnämna högst 25 användare.
+- Dubbletter i listan, och användare som redan är taggade i `note.elements`, hoppas över istället för att omnämnas två gånger.
+- En post som inte är en giltig e-postadress, eller en lista med fler än 25 e-postadresser, avvisas med `400` av typen `invalidInputDataException`. Ingenting sparas.
+- En tom lista ignoreras. Att skicka `taggedUsers` utan ett `note`-objekt avvisas med `400`.
+
 För att publicera en uppsättning foton (en teknikers före/efter-bilder, till exempel), använd `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` med `{ "id": ..., "notes": [ ... ] }`. Varje anteckning måste bära en `photo`-URL och inget annat innehåll: `text` måste vara tomt och `video`, `audio`, `otherFile` och `elements` måste utelämnas. En begäran tar 1–25 anteckningar, dubblerade foto-URL:er avvisas med `400`, och batchen behåller sin ordning under ett enda serversatt `noteAddedAt`. Prenumeranter får en enda grupperad avisering istället för en avisering per foto.
 
 ```bash

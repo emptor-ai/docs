@@ -195,6 +195,30 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Tag people on a note** by adding `taggedUsers` beside the `note`: a list of contact email addresses to @mention. OpenWrench folds each email into `note.elements` as a `user` element, the same shape the apps write for an @mention, so you don't need to build the `elements` structure yourself. Tagged contacts are added to the work order's subscriber list if they aren't subscribed already.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    },
+    "taggedUsers": ["tech@supplier.com", "manager@example.com"]
+  }'
+```
+
+Rules for `taggedUsers`:
+
+- Emails are trimmed and lowercased before matching. A note can mention at most 25 users.
+- Duplicate emails in the list, and users already tagged in `note.elements`, are skipped rather than mentioned twice.
+- An entry that is not a valid email address, or a list of more than 25 emails, is rejected with a `400` of type `invalidInputDataException`. Nothing is persisted.
+- An empty list is ignored. Sending `taggedUsers` without a `note` object is rejected with `400`.
+
 **Bulk-append photos** with `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Use it when you have a batch of photos to post (a technician's before/after set, for example): subscribers receive a single grouped notification instead of one notification per photo. The body is `{ "id": <woId>, "notes": [ ... ] }` with 1–25 notes, and each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. Repeating the same photo URL within a request is rejected with `400`. The server stamps every note in the batch with the same `noteAddedAt` and preserves the order you sent them in.
 
 ```bash

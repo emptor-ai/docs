@@ -195,6 +195,30 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Étiqueter des personnes sur une note** en ajoutant `taggedUsers` à côté de `note` : une liste de courriels de contacts à @mentionner. OpenWrench intègre chaque courriel dans `note.elements` comme un élément `user`, la même forme que les applications écrivent pour une @mention, vous n'avez donc pas à construire la structure `elements` vous-même. Les contacts étiquetés sont ajoutés à la liste des abonnés du bon de travail s'ils ne sont pas déjà abonnés.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    },
+    "taggedUsers": ["tech@supplier.com", "manager@example.com"]
+  }'
+```
+
+Règles de `taggedUsers` :
+
+- Les courriels sont épurés et mis en minuscules avant la correspondance. Une note peut mentionner au plus 25 utilisateurs.
+- Les courriels en double dans la liste, et les utilisateurs déjà étiquetés dans `note.elements`, sont ignorés plutôt que mentionnés deux fois.
+- Une entrée qui n'est pas un courriel valide, ou une liste de plus de 25 courriels, est rejetée avec un `400` de type `invalidInputDataException`. Rien n'est persisté.
+- Une liste vide est ignorée. Envoyer `taggedUsers` sans objet `note` est rejeté avec `400`.
+
 **Ajouter des photos en lot** avec `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Utilisez-le lorsque vous avez un lot de photos à publier (le jeu avant/après d'un technicien, par exemple) : les abonnés reçoivent une seule notification groupée au lieu d'une notification par photo. Le corps est `{ "id": <woId>, "notes": [ ... ] }` avec 1 à 25 notes, et chaque note doit porter une URL `photo` et aucun autre contenu : `text` doit être vide et `video`, `audio`, `otherFile` et `elements` doivent être absents. Répéter la même URL de photo dans une requête est rejeté avec `400`. Le serveur horodate chaque note du lot avec le même `noteAddedAt` et préserve l'ordre d'envoi.
 
 ```bash
