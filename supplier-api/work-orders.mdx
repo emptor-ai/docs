@@ -47,11 +47,11 @@ Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `or
 
 The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. The count endpoint runs the same query as the list, so the two always agree. Behavior to know:
 
-- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, problem type name, and reference numbers such as the work order number, PO number, and asset serial number. Wrap the value in double quotes to require the exact phrase.
+- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Wrap the value in double quotes to require the exact phrase.
 - **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
 - **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
 - **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on a `statusChangedAt` window or other indexed columns instead.
-- **Freshness.** Search index and replica updates lag writes by a moment, so your own just-written change, or a work order assigned seconds ago, can be briefly absent from list results and counts.
+- **Freshness.** Search index and replica updates lag writes by a moment. Your own just-written change, or a work order assigned seconds ago, can be briefly absent from list results and counts.
 - **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
 - **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
 

@@ -85,7 +85,7 @@ List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `orde
 
 The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. That changes a few behaviors:
 
-- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, problem type name, and reference numbers such as the work order number, PO number, and asset serial number. Quote the value (`search="walk-in cooler"`) to require the exact phrase.
+- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Quote the value (`search="walk-in cooler"`) to require the exact phrase.
 - **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
 - **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
 - **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on `statusChangedAt` windows or other indexed columns instead.

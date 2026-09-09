@@ -47,11 +47,11 @@ Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `or
 
 Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Räkningsslutpunkten kör samma fråga som listan, så de två stämmer alltid överens. Beteende att känna till:
 
-- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar, problemtypens namn och referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom dubbla citattecken för att kräva den exakta frasen.
+- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar, problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom dubbla citattecken för att kräva den exakta frasen.
 - **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
 - **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
 - **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på ett `statusChangedAt`-fönster eller andra indexerade kolumner.
-- **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick, så en ändring du just skrivit, eller en arbetsorder som tilldelades för några sekunder sedan, kan tillfälligt saknas i listresultat och räkningar.
+- **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick. En ändring du just skrivit, eller en arbetsorder som tilldelades för några sekunder sedan, kan tillfälligt saknas i listresultat och räkningar.
 - **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
 - **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/sv/supplier-api/reference-data#datamaskering) för detaljer.
 

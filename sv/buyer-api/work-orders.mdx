@@ -85,7 +85,7 @@ List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `ord
 
 Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Det ändrar några beteenden:
 
-- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar, problemtypens namn och referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom citattecken (`search="walk-in cooler"`) för att kräva den exakta frasen.
+- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar, problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom citattecken (`search="walk-in cooler"`) för att kräva den exakta frasen.
 - **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
 - **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
 - **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på `statusChangedAt`-fönster eller andra indexerade kolumner.
