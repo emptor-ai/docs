@@ -85,6 +85,10 @@ List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `orde
 
 Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
 
+<Warning>
+  **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks) and fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (`statusChangedAt` window, small `limit`).
+</Warning>
+
 ## Reassign a supplier
 
 `PATCH /v1/buyer/work_order/work_orders/{id}` is deliberately narrow: **only `supplierFacilityId` and `supplierPrimaryContactEmail` are read from the body**. Every other field you send is silently ignored rather than rejected.
@@ -249,6 +253,6 @@ A typical dispatch integration:
 
 1. Cache `me`, problem types, and locations at startup.
 2. Create the work order with `supplierFacilityId` set (or create unassigned, then rank suppliers and `PATCH` the assignment).
-3. Track supplier progress through [webhooks](/buyer-api/webhooks) (`workorder.status_update`), with `GET /work_orders?statusChangedAt=...` as a polling fallback.
+3. Track supplier progress through [webhooks](/buyer-api/webhooks) (`workorder.status_update`), fetching each work order by id when an event arrives. Keep `GET /work_orders?statusChangedAt=...` as an infrequent reconciliation pass, not the primary signal.
 4. When the supplier reaches `WaitingForReview`, verify the work (see [Service calls](/buyer-api/service-calls) for visit evidence) and post `work_reviewed_and_completed`, or `work_unsatisfactory` with a note.
 5. Reconcile the money side through [Quotes and proposals](/buyer-api/quotes-and-proposals) and [Invoices](/buyer-api/invoices).
