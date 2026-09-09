@@ -111,6 +111,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Ajoutez au fil partagé acheteur-fournisseur avec `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), et lisez le fil d'un bon de travail avec `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lecture met à jour les accusés de lecture pour votre contact, et une lecture refusée retourne une liste vide plutôt qu'une erreur.
 
+Pour @mentionner des personnes sur la note, ajoutez `taggedUsers` à côté de `note` : une liste de courriels de contacts. OpenWrench intègre chaque courriel dans `note.elements` comme un élément `user`, la même forme que les applications écrivent pour une @mention, vous n'avez donc pas à construire la structure `elements` vous-même. Les contacts étiquetés sont ajoutés à la liste des abonnés du bon de travail s'ils ne sont pas déjà abonnés.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Règles de `taggedUsers` :
+
+- Les courriels sont épurés et mis en minuscules avant la correspondance. Une note peut mentionner au plus 25 utilisateurs.
+- Les courriels en double dans la liste, et les utilisateurs déjà étiquetés dans `note.elements`, sont ignorés plutôt que mentionnés deux fois.
+- Une entrée qui n'est pas un courriel valide, ou une liste de plus de 25 courriels, est rejetée avec un `400` de type `invalidInputDataException`. Rien n'est persisté.
+- Une liste vide est ignorée. Envoyer `taggedUsers` sans objet `note` est rejeté avec `400`.
+
 Pour publier un lot de photos (le jeu avant/après d'un technicien, par exemple), utilisez `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` avec `{ "id": ..., "notes": [ ... ] }`. Chaque note doit porter une URL `photo` et aucun autre contenu : `text` doit être vide et `video`, `audio`, `otherFile` et `elements` doivent être absents. Une requête accepte 1 à 25 notes, les URL de photo en double sont rejetées avec `400`, et le lot conserve son ordre sous un seul `noteAddedAt` défini par le serveur. Les abonnés reçoivent une seule notification groupée au lieu d'une notification par photo.
 
 ```bash

@@ -3585,7 +3585,16 @@
                         "type": "null"
                       }
                     ],
-                    "description": "The note to append (text and noteAddedBy required; noteAddedAt is replaced server-side). Technically optional — omitting it makes the call a no-op save."
+                    "description": "The note to append (text and noteAddedBy required; noteAddedAt is replaced server-side). Technically optional \u2014 omitting it makes the call a no-op save."
+                  },
+                  "taggedUsers": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "maxItems": 25,
+                    "description": "Contact email addresses to @mention on the note. Each email is trimmed, lowercased and validated, then folded into note.elements as a user element, so you do not need to build the elements structure yourself. Duplicates in the list and users already tagged in note.elements are skipped. Requires a note object to tag people on. An entry that is not a valid email address, or a list of more than 25 emails, is rejected with 400 invalidInputDataException and nothing is persisted. An empty list is ignored."
                   }
                 },
                 "required": [

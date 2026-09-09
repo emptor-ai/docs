@@ -206,6 +206,30 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
+**Tagga personer i en anteckning** genom att lägga till `taggedUsers` bredvid `note`: en lista med kontakters e-postadresser att @omnämna. OpenWrench viker in varje e-postadress i `note.elements` som ett `user`-element, samma form som apparna skriver för ett @omnämnande, så du behöver inte bygga `elements`-strukturen själv. Taggade kontakter läggs till i arbetsorderns prenumerantlista om de inte redan prenumererar.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    },
+    "taggedUsers": ["tech@supplier.com", "manager@example.com"]
+  }'
+```
+
+Regler för `taggedUsers`:
+
+- E-postadresser trimmas och görs om till gemener innan matchning. En anteckning kan omnämna högst 25 användare.
+- Dubbletter i listan, och användare som redan är taggade i `note.elements`, hoppas över istället för att omnämnas två gånger.
+- En post som inte är en giltig e-postadress, eller en lista med fler än 25 e-postadresser, avvisas med `400` av typen `invalidInputDataException`. Ingenting sparas.
+- En tom lista ignoreras. Att skicka `taggedUsers` utan ett `note`-objekt avvisas med `400`.
+
 **Lägg till foton i bulk** med `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Använd den när du har en uppsättning foton att publicera (en teknikers före/efter-bilder, till exempel): prenumeranter får en enda grupperad avisering istället för en avisering per foto. Kroppen är `{ "id": <woId>, "notes": [ ... ] }` med 1–25 anteckningar, och varje anteckning måste bära en `photo`-URL och inget annat innehåll: `text` måste vara tomt och `video`, `audio`, `otherFile` och `elements` måste utelämnas. Att upprepa samma foto-URL i en begäran avvisas med `400`. Servern stämplar varje anteckning i batchen med samma `noteAddedAt` och bevarar ordningen du skickade dem i.
 
 ```bash
