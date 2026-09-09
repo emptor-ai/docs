@@ -36,6 +36,16 @@ La section **API Équipes internes** plus bas dans cet onglet utilise une **clé
 
 10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests` : attendez au moins 20 secondes avant de réessayer, et espacez les tâches en arrière-plan (par exemple les exports paginés complets) pour qu'elles demeurent sous la limite.
 
+## Garder les bons de travail synchronisés
+
+Si votre intégration réplique les bons de travail dans un autre système (un outil de billetterie, un ERP, un entrepôt de données), bâtissez-la sur la poussée, pas sur le sondage :
+
+1. Enregistrez un endpoint [webhook](/fr-CA/buyer-api/webhooks). OpenWrench envoie les événements `workorder.create`, `workorder.status_update` et `workorder.new_note` à mesure qu'ils se produisent.
+2. À chaque événement, récupérez ce seul bon de travail avec `GET /v1/buyer/work_order/work_orders/{id}`.
+3. Utilisez `GET /v1/buyer/work_order/work_orders` pour les requêtes ponctuelles, le chargement initial unique et la réconciliation occasionnelle, avec un filtre étroit et une petite page.
+
+Ne sondez pas l'endpoint de liste selon un horaire pour trouver les bons de travail nouveaux ou modifiés. C'est la lecture la plus coûteuse de l'API, elle est lente sur les gros comptes et elle rivalise avec votre vrai travail pour la limite de débit. Voir [Bons de travail](/fr-CA/buyer-api/work-orders#lister-filtrer-et-compter) pour les détails.
+
 ## Enveloppe de réponse
 
 Réponses à entité unique :

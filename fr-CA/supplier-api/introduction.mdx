@@ -32,6 +32,16 @@ Les clés n'expirent pas d'elles-mêmes. Pour en effectuer la rotation, demandez
 
 10 requêtes par fenêtre de 20 secondes par clé. Au-delà, vous recevrez `429 Too Many Requests` : attendez au moins 20 secondes avant de réessayer, et espacez les tâches en arrière-plan (par exemple les exports paginés complets) pour qu'elles demeurent sous la limite.
 
+## Garder les bons de travail synchronisés
+
+La plupart des intégrations fournisseur existent pour répliquer la file de bons de travail OpenWrench dans un autre système. Bâtissez cela sur la poussée, pas sur le sondage :
+
+1. Enregistrez un endpoint [webhook](/fr-CA/supplier-api/webhooks). OpenWrench envoie les événements `workorder.create`, `workorder.status_update` et `workorder.new_note` à mesure qu'ils se produisent.
+2. À chaque événement, récupérez ce seul bon de travail avec `GET /v1/supplier/work_order/work_orders/{id}`.
+3. Utilisez `GET /v1/supplier/work_order/work_orders` uniquement pour le chargement initial unique et la réconciliation occasionnelle, avec un filtre étroit et une petite page.
+
+Ne sondez pas l'endpoint de liste selon un horaire pour trouver les travaux nouveaux ou modifiés. C'est la lecture la plus coûteuse de l'API, elle est lente sur les grandes files et elle rivalise avec votre vrai travail pour la limite de débit. Voir [Bons de travail](/fr-CA/supplier-api/work-orders#lire-votre-file) pour les détails.
+
 ## Enveloppe de réponse
 
 Réponses à entité unique :

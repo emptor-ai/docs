@@ -32,6 +32,16 @@ Nycklar löper inte ut av sig själva. För att rotera en, begär ett nytt par n
 
 10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`: vänta minst 20 sekunder innan du försöker igen, och sprid ut bakgrundsjobb (till exempel fullständiga sidindelade exporter) så att de håller sig under gränsen.
 
+## Hålla arbetsordrar synkroniserade
+
+De flesta leverantörsintegrationer finns till för att spegla OpenWrench-arbetsorderkön till ett annat system. Bygg det på push, inte polling:
+
+1. Registrera en [webhook](/sv/supplier-api/webhooks)-slutpunkt. OpenWrench skickar händelserna `workorder.create`, `workorder.status_update` och `workorder.new_note` när de inträffar.
+2. Vid varje händelse, hämta just den arbetsordern med `GET /v1/supplier/work_order/work_orders/{id}`.
+3. Använd `GET /v1/supplier/work_order/work_orders` endast för den engångsvisa initiala laddningen och för tillfällig avstämning, med ett smalt filter och en liten sida.
+
+Polla inte list-slutpunkten enligt schema för att hitta nytt eller ändrat arbete. Den är den dyraste läsningen i API:et, den är långsam på stora köer och den konkurrerar med ditt riktiga arbete om hastighetsgränsen. Se [Arbetsordrar](/sv/supplier-api/work-orders#läsa-din-kö) för detaljerna.
+
 ## Svarshöljet
 
 Svar för enskilda entiteter:
