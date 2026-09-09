@@ -104,6 +104,29 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_att
 
 Append to the shared buyer–supplier thread with `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), and read a work order's thread with `GET /v1/supplier/work_order/work_order_notes/{woId}`. Reading updates read receipts for your contact, and a denied read returns an empty list rather than an error.
 
+To @mention people on the note, add `taggedUsers` beside the `note`: a list of contact email addresses. OpenWrench folds each email into `note.elements` as a `user` element, the same shape the apps write for an @mention, so you don't need to build the `elements` structure yourself. Tagged contacts are added to the work order's subscriber list if they aren't subscribed already.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Rules for `taggedUsers`:
+
+- Emails are trimmed and lowercased before matching. A note can mention at most 25 users.
+- Duplicate emails in the list, and users already tagged in `note.elements`, are skipped rather than mentioned twice.
+- An entry that is not a valid email address, or a list of more than 25 emails, is rejected with a `400` of type `invalidInputDataException`. Nothing is persisted.
+- An empty list is ignored. Sending `taggedUsers` without a `note` object is rejected with `400`.
+
 To post a batch of photos (a technician's before/after set, for example), use `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` with `{ "id": ..., "notes": [ ... ] }`. Each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. A request takes 1–25 notes, duplicate photo URLs are rejected with `400`, and the batch keeps its order under one server-set `noteAddedAt`. Subscribers receive a single grouped notification instead of one notification per photo.
 
 ```bash
