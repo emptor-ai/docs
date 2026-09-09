@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # en-tête OW-KEY
 ```bash
 # Travaux nouvellement assignés, les plus anciens en premier
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=assignedAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?limit=25&sort_by=createdAt&order=asc"
 
 # Nombre par filtre
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -28,9 +28,16 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête filtre sur les colonnes indexées de l'entité. Tout est limité au locataire de votre établissement. Deux choses à retenir :
+La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête agit comme un filtre de champ. Tout est limité au locataire de votre établissement.
 
-- **Les lectures viennent d'une réplique en lecture**, votre propre changement récemment écrit peut donc mettre un instant à apparaître dans les résultats de liste.
+La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. L'endpoint de comptage exécute la même requête que la liste, donc les deux concordent toujours. Comportements à connaître :
+
+- **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes de pointage d'entrée et de sortie des visites de service, le nom du type de problème. Il correspond aussi aux numéros de référence tels que le numéro de bon de travail, le numéro de PO et le numéro de série de l'actif. Mettez la valeur entre guillemets doubles pour exiger la phrase exacte.
+- **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'identifiant donné.
+- **Tri.** `sort_by` accepte `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
+- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur une fenêtre de `statusChangedAt` ou d'autres colonnes indexées.
+- **Fraîcheur.** Les mises à jour de l'index de recherche et de la réplique accusent un léger retard sur les écritures. Votre propre changement récemment écrit, ou un bon de travail assigné il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
+- **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Restreignez le filtre plutôt que de paginer aussi loin.
 - **Masquage des données.** Si vous êtes un fournisseur tiers (et non l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, emplacements et factures avant que la réponse ne soit retournée. Les champs manquants correspondent généralement à du masquage, pas à des bogues. Voir [Données de référence](/supplier-api/reference-data#data-masking) pour plus de détails.
 
 ## Accepter ou refuser
@@ -152,7 +159,7 @@ Valeurs par défaut si omises : `problemTypeId` revient au premier type de probl
 
 ## Boucle d'intégration typique
 
-1. Recevez les nouveaux travaux via les [webhooks](/supplier-api/webhooks) (`workorder.create`), ou interrogez la file d'attente (`sort_by=assignedAt`) et comparez sur `statusChangedAt`.
+1. Recevez les nouveaux travaux via les [webhooks](/supplier-api/webhooks) (`workorder.create`), ou interrogez la file d'attente (`sort_by=createdAt`) et comparez sur `statusChangedAt`.
 2. `confirm` ou `decline` dans les limites de votre SLA.
 3. Planifiez la visite via les [visites de service](/supplier-api/service-calls) ; publiez les statuts des pièces et une ECD au fur et à mesure de l'évolution.
 4. Complétez via le pointage de sortie, puis facturez via [Soumissions et facturation](/supplier-api/quotes-and-invoicing).

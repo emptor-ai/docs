@@ -36,16 +36,23 @@ Los endpoints de listado y conteo son para los dos momentos que un webhook no pu
 ```bash
 # Carga inicial o conciliación: filtra estrecho, pagina pequeño, recorre con offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=assignedAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Conteo por filtro, sin traer filas
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Aplica la paginación estándar (`offset`, `limit` por defecto 10, máx. 25, `sort_by`, `order`), y cualquier otro parámetro de consulta filtra sobre las columnas indexadas de la entidad. Todo está limitado por inquilino a tu instalación. Si una llamada de listado es lenta, estrecha el filtro (un estado, una ventana de `statusChangedAt` o `assignedAt`) en lugar de reintentarla sin cambios. Un listado sin filtrar sobre una cola grande puede agotar el tiempo de espera. Dos cosas más a recordar:
+Aplica la paginación estándar (`offset`, `limit` por defecto 10, máx. 25, `sort_by`, `order`), y cualquier otro parámetro de consulta actúa como un filtro de campo. Todo está limitado por inquilino a tu instalación.
 
-- **Las lecturas vienen de una réplica de lectura**, así que tu propio cambio recién escrito puede tardar un momento en aparecer en los resultados de listado.
+El listado y el conteo resuelven qué órdenes de trabajo coinciden en el índice de búsqueda de OpenWrench y luego cargan los registros completos desde la base de datos. El endpoint de conteo ejecuta la misma consulta que el listado, así que los dos siempre concuerdan. Comportamiento a conocer:
+
+- **Búsqueda de texto completo.** `search=` coincide con palabras (con coincidencia por prefijo y por raíz) en el título, la descripción, el nombre de la ubicación, las notas, las notas de check-in y check-out de las llamadas de servicio, el nombre del tipo de problema. También coincide con números de referencia como el número de orden de trabajo, el número de PO y el número de serie del activo. Envuelve el valor en comillas dobles para exigir la frase exacta.
+- **Los filtros de activo incluyen los subactivos.** `assetId=` y `assetIds=` coinciden con órdenes de trabajo cuyo activo principal *o* cualquiera de sus subactivos es el id dado.
+- **Ordenamiento.** `sort_by` admite `createdAt`, `locationName`, `woPriority` (por el tiempo de resolución esperado de la prioridad) y `lastServiceCallServiceScheduledAt`. Cualquier otro valor, o la ausencia de `sort_by`, ordena por `createdAt` descendente.
+- **Los filtros no indexados se ignoran.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` y `walkthroughId` no están en el índice de búsqueda y ya no estrechan los resultados. Filtra en su lugar por una ventana de `statusChangedAt` u otras columnas indexadas.
+- **Frescura.** Las actualizaciones del índice de búsqueda y de la réplica van un momento por detrás de las escrituras. Tu propio cambio recién escrito, o una orden de trabajo asignada hace segundos, puede estar brevemente ausente de los resultados de listado y de los conteos.
+- **Profundidad de paginación.** `offset + limit` no puede exceder la ventana de resultados de búsqueda de 10.000. Estrecha el filtro en lugar de paginar tan profundo.
 - **Enmascaramiento de datos.** Si eres un proveedor tercero (no el equipo interno del comprador), los campos privados del comprador se ponen en blanco en órdenes de trabajo, ubicaciones y facturas antes de devolver la respuesta. Los campos faltantes son usualmente enmascaramiento, no bugs. Consulta [Datos de referencia](/es/supplier-api/reference-data#enmascaramiento-de-datos) para más detalles.
 
 ## Aceptar o rechazar

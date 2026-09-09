@@ -1534,7 +1534,7 @@
       "get": {
         "operationId": "listWorkOrders",
         "summary": "List work orders",
-        "description": "Lists work orders visible to the supplier key (served from a read replica). For third-party suppliers each work order is masked (buyer-private fields blanked); internal-service-team keys receive full records. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists work orders visible to the supplier key. The page and total are resolved in the search index, then the matching records are loaded from the read replica; a just-created or just-assigned work order can be briefly absent while the index and replica catch up. For third-party suppliers each work order is masked (buyer-private fields blanked); internal-service-team keys receive full records. Every query parameter other than the pagination parameters is matched against the work order's indexed search-document fields (multi-value filters are comma-separated strings). `assetId`/`assetIds` also match sub-assets. Filters not present in the search document (`updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`) are ignored. `offset + limit` cannot exceed the 10,000-result search window. Tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
         "tags": [
           "Work Orders"
         ],
@@ -1607,7 +1607,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Column name to sort by."
+            "description": "Sort field. Supported: `createdAt`, `locationName` (alphabetical), `woPriority` (by the priority's expected resolution time), `lastServiceCallServiceScheduledAt`. Any other value falls back to `createdAt` descending."
           },
           {
             "name": "order",
@@ -1621,6 +1621,15 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
           }
         ]
       }
@@ -1629,7 +1638,7 @@
       "get": {
         "operationId": "countWorkOrders",
         "summary": "Count work orders",
-        "description": "Counts work orders visible to the supplier key (read replica). Accepts the same query-string filters as the list endpoint. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Counts work orders visible to the supplier key. Accepts the same query-string filters as the list endpoint and runs the same search-index query, so the count always agrees with the list results, including the ignored unindexed filters and the brief lag before a just-created work order is counted. Tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
         "tags": [
           "Work Orders"
         ],
@@ -1674,7 +1683,18 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
+          }
+        ]
       }
     },
     "/v1/supplier/work_order/work_orders/{id}": {

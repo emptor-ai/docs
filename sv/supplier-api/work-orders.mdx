@@ -36,16 +36,23 @@ List- och räkningsslutpunkterna är till för de två tillfällen en webhook in
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=assignedAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Count by filter, without fetching rows
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter filtrerar på entitetens indexerade kolumner. Allt är tenant-avgränsat till din anläggning. Om ett listanrop är långsamt, smalna av filtret (en status, ett `statusChangedAt`- eller `assignedAt`-fönster) istället för att försöka igen oförändrat. En ofiltrerad lista över en stor kö kan få timeout. Två saker till att komma ihåg:
+Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter fungerar som ett fältfilter. Allt är tenant-avgränsat till din anläggning.
 
-- **Läsningar kommer från en läs-replika**, så en ändring du just skrivit kan släpa efter ett ögonblick i listresultat.
+Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Räkningsslutpunkten kör samma fråga som listan, så de två stämmer alltid överens. Beteende att känna till:
+
+- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar, problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom dubbla citattecken för att kräva den exakta frasen.
+- **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
+- **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
+- **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på ett `statusChangedAt`-fönster eller andra indexerade kolumner.
+- **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick. En ändring du just skrivit, eller en arbetsorder som tilldelades för några sekunder sedan, kan tillfälligt saknas i listresultat och räkningar.
+- **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
 - **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/sv/supplier-api/reference-data#datamaskering) för detaljer.
 
 ## Acceptera eller avvisa

@@ -3,7 +3,7 @@
   "info": {
     "title": "OpenWrench Buyer API",
     "version": "1.0.0",
-    "description": "External REST API for OpenWrench buyers (facilities-management side). Generated from the application source (Play routes, controllers and models).\n\n## Authentication\nEvery request must carry a buyer API key in the `X-API-KEY` header. The key resolves to a buyer contact, and all reads/writes are tenant-scoped to that contact's buyer company (plus, on several endpoints, role-based location/brand restrictions). Endpoints under `/v1/buyer/super_admin/...` (and a few others noted per-operation) additionally require the key's contact to be a buyer super admin.\n\n## Rate limiting\n10 requests per 20-second window per API key; requests beyond that receive **429**. A handful of operations noted per-operation bypass the rate limiter.\n\n## Response envelope\nSingle-entity responses: `{ \"type\": \"<EntityName>\", \"data\": { ... }, \"status\": \"ok\" }`.\nList responses: `{ \"type\": \"<EntityName>\", \"data\": [ ... ], \"count\": <total>, \"status\": \"ok\" }`.\ncount_by responses: `{ \"type\": \"CountBy\", \"data\": <integer>, \"status\": \"ok\" }`.\nErrors: `{ \"message\": \"...\", \"type\": \"<ExceptionType>\", \"status\": \"error\", \"traceId\": \"...\" }` \u2014 401 missing/invalid key, 400 bad input, 404 not found, 429 rate limit.\n\n## Pagination & filtering\nList endpoints accept `offset`, `limit` (default 10, max 25 \u2014 the locations list clamps to 10), `sort_by` and `order` (asc|desc). Every other query parameter is treated as a filter and matched against the entity's indexed columns (multi-value filters are comma-separated strings); these are combined with the tenant-security filters derived from the API key.\n\nTimestamps are ISO 8601 strings unless noted otherwise.\n\n## Date formats\nDate-time fields serialize as strings in one of two shapes depending on the underlying type: ISO 8601 with offset (e.g. `2026-08-14T13:05:22.000-07:00`) for most timestamps, or `yyyy-MM-dd HH:mm:ss.S` (space-separated, no offset) for database timestamp fields. Plain dates are `yyyy-MM-dd`. When sending date-times, ISO 8601 is accepted.\n\n## Required headers\nEvery request must carry BOTH `X-API-KEY` (your API key) and `OW-KEY` (the OpenWrench shared secret issued with it). Requests missing either return 401."
+    "description": "External REST API for OpenWrench buyers (facilities-management side). Generated from the application source (Play routes, controllers and models).\n\n## Authentication\nEvery request must carry a buyer API key in the `X-API-KEY` header. The key resolves to a buyer contact, and all reads/writes are tenant-scoped to that contact's buyer company (plus, on several endpoints, role-based location/brand restrictions). Endpoints under `/v1/buyer/super_admin/...` (and a few others noted per-operation) additionally require the key's contact to be a buyer super admin.\n\n## Rate limiting\n10 requests per 20-second window per API key; requests beyond that receive **429**. A handful of operations noted per-operation bypass the rate limiter.\n\n## Response envelope\nSingle-entity responses: `{ \"type\": \"<EntityName>\", \"data\": { ... }, \"status\": \"ok\" }`.\nList responses: `{ \"type\": \"<EntityName>\", \"data\": [ ... ], \"count\": <total>, \"status\": \"ok\" }`.\ncount_by responses: `{ \"type\": \"CountBy\", \"data\": <integer>, \"status\": \"ok\" }`.\nErrors: `{ \"message\": \"...\", \"type\": \"<ExceptionType>\", \"status\": \"error\", \"traceId\": \"...\" }` — 401 missing/invalid key, 400 bad input, 404 not found, 429 rate limit.\n\n## Pagination & filtering\nList endpoints accept `offset`, `limit` (default 10, max 25 — the locations list clamps to 10), `sort_by` and `order` (asc|desc). Every other query parameter is treated as a filter and matched against the entity's indexed columns (multi-value filters are comma-separated strings); these are combined with the tenant-security filters derived from the API key.\n\nTimestamps are ISO 8601 strings unless noted otherwise.\n\n## Date formats\nDate-time fields serialize as strings in one of two shapes depending on the underlying type: ISO 8601 with offset (e.g. `2026-08-14T13:05:22.000-07:00`) for most timestamps, or `yyyy-MM-dd HH:mm:ss.S` (space-separated, no offset) for database timestamp fields. Plain dates are `yyyy-MM-dd`. When sending date-times, ISO 8601 is accepted.\n\n## Required headers\nEvery request must carry BOTH `X-API-KEY` (your API key) and `OW-KEY` (the OpenWrench shared secret issued with it). Requests missing either return 401."
   },
   "servers": [
     {
@@ -1016,7 +1016,7 @@
         "tags": [
           "Asset Meters"
         ],
-        "description": "Creates a meter on an asset. valueType, valueUnit and locationId are not read from the request body \u2014 they are derived server-side from the referenced asset and meter type. readingMode defaults to direct_reading when omitted.",
+        "description": "Creates a meter on an asset. valueType, valueUnit and locationId are not read from the request body — they are derived server-side from the referenced asset and meter type. readingMode defaults to direct_reading when omitted.",
         "requestBody": {
           "required": true,
           "content": {
@@ -2924,7 +2924,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Lists work orders for the caller's buyer company (served from the read replica). Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Lists work orders for the caller's buyer company. The page and total are resolved in the search index, then the matching records are loaded from the read replica; a just-created work order can be briefly absent while the index and replica catch up. Filtering: every query parameter other than the pagination parameters is matched against the work order's indexed search-document fields (multi-value filters are comma-separated strings). `assetId`/`assetIds` also match sub-assets. Filters not present in the search document (`updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`) are ignored. `sort_by` supports `createdAt`, `locationName`, `woPriority`, and `lastServiceCallServiceScheduledAt`; any other value falls back to `createdAt` descending. `offset + limit` cannot exceed the 10,000-result search window. Filters are combined with the tenant-security filters derived from the API key.",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -2937,6 +2937,15 @@
           },
           {
             "$ref": "#/components/parameters/order"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
           }
         ],
         "responses": {
@@ -2990,7 +2999,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Count of work orders matching the given filters (served from the read replica). Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Count of work orders matching the given filters. The count runs the same search-index query as the list endpoint, so it always agrees with the list results, including the ignored unindexed filters (`updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`) and the brief lag before a just-created work order is counted. Filters are combined with the tenant-security filters derived from the API key.",
         "responses": {
           "200": {
             "description": "Success.",
@@ -3032,7 +3041,18 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
+          }
+        ]
       }
     },
     "/v1/buyer/work_order/work_orders/{id}": {
@@ -3112,7 +3132,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Restricted patch: only supplierFacilityId and supplierPrimaryContactEmail are read from the body; all other fields are ignored rather than rejected. The email applies only as part of a reassignment \u2014 without a supplier facility change the patch is a no-op and persists nothing (the current hydrated work order is returned). A nonexistent id and a permission denial return the same 400 unauthorized response.",
+        "description": "Restricted patch: only supplierFacilityId and supplierPrimaryContactEmail are read from the body; all other fields are ignored rather than rejected. The email applies only as part of a reassignment — without a supplier facility change the patch is a no-op and persists nothing (the current hydrated work order is returned). A nonexistent id and a permission denial return the same 400 unauthorized response.",
         "parameters": [
           {
             "name": "id",
@@ -3544,7 +3564,7 @@
         "tags": [
           "Work Order Notes"
         ],
-        "description": "Appends a note to the work order's buyer\u2194supplier thread and sends note notifications. The note's noteAddedAt is overwritten with the current server time, and the note's noteAddedBy email is added to the work order's buyer subscriber list.",
+        "description": "Appends a note to the work order's buyer↔supplier thread and sends note notifications. The note's noteAddedAt is overwritten with the current server time, and the note's noteAddedBy email is added to the work order's buyer subscriber list.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3635,7 +3655,7 @@
         "tags": [
           "Work Order Notes"
         ],
-        "description": "Appends up to 25 photo-only notes to the work order's buyer\u2194supplier thread in one call and sends a single grouped notification instead of one notification per photo. Each note must carry a photo URL and no other content (empty text, no video, audio, otherFile, or elements), and the same photo URL cannot appear twice in one request. Every note's noteAddedBy is set to the calling contact and noteAddedAt is overwritten with the current server time, so the batch keeps the order it was sent in. The author's email is added to the work order's buyer subscriber list.",
+        "description": "Appends up to 25 photo-only notes to the work order's buyer↔supplier thread in one call and sends a single grouped notification instead of one notification per photo. Each note must carry a photo URL and no other content (empty text, no video, audio, otherFile, or elements), and the same photo URL cannot appear twice in one request. Every note's noteAddedBy is set to the calling contact and noteAddedAt is overwritten with the current server time, so the batch keeps the order it was sent in. The author's email is added to the work order's buyer subscriber list.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3716,7 +3736,7 @@
         "tags": [
           "Work Order Notes"
         ],
-        "description": "Buyer read of a work order's root notes (workorder_note_items only \u2014 contractor and internal threads have their own endpoints). Reading also updates read receipts. Org scoping is enforced internally; a denied read returns an empty list rather than an error.",
+        "description": "Buyer read of a work order's root notes (workorder_note_items only — contractor and internal threads have their own endpoints). Reading also updates read receipts. Org scoping is enforced internally; a denied read returns an empty list rather than an error.",
         "parameters": [
           {
             "name": "woId",
@@ -4068,7 +4088,7 @@
         "tags": [
           "Service Calls"
         ],
-        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden.",
+        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team — third-party rates stay hidden.",
         "parameters": [
           {
             "name": "id",
@@ -4140,7 +4160,7 @@
         "tags": [
           "Service Calls"
         ],
-        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden.",
+        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team — third-party rates stay hidden.",
         "parameters": [
           {
             "name": "id",
@@ -4212,7 +4232,7 @@
         "tags": [
           "Service Calls"
         ],
-        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden.",
+        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team — third-party rates stay hidden.",
         "parameters": [
           {
             "name": "id",
@@ -5201,7 +5221,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Applies the given column updates to every invoice matching the given filters, always constrained to the caller's buyer company. Filters and updates are free-form column\u2192value maps consumed by a dynamic SQL update. Not rate limited.",
+        "description": "Applies the given column updates to every invoice matching the given filters, always constrained to the caller's buyer company. Filters and updates are free-form column→value maps consumed by a dynamic SQL update. Not rate limited.",
         "requestBody": {
           "required": true,
           "content": {
@@ -5213,13 +5233,13 @@
                     "type": "object",
                     "properties": {},
                     "additionalProperties": true,
-                    "description": "Column \u2192 value filter map."
+                    "description": "Column → value filter map."
                   },
                   "updates": {
                     "type": "object",
                     "properties": {},
                     "additionalProperties": true,
-                    "description": "Column \u2192 new value map."
+                    "description": "Column → new value map."
                   }
                 },
                 "required": [
@@ -5816,7 +5836,7 @@
         "tags": [
           "Planned Maintenance"
         ],
-        "description": "Advances the schedule past its next scheduled run. The body is parsed by service.constructPlannedMaintenanceScheduleToUpdateNextSchedule, whose source was not provided; the schedule id is the observed requirement \u2014 the schema here is ABRIDGED. Not rate limited.",
+        "description": "Advances the schedule past its next scheduled run. The body is parsed by service.constructPlannedMaintenanceScheduleToUpdateNextSchedule, whose source was not provided; the schedule id is the observed requirement — the schema here is ABRIDGED. Not rate limited.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6056,7 +6076,7 @@
         "tags": [
           "Supplier Network"
         ],
-        "description": "Supplier facilities in the buyer's network \u2014 every non-deleted buyer_supplier_relationship for the caller's buyer company. Supports the filters: search (facility name / display name / buyer alias), name, status, problemTypeId, spendCategoryId and locationId.",
+        "description": "Supplier facilities in the buyer's network — every non-deleted buyer_supplier_relationship for the caller's buyer company. Supports the filters: search (facility name / display name / buyer alias), name, status, problemTypeId, spendCategoryId and locationId.",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -6243,7 +6263,7 @@
         "tags": [
           "Supplier Network"
         ],
-        "description": "Ranked private-network supplier relationships for a (location, problemType) pair, each hydrated with the buyer's relationship details (contacts, routing emails). Rank is conveyed by array order \u2014 any caller-supplied sort_by is dropped so array order always equals rank. Paginated (default page size 10, max 25).",
+        "description": "Ranked private-network supplier relationships for a (location, problemType) pair, each hydrated with the buyer's relationship details (contacts, routing emails). Rank is conveyed by array order — any caller-supplied sort_by is dropped so array order always equals rank. Paginated (default page size 10, max 25).",
         "parameters": [
           {
             "name": "locationId",
@@ -6416,7 +6436,7 @@
                       "string",
                       "null"
                     ],
-                    "description": "EPA 608 certification class; validated against the recognised classes \u2014 an unrecognised value is rejected with 400."
+                    "description": "EPA 608 certification class; validated against the recognised classes — an unrecognised value is rejected with 400."
                   },
                   "epaCertificationNumber": {
                     "type": [

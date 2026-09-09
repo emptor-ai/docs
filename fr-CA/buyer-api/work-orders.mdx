@@ -81,7 +81,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-Les endpoints de liste prennent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ contre les colonnes indexées de l'entité; séparez une valeur par une virgule pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la portée de locataire dérivée de votre clé, donc vous ne voyez jamais que les bons de travail de votre entreprise. Les lectures sont servies depuis un réplica de lecture, alors un bon de travail créé il y a quelques millisecondes peut mettre un instant à apparaître dans les résultats de liste.
+Les endpoints de liste prennent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ; séparez une valeur par une virgule pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la portée de locataire dérivée de votre clé, donc vous ne voyez jamais que les bons de travail de votre entreprise.
+
+La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. Cela change quelques comportements :
+
+- **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Mettez la valeur entre guillemets (`search="walk-in cooler"`) pour exiger la phrase exacte.
+- **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'id donné.
+- **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
+- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur des fenêtres `statusChangedAt` ou d'autres colonnes indexées.
+- **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures, alors un bon de travail créé il y a quelques millisecondes peut être brièvement absent des résultats de liste et des comptages.
+- **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
+
+L'endpoint de comptage exécute la même requête d'index de recherche que la liste, alors un comptage concorde toujours avec la liste qu'il décrit.
 
 Récupérez un bon de travail avec `GET /v1/buyer/work_order/work_orders/{id}`.
 
