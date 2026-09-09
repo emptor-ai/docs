@@ -85,6 +85,10 @@ List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `ord
 
 Hämta en enskild arbetsorder med `GET /v1/buyer/work_order/work_orders/{id}`.
 
+<Warning>
+  **Använd listan för att söka, inte för att bevaka ändringar.** Om din integration behöver veta när arbetsordrar skapas, byter status eller får en ny anteckning, registrera en [webhook](/sv/buyer-api/webhooks) och hämta arbetsordern som anges i varje händelse via dess id. Att polla list-slutpunkten enligt schema är långsamt på stora konton, förbrukar din hastighetsgräns och missar ändå ändringar mellan pollningarna. Spara listanropen till ad hoc-frågor, den engångsvisa initiala laddningen och en tillfällig snävt filtrerad avstämning (`statusChangedAt`-fönster, litet `limit`).
+</Warning>
+
 ## Tilldela om en leverantör
 
 `PATCH /v1/buyer/work_order/work_orders/{id}` är avsiktligt smal: **endast `supplierFacilityId` och `supplierPrimaryContactEmail` läses från kroppen**. Alla andra fält du skickar ignoreras tyst istället för att avvisas.
@@ -249,6 +253,6 @@ En typisk utskicksintegration:
 
 1. Cacha `me`, problemtyper och platser vid start.
 2. Skapa arbetsordern med `supplierFacilityId` satt (eller skapa otilldelad, rangordna sedan leverantörer och `PATCH` tilldelningen).
-3. Följ leverantörens framsteg via [webhooks](/sv/buyer-api/webhooks) (`workorder.status_update`), med `GET /work_orders?statusChangedAt=...` som polling-reserv.
+3. Följ leverantörens framsteg via [webhooks](/sv/buyer-api/webhooks) (`workorder.status_update`), och hämta varje arbetsorder via id när en händelse kommer in. Behåll `GET /work_orders?statusChangedAt=...` som en gles avstämningskörning, inte som den primära signalen.
 4. När leverantören når `WaitingForReview`, verifiera arbetet (se [Servicebesök](/sv/buyer-api/service-calls) för besöksbevis) och posta `work_reviewed_and_completed`, eller `work_unsatisfactory` med en anteckning.
 5. Stäm av pengasidan genom [Offerter och förslag](/sv/buyer-api/quotes-and-proposals) och [Fakturor](/sv/buyer-api/invoices).

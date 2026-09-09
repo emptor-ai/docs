@@ -36,6 +36,16 @@ La sección **Internal Teams API**, más abajo en esta pestaña, usa una **clave
 
 10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`: espera al menos 20 segundos antes de reintentar y espacia los trabajos en segundo plano (como exportaciones paginadas completas) para que se mantengan por debajo del límite.
 
+## Mantener las órdenes de trabajo sincronizadas
+
+Si tu integración replica las órdenes de trabajo en otro sistema (una herramienta de tickets, un ERP, un data warehouse), constrúyela sobre push, no sobre sondeo:
+
+1. Registra un endpoint de [webhook](/es/buyer-api/webhooks). OpenWrench envía los eventos `workorder.create`, `workorder.status_update` y `workorder.new_note` a medida que ocurren.
+2. En cada evento, obtén esa única orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.
+3. Usa `GET /v1/buyer/work_order/work_orders` para consultas puntuales, la carga inicial única y la conciliación ocasional, con un filtro estrecho y una página pequeña.
+
+No sondees el endpoint de listado según un cronograma para descubrir órdenes de trabajo nuevas o cambiadas. Es la lectura más costosa de la API, es lenta en cuentas grandes y compite con tu trabajo real por el límite de tasa. Consulta [Órdenes de trabajo](/es/buyer-api/work-orders#listar-filtrar-y-contar) para los detalles.
+
 ## Envoltura de respuesta
 
 Respuestas de una sola entidad:
