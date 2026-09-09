@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Lire votre file
 
 <Warning>
-  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle : c'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été assigné, a changé de statut ou a reçu une note, puis récupérez ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
+  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle. C'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été assigné, a changé de statut ou a reçu une note, puis récupérez ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
 </Warning>
 
 Le modèle qui passe à l'échelle est la poussée, puis la récupération par id :
@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Les endpoints de liste et de comptage servent aux deux moments qu'un webhook ne peut pas couvrir : le premier chargement du travail qui existait déjà avant l'enregistrement de votre endpoint, et une vérification périodique que rien n'a été manqué :
+Les endpoints de liste et de comptage servent aux deux moments qu'un webhook ne peut pas couvrir. Utilisez-les pour le premier chargement du travail qui existait déjà avant l'enregistrement de votre endpoint. Utilisez-les aussi pour une vérification périodique que rien n'a été manqué :
 
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
@@ -43,7 +43,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête filtre sur les colonnes indexées de l'entité. Tout est restreint à votre établissement. Si un appel de liste est lent, resserrez le filtre (un statut, une fenêtre `statusChangedAt` ou `assignedAt`) plutôt que de le réessayer tel quel; une liste non filtrée sur une grande file peut expirer. Deux autres choses à retenir :
+La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête filtre sur les colonnes indexées de l'entité. Tout est restreint à votre établissement. Si un appel de liste est lent, resserrez le filtre (un statut, une fenêtre `statusChangedAt` ou `assignedAt`) plutôt que de le réessayer tel quel. Une liste non filtrée sur une grande file peut expirer. Deux autres choses à retenir :
 
 - **Les lectures proviennent d'un réplica de lecture**, alors votre propre changement fraîchement écrit peut prendre un moment à apparaître dans les résultats de liste.
 - **Masquage de données.** Si vous êtes un fournisseur tiers (pas l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, les emplacements et les factures avant que la réponse soit retournée. Les champs manquants sont généralement du masquage, pas des bogues. Voir [Données de référence](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les détails.

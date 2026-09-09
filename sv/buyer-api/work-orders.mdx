@@ -86,7 +86,7 @@ List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `ord
 Hämta en enskild arbetsorder med `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Använd listan för att söka, inte för att bevaka ändringar.** Om din integration behöver veta när arbetsordrar skapas, byter status eller får en ny anteckning, registrera en [webhook](/sv/buyer-api/webhooks) och hämta arbetsordern som anges i varje händelse via dess id. Att polla list-slutpunkten enligt schema är långsamt på stora konton, förbrukar din hastighetsgräns och missar ändå ändringar mellan pollningarna. Spara listanropen till ad hoc-frågor, den engångsvisa initiala laddningen och en tillfällig snävt filtrerad avstämning (`statusChangedAt`-fönster, litet `limit`).
+  **Använd listan för att söka, inte för att bevaka ändringar.** Om din integration behöver veta när arbetsordrar skapas, byter status eller får en ny anteckning, registrera en [webhook](/sv/buyer-api/webhooks). Hämta arbetsordern som anges i varje händelse via dess id. Att polla list-slutpunkten enligt schema är långsamt på stora konton, förbrukar din hastighetsgräns och missar ändå ändringar mellan pollningarna. Spara listanropen till ad hoc-frågor, den engångsvisa initiala laddningen och en tillfällig snävt filtrerad avstämning (`statusChangedAt`-fönster, litet `limit`).
 </Warning>
 
 ## Tilldela om en leverantör

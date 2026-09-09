@@ -86,7 +86,7 @@ Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `
 Obtén una orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Usa el listado para consultar, no para vigilar cambios.** Si tu integración necesita saber cuándo se crean órdenes de trabajo, cambian de estado o reciben una nota nueva, registra un [webhook](/es/buyer-api/webhooks) y obtén por id la orden de trabajo nombrada en cada evento. Sondear el endpoint de listado según un cronograma es lento en cuentas grandes, gasta tu límite de tasa y aun así pierde los cambios entre sondeos. Reserva las llamadas de listado para consultas puntuales, la carga inicial única y una conciliación ocasional con filtros estrechos (ventana de `statusChangedAt`, `limit` pequeño).
+  **Usa el listado para consultar, no para vigilar cambios.** Si tu integración necesita saber cuándo se crean órdenes de trabajo, cambian de estado o reciben una nota nueva, registra un [webhook](/es/buyer-api/webhooks). Obtén por id la orden de trabajo nombrada en cada evento. Sondear el endpoint de listado según un cronograma es lento en cuentas grandes, gasta tu límite de tasa y aun así pierde los cambios entre sondeos. Reserva las llamadas de listado para consultas puntuales, la carga inicial única y una conciliación ocasional con filtros estrechos (ventana de `statusChangedAt`, `limit` pequeño).
 </Warning>
 
 ## Reasignar un proveedor
