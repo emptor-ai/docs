@@ -32,7 +32,13 @@ Champs de requête partagés : `workOrderId` et `numberOfTechs` sont toujours re
 | `POST .../service_calls/status_update/check_out` | Le `checkOutStatus` que vous envoyez (requis) |
 | `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Identique à leurs équivalents sur place, pour le travail à distance |
 
-Tous les chemins sont sous `/v1/supplier/work_order/`.
+Tous les chemins sont sous `/v1/supplier/work_order/`. Il n'existe pas d'équivalents côté acheteur : le check-in et le check-out ne peuvent pas être pilotés depuis la Buyer API.
+
+<Warning>
+**`check_in`, `check_out` et leurs variantes `remote_` exigent un `id` de service call existant.** Ils mettent à jour une visite; ils n'en créent pas. Les envoyer sans `id` retourne `400 InvalidInputException` avec `"required param: id"`. Commencez la visite par `tech_scheduled` (qui crée le premier service call et retourne le bon de travail avec le nouveau call dans `associatedServiceCalls` / `lastServiceCall`), puis réutilisez cet `id` à chaque mise à jour ultérieure de la même visite.
+
+Le bon de travail doit aussi avoir dépassé l'acceptation avant que `tech_scheduled` soit valide. S'il est encore à `PendingConfirmationByServiceProvider` (le statut acheteur « Open - Pending Contractor Confirmation »), [acceptez-le d'abord](/fr-CA/supplier-api/work-orders#accepter-ou-refuser) avec `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
+</Warning>
 
 ## 1. Planifier la visite
 
