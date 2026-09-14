@@ -34,7 +34,13 @@ Shared request fields: `workOrderId` and `numberOfTechs` are always required. `i
 | `POST .../service_calls/status_update/check_out` | The `checkOutStatus` you send (required) |
 | `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Same as their on-site counterparts, for remote work |
 
-All paths are under `/v1/supplier/work_order/`.
+All paths are under `/v1/supplier/work_order/`. There are no buyer-side equivalents: check-in and check-out cannot be driven from the Buyer API.
+
+<Warning>
+**`check_in`, `check_out`, and their `remote_` variants require an existing service call `id`.** They update a visit; they do not create one. Sending them without `id` returns `400 InvalidInputException` with `"required param: id"`. Start the visit with `tech_scheduled` (which creates the first service call and returns the work order with the new call in `associatedServiceCalls` / `lastServiceCall`), then reuse that `id` on every later update of the same visit.
+
+The work order also has to be past acceptance before `tech_scheduled` is valid. If it is still in `PendingConfirmationByServiceProvider` (the buyer status "Open - Pending Contractor Confirmation"), [accept it first](/supplier-api/work-orders#accept-or-decline) with `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
+</Warning>
 
 ## 1. Schedule the visit
 
