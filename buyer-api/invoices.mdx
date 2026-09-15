@@ -4,7 +4,7 @@ sidebarTitle: "Invoices"
 description: "Read, approve, and pay supplier invoices with the OpenWrench Buyer API, including status transitions, AP-system sync, flattened exports, and bulk updates."
 ---
 
-Suppliers bill completed work orders through invoices; the Buyer API is where your AP integration reads them, moves them through approval, and marks them paid. Invoices can also be anchored to a project instead of a work order — the same statuses and payment endpoints apply, with the differences called out below.
+Suppliers bill completed work orders through invoices; the Buyer API is where your AP integration reads them, moves them through approval, and marks them paid. Invoices can also be anchored to a project instead of a work order. The same statuses and payment endpoints apply, with the differences called out below.
 
 All examples assume:
 
@@ -130,7 +130,7 @@ It returns the number of invoices updated. This is a power tool that bypasses th
 A robust accounts-payable sync:
 
 1. Poll `GET /invoices?status=pending` (or `publishedAt` windows) on a schedule.
-2. Pull each invoice. For work-order invoices, match totals against the approved [proposal](/buyer-api/quotes-and-proposals) and the work order's `nte`. For project invoices, match against your project budget instead — the NTE check does not run server-side.
+2. Pull each invoice. For work-order invoices, match totals against the approved [proposal](/buyer-api/quotes-and-proposals) and the work order's `nte`. For project invoices, match against your project budget instead. The NTE check does not run server-side for project invoices.
 3. `POST status/approved`, export to your AP system, then `POST status/processing`.
 4. On settlement, `POST status/paid` by id, or `status/paid/by_work_order_id` keyed on the work order reference your AP system carries.
 5. Log the envelope `traceId` on any `400`/`406` so support can trace the exact request.

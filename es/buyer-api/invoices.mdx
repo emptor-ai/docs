@@ -2,7 +2,7 @@
 
 > Lee, aprueba y paga facturas de proveedores con la Buyer API de OpenWrench, incluyendo transiciones de estado, sincronización con sistemas AP, exportaciones aplanadas y actualizaciones masivas.
 
-Los proveedores facturan las órdenes de trabajo completadas mediante facturas; la Buyer API es donde tu integración con AP las lee, las mueve por la aprobación y las marca como pagadas.
+Los proveedores facturan las órdenes de trabajo completadas mediante facturas; la Buyer API es donde tu integración con AP las lee, las mueve por la aprobación y las marca como pagadas. Las facturas también pueden anclarse a un proyecto en lugar de una orden de trabajo. Aplican los mismos estados y endpoints de pago, con las diferencias señaladas a continuación.
 
 Todos los ejemplos asumen:
 
@@ -43,11 +43,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-Una factura enlaza de vuelta a su `workOrderId`, `locationId` y `supplierFacilityId`, y lleva el desglose monetario en secciones (labor, material, viaje, flete, misc), cada una con líneas, una `taxRate` y un `totalBeforeTax`, que se suman a `invoiceTotalBeforeTax`, `invoiceTax` e `invoiceTotalAfterTax`. Los valores monetarios se serializan como cadenas. El PDF renderizado está en `invoicePDFs`; los archivos de soporte están en `attachments` (ver [Archivos y adjuntos](/buyer-api/files-and-attachments)).
+Una factura enlaza de vuelta a su `supplierFacilityId` más **exactamente uno** de `workOrderId` o `projectId` (el otro es `null`, junto con el `workOrder` / `project` hidratado). Las facturas de orden de trabajo siempre llevan `locationId` y `buyerFacilityId`; las facturas de proyecto los llevan solo cuando el cliente los proporcionó, por lo que ambos pueden ser `null`. La factura lleva el desglose monetario en secciones (labor, material, viaje, flete, misc), cada una con líneas, una `taxRate` y un `totalBeforeTax`, que se suman a `invoiceTotalBeforeTax`, `invoiceTax` e `invoiceTotalAfterTax`. Los valores monetarios se serializan como cadenas. Un breve resumen del alcance derivado por IA puede aparecer en `title`. El PDF renderizado está en `invoicePDFs`; los archivos de soporte están en `attachments` (ver [Archivos y adjuntos](/buyer-api/files-and-attachments)).
+
+### Filtrar por tipo de entidad
+
+Agrega `invoiceEntityType=work_order` o `invoiceEntityType=project` a `GET /invoices`, `/invoices/count_by` y `/invoices/download` para acotar a una pestaña; omítelo para obtener ambas. `projectId` y `projectIdSeq` filtran por proyectos específicos de la misma forma en que `workOrderId` / `workOrderIdSeq` filtran por órdenes de trabajo específicas.
+
+```bash
+# Solo facturas de proyecto para este proyecto
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
+```
 
 ### Exportación aplanada
 
-`GET /v1/buyer/invoice/invoices/download` devuelve los mismos datos como filas planas (una fila por factura con los totales desnormalizados), pensado para exportación a hoja de cálculo e importaciones en sistemas AP. Mismos filtros que el endpoint de listado.
+`GET /v1/buyer/invoice/invoices/download` devuelve los mismos datos como filas planas (una fila por factura con los totales desnormalizados), pensado para exportación a hoja de cálculo e importaciones en sistemas AP. Mismos filtros que el endpoint de listado. En las filas de facturas de proyecto, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId` y `locationName` son `null`; `projectId` está definido.
 
 ## Mover una factura por la aprobación
 
@@ -79,6 +89,23 @@ curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
 
 La búsqueda prueba primero con `workOrderId` y recae en `externalWorkOrderId`, siempre dentro de tu empresa. Las facturas ya `paid` se devuelven sin cambios (seguro reintentar); las facturas `approved` o `processing` se marcan como pagadas; una factura en cualquier otro estado devuelve `400` con "Invoice not found".
 
+## Facturas de proyecto
+
+Las facturas de proyecto se anclan a un proyecto (`projectId`) en lugar de a una orden de trabajo (`workOrderId`), y omiten el lado de orden de trabajo del pipeline. Para una factura sin `workOrderId`, OpenWrench omite:
+
+- La verificación de NTE al crear y actualizar.
+- La derivación de código GL a partir de la orden de trabajo.
+- El reflejo del gasto de presupuesto y del gasto de activos.
+- La sincronización de estado de orden de trabajo que normalmente se ejecuta en cada transición de estado (una transición de estado en una factura de proyecto nunca se anula ni devuelve `400` por un mapeo roto de la orden de trabajo).
+- La adición de la página de detalle de la orden de trabajo en la utilidad del PDF de la factura.
+- Las jerarquías de aprobación ancladas a orden de trabajo y sus notificaciones de aprobación / recordatorio / escalación.
+- La verificación por orden de trabajo de "una factura por proveedor" para duplicados.
+- La validación con alcance de moneda sobre `taxLineItems` (los montos aún se validan como numéricos).
+
+Las analíticas de costo por ubicación y costo por facility solo incluyen facturas que llevan el campo respectivo, por lo que una factura de proyecto creada sin `locationId` o `buyerFacilityId` queda excluida de esos reportes.
+
+El atajo `POST status/paid/by_work_order_id` solo coincide con facturas de orden de trabajo; para una factura de proyecto, márcala como pagada por `id` mediante `POST status/paid`.
+
 ## Utilidades
 
 **Añadir la página de detalle de la orden de trabajo al PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` regenera el PDF de la factura con la página de detalle de la orden de trabajo añadida y devuelve el nuevo enlace del PDF (envoltura tipo `UpdatedInvoicePdf`). Sin cuerpo de solicitud; sin límite de tasa.
@@ -101,7 +128,7 @@ Devuelve el número de facturas actualizadas. Es una herramienta potente que sal
 Una sincronización robusta de cuentas por pagar:
 
 1. Consulta `GET /invoices?status=pending` (o ventanas de `publishedAt`) según programación.
-2. Descarga cada factura, contrasta los totales con la [propuesta](/buyer-api/quotes-and-proposals) aprobada y el `nte` de la orden de trabajo.
+2. Descarga cada factura. Para facturas de orden de trabajo, contrasta los totales con la [propuesta](/buyer-api/quotes-and-proposals) aprobada y el `nte` de la orden de trabajo. Para facturas de proyecto, contrasta con tu presupuesto de proyecto en su lugar. La verificación de NTE no se ejecuta del lado del servidor para facturas de proyecto.
 3. `POST status/approved`, exporta a tu sistema AP y luego `POST status/processing`.
 4. En la liquidación, `POST status/paid` por id, o `status/paid/by_work_order_id` con la referencia de la orden de trabajo que lleva tu sistema AP.
 5. Registra el `traceId` de la envoltura en cualquier `400`/`406` para que soporte pueda rastrear la solicitud exacta.
