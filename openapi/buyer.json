@@ -4474,7 +4474,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Lists invoices for the caller's buyer company. Supplier draft invoices are excluded. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Lists invoices for the caller's buyer company, including both work-order and project invoices (work-order fields are joined via LEFT JOIN). Supplier draft invoices are excluded. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Additional filters: `invoiceEntityType` (`work_order` | `project`, omit for both) narrows to the WO / Project / Both tabs; `projectId` and `projectIdSeq` filter to specific projects. Filters are combined with the tenant-security filters derived from the API key.",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -4540,7 +4540,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Count of invoices matching the given filters (drafts excluded via role-based filters). Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Count of invoices matching the given filters (drafts excluded via role-based filters). Includes both work-order and project invoices. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Additional filters: `invoiceEntityType` (`work_order` | `project`, omit for both), `projectId`, and `projectIdSeq`. Filters are combined with the tenant-security filters derived from the API key.",
         "responses": {
           "200": {
             "description": "Success.",
@@ -4592,7 +4592,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Flattened invoice rows suitable for spreadsheet export. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Flattened invoice rows suitable for spreadsheet export. Includes both work-order and project invoices; work-order-derived columns (workOrderId, workOrderTitle, problem type, location) are null on project rows. Filtering: every query parameter other than the pagination parameters is passed to the entity's filter layer and matched against its indexed columns (multi-value filters are comma-separated strings); the per-entity column names are not exhaustively documented here. Additional filters: `invoiceEntityType` (`work_order` | `project`, omit for both), `projectId`, and `projectIdSeq`. Filters are combined with the tenant-security filters derived from the API key.",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -4658,7 +4658,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Retrieves a single invoice by id.",
+        "description": "Retrieves a single invoice by id. Project invoices return a hydrated `project` and a null `workOrder` (and vice versa).",
         "parameters": [
           {
             "name": "id",
@@ -5129,7 +5129,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Regenerates the invoice PDF with the work order detail page appended and returns the new PDF link (type marker \"UpdatedInvoicePdf\"). No request body. Not rate limited.",
+        "description": "Regenerates the invoice PDF with the work order detail page appended and returns the new PDF link (type marker \"UpdatedInvoicePdf\"). Applies only to work-order invoices; on a project invoice the WO-detail page is skipped. No request body. Not rate limited.",
         "parameters": [
           {
             "name": "invoiceId",
@@ -10563,6 +10563,13 @@
               "null"
             ]
           },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Short human summary of the invoice's scope. Buyer-supplied on write; on AI-parsed invoices the supplier UI prefills it from the AI extract's title. Always null on the contractor leg of client invoices."
+          },
           "externalWorkOrderId": {
             "type": [
               "string",
@@ -10891,7 +10898,11 @@
             "type": "boolean"
           },
           "workOrderId": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Set on work-order invoices. Null on project invoices."
           },
           "workOrder": {
             "anyOf": [
@@ -10902,6 +10913,21 @@
                 "type": "null"
               }
             ]
+          },
+          "projectId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Set on project invoices. Null on work-order invoices. Exactly one of workOrderId or projectId is set."
+          },
+          "project": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true,
+            "description": "Hydrated project when projectId is set; hydration mirrors workOrder. Shape abridged."
           },
           "serviceCallIds": {
             "type": "array",
@@ -10945,7 +10971,11 @@
             ]
           },
           "locationId": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Derived from the work order on WO invoices. Optional on project invoices; when omitted, the invoice is excluded from cost-by-location analytics."
           },
           "location": {
             "anyOf": [
@@ -10958,7 +10988,11 @@
             ]
           },
           "buyerFacilityId": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Derived from the work order on WO invoices. Optional on project invoices; when omitted, the invoice is excluded from cost-by-facility analytics."
           },
           "buyerCompanyId": {
             "type": "integer"
@@ -11002,16 +11036,13 @@
         },
         "required": [
           "status",
-          "workOrderId",
           "supplierFacilityId",
-          "locationId",
-          "buyerFacilityId",
           "buyerCompanyId",
           "owGeneratedPDF",
           "isDeleted"
         ],
         "additionalProperties": true,
-        "description": "Invoice (external API projection). ABRIDGED: further fields (invoice type templates, custom field values, approval hierarchy, revision changes, AI-parse metadata, watermarked PDFs) may appear. On external responses buyerSupplierRelationship additionally carries vendorCode."
+        "description": "Invoice (external API projection). Every invoice is anchored to exactly one of workOrderId or projectId; the other side (plus its hydrated object) is null. Project invoices skip work-order-anchored behaviour: NTE check, GL-code derivation, budget spend, WO status sync, asset spend mirror, WO-detail PDF, WO-anchored approval hierarchies and notifications, per-WO duplicate check, and tax-line currency validation. locationId and buyerFacilityId may be null on project invoices; when null, the invoice is excluded from cost-by-location and cost-by-facility analytics respectively. ABRIDGED: further fields (invoice type templates, custom field values, approval hierarchy, revision changes, AI-parse metadata, watermarked PDFs) may appear. On external responses buyerSupplierRelationship additionally carries vendorCode."
       },
       "InvoiceForDownload": {
         "type": "object",
@@ -11026,7 +11057,25 @@
             "type": "string"
           },
           "workOrderId": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Set on work-order invoices. Null on project invoices."
+          },
+          "projectId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Set on project invoices. Null on work-order invoices."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Short human summary of the invoice's scope."
           },
           "invoiceNumber": {
             "type": [
@@ -11035,7 +11084,10 @@
             ]
           },
           "workOrderTitle": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "workOrderCompletedAt": {
             "type": [
@@ -11062,13 +11114,22 @@
             ]
           },
           "problemTypeId": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "problemTypeName": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "locationId": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "storeId": {
             "type": [
@@ -11077,7 +11138,10 @@
             ]
           },
           "locationName": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "regionId": {
             "type": [
@@ -11220,19 +11284,13 @@
         },
         "required": [
           "status",
-          "workOrderId",
-          "workOrderTitle",
-          "problemTypeId",
-          "problemTypeName",
-          "locationId",
-          "locationName",
           "buyerCompanyId",
           "supplierFacilityId",
           "createdByEmail",
           "createdByName"
         ],
         "additionalProperties": true,
-        "description": "Flattened invoice row for spreadsheet-style export. Custom-field maps also appear."
+        "description": "Flattened invoice row for spreadsheet-style export. Custom-field maps also appear. workOrderId, workOrderTitle, problemTypeId, problemTypeName, locationId, and locationName are null on project invoices."
       },
       "Proposal": {
         "type": "object",
