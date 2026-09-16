@@ -94,7 +94,8 @@
                   "supplier-api/quotes-and-invoicing",
                   "supplier-api/purchasing-and-inventory",
                   "supplier-api/reference-data",
-                  "supplier-api/files-and-users"
+                  "supplier-api/files-and-users",
+                  "supplier-api/private-network"
                 ]
               },
               {
