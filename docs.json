@@ -180,7 +180,8 @@
                   "es/supplier-api/quotes-and-invoicing",
                   "es/supplier-api/purchasing-and-inventory",
                   "es/supplier-api/reference-data",
-                  "es/supplier-api/files-and-users"
+                  "es/supplier-api/files-and-users",
+                  "es/supplier-api/private-network"
                 ]
               },
               {
@@ -265,7 +266,8 @@
                   "fr-CA/supplier-api/quotes-and-invoicing",
                   "fr-CA/supplier-api/purchasing-and-inventory",
                   "fr-CA/supplier-api/reference-data",
-                  "fr-CA/supplier-api/files-and-users"
+                  "fr-CA/supplier-api/files-and-users",
+                  "fr-CA/supplier-api/private-network"
                 ]
               },
               {
@@ -350,7 +352,8 @@
                   "sv/supplier-api/quotes-and-invoicing",
                   "sv/supplier-api/purchasing-and-inventory",
                   "sv/supplier-api/reference-data",
-                  "sv/supplier-api/files-and-users"
+                  "sv/supplier-api/files-and-users",
+                  "sv/supplier-api/private-network"
                 ]
               },
               {
