@@ -197,11 +197,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-<Warning>
-**API-driven check-ins and check-outs do not generate WrenchMode events.** The `started_work` / `ended_work` pair behind `with_work_logs` is recorded by the OpenWrench apps, not by these endpoints. A visit whose whole lifecycle was driven through the Supplier API therefore comes back with an empty work log and no `trueWorkTimeMillis`, even though its check-in and check-out times are set correctly.
+<Note>
+**API check-ins do not record the `started_work` / `ended_work` pair.** Those two events are written by the OpenWrench apps, not by the status-update endpoints, so they are missing from the work log of a visit checked in and out through the API.
 
-Use `checkInTime` and `checkOutTime` from the service call itself for the labor span on API-driven visits, and treat `trueWorkTimeMillis` as available only for visits your technicians ran in the app.
-</Warning>
+Everything else in the log is unaffected. The `location_*` timer events are matched to the visit by facility, location, and overlap with the check-in→check-out window — not by service-call id — so a visit you scheduled and closed through the API still shows the timer sessions your technician ran in the app.
+
+`trueWorkTimeMillis` is always returned, but it means one of two things:
+
+- **Timer sessions exist** → the pause-excluded total from those sessions. This is true work time.
+- **No timer sessions** → the plain `checkOutTime` − `checkInTime` span, which still includes breaks.
+
+So on a visit run entirely through the API with no app timer use, read `trueWorkTimeMillis` as elapsed time rather than worked time. An empty `workLogs` array is how you tell the two apart.
+</Note>
 
 For fleet-level time reporting across all technicians, use [WrenchMode](/supplier-api/wrenchmode) instead of iterating calls.
 

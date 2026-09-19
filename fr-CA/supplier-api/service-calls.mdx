@@ -195,11 +195,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-<Warning>
-**Les arrivées et départs pilotés par l'API ne génèrent pas d'événements WrenchMode.** La paire `started_work` / `ended_work` derrière `with_work_logs` est enregistrée par les applications OpenWrench, pas par ces endpoints. Une visite dont tout le cycle de vie a été piloté via l'API Fournisseur revient donc avec un journal de travail vide et sans `trueWorkTimeMillis`, même si ses heures d'arrivée et de départ sont correctement fixées.
+<Note>
+**Les arrivées pilotées par l'API n'enregistrent pas la paire `started_work` / `ended_work`.** Ces deux événements sont écrits par les applications OpenWrench, pas par les endpoints de mise à jour de statut; ils manquent donc au journal de travail d'une visite dont l'arrivée et le départ ont été faits via l'API.
 
-Utilisez `checkInTime` et `checkOutTime` de l'appel de service lui-même pour l'intervalle de main-d'œuvre sur les visites pilotées par l'API, et considérez `trueWorkTimeMillis` comme disponible seulement pour les visites que vos techniciens ont menées dans l'application.
-</Warning>
+Tout le reste du journal est intact. Les événements `location_*` sont rattachés à la visite par établissement, emplacement et chevauchement avec la fenêtre arrivée→départ — pas par id d'appel de service — si bien qu'une visite que vous avez planifiée et fermée via l'API affiche quand même les sessions de minuterie que votre technicien a menées dans l'application.
+
+`trueWorkTimeMillis` est toujours retourné, mais il signifie l'une de deux choses :
+
+- **Des sessions de minuterie existent** → le total hors pauses de ces sessions. C'est le vrai temps de travail.
+- **Aucune session de minuterie** → le simple intervalle `checkOutTime` − `checkInTime`, qui inclut encore les pauses.
+
+Donc sur une visite entièrement pilotée par l'API sans usage de la minuterie dans l'application, lisez `trueWorkTimeMillis` comme du temps écoulé et non du temps travaillé. Un tableau `workLogs` vide est ce qui vous permet de distinguer les deux cas.
+</Note>
 
 Pour un rapport de temps à l'échelle de la flotte à travers tous les techniciens, utilisez [WrenchMode](/fr-CA/supplier-api/wrenchmode) plutôt que d'itérer sur les appels.
 

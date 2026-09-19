@@ -195,11 +195,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-<Warning>
-**Incheckningar och utcheckningar som drivs via API:et genererar inga WrenchMode-händelser.** Paret `started_work` / `ended_work` bakom `with_work_logs` registreras av OpenWrench-apparna, inte av de här slutpunkterna. Ett besök vars hela livscykel drevs via Supplier API kommer därför tillbaka med en tom arbetslogg och utan `trueWorkTimeMillis`, även om dess in- och utcheckningstider är korrekt satta.
+<Note>
+**Incheckningar via API:et registrerar inte paret `started_work` / `ended_work`.** De två händelserna skrivs av OpenWrench-apparna, inte av statusuppdateringsslutpunkterna, så de saknas i arbetsloggen för ett besök som checkades in och ut via API:et.
 
-Använd `checkInTime` och `checkOutTime` från själva servicebesöket för arbetsspannet på API-drivna besök, och betrakta `trueWorkTimeMillis` som tillgängligt bara för besök som dina tekniker körde i appen.
-</Warning>
+Allt annat i loggen påverkas inte. `location_*`-händelserna kopplas till besöket via anläggning, plats och överlapp med fönstret incheckning→utcheckning — inte via servicebesöks-id — så ett besök som du schemalagt och avslutat via API:et visar fortfarande de timer-sessioner din tekniker körde i appen.
+
+`trueWorkTimeMillis` returneras alltid, men det betyder en av två saker:
+
+- **Timer-sessioner finns** → totalen exklusive pauser från de sessionerna. Det här är verklig arbetstid.
+- **Inga timer-sessioner** → det enkla spannet `checkOutTime` − `checkInTime`, som fortfarande inkluderar raster.
+
+Så på ett besök som körts helt via API:et utan att timern använts i appen ska `trueWorkTimeMillis` läsas som förfluten tid, inte arbetad tid. En tom `workLogs`-array är hur du skiljer de två fallen åt.
+</Note>
 
 För tidsrapportering på flottnivå över alla tekniker, använd [WrenchMode](/sv/supplier-api/wrenchmode) istället för att iterera besök.
 

@@ -38,9 +38,14 @@ El `{id}` es el id de la llamada de servicio, que lees de `associatedServiceCall
 `with_work_logs` devuelve el rastro de eventos WrenchMode registrados durante la visita (trabajo iniciado, pausado, reanudado, finalizado) junto con **`trueWorkTimeMillis`**: la duración del trabajo en sitio excluyendo pausas. Este es el número a usar para la verificación de labor, ya que los tramos brutos de check-in a check-out incluyen descansos e interrupciones.
 
 <Warning>
-**Un registro de trabajo vacío no significa que no hubo trabajo.** Los eventos WrenchMode los registran las apps de OpenWrench. Un proveedor que conduce el check-in y el check-out por la Supplier API produce en cambio una llamada de servicio con `checkInTime` y `checkOutTime` correctos pero **sin eventos de registro de trabajo y sin `trueWorkTimeMillis`**.
+**`trueWorkTimeMillis` no siempre excluye las pausas, así que revisa el registro de trabajo antes de confiarlo contra las horas facturadas.** Se calcula de dos formas distintas y la respuesta no indica cuál te tocó:
 
-Así que trata un `trueWorkTimeMillis` faltante como "no medido", no como "cero horas": recurre al tramo de `checkOutTime` menos `checkInTime` para esas visitas, y ten en cuenta que ese tramo incluye cualquier descanso. La misma salvedad aplica a `checkInGeoLocation`: está ausente en check-ins remotos y en visitas que el proveedor registró por la API sin coordenadas.
+- **El registro de trabajo contiene eventos `location_*`** → el valor es el total excluyendo pausas de esas sesiones. Este es el número que describe la sección de arriba.
+- **El registro de trabajo está vacío** → el valor cae en silencio al tramo simple de `checkOutTime` − `checkInTime`, descansos incluidos. Se verá plausible y saldrá alto.
+
+El caso vacío es lo que obtienes cuando el técnico del proveedor nunca ejecutó el temporizador de WrenchMode en la app, algo común cuando el proveedor conduce la visita por la Supplier API, que registra las horas de check-in y check-out pero ninguna sesión de temporizador. No es señal de que no hubo trabajo, y nunca es cero para una visita con check-in.
+
+Así que un arreglo `workLogs` vacío significa "no medido", no "sin trabajo": el número de labor sigue ahí, solo que es tiempo transcurrido. Trata esas visitas como no verificadas en duración y apóyate en las notas, las imágenes y las coordenadas geográficas. `checkInGeoLocation` tiene su propio hueco: está ausente en los check-ins remotos, donde las coordenadas se descartan.
 </Warning>
 
 ## Detalles del técnico y visibilidad de tarifas
@@ -53,7 +58,7 @@ Antes de aprobar una orden de trabajo completada o su factura:
 
 1. Obtén la orden de trabajo y lee `associatedServiceCalls`.
 2. Para cada llamada, solicita `/with_work_logs/with_tech_details`.
-3. Contrasta `checkInGeoLocation` contra la ubicación, compara `trueWorkTimeMillis` contra las horas de trabajo facturadas y revisa las notas e imágenes de check-out. Donde `trueWorkTimeMillis` esté ausente, usa en su lugar el tramo de check-in a check-out.
+3. Contrasta `checkInGeoLocation` contra la ubicación, compara `trueWorkTimeMillis` contra las horas de trabajo facturadas y revisa las notas e imágenes de check-out. Comprueba primero si `workLogs` está vacío: si lo está, `trueWorkTimeMillis` es tiempo transcurrido con descansos incluidos, así que espera que supere las horas de labor genuinas.
 4. Aprueba mediante las [acciones de estado de la orden de trabajo](/buyer-api/work-orders#buyer-status-actions) o disputa mediante `work_unsatisfactory`, citando en la nota lo que encontraste.
 
 Los errores siguen la envoltura estándar: `404` para una llamada desconocida, `400` para una llamada fuera de tu alcance.

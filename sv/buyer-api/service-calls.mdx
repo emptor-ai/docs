@@ -38,9 +38,14 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 `with_work_logs` returnerar WrenchMode-händelsespåret som spelades in under besöket (arbete startat, pausat, återupptaget, avslutat) tillsammans med **`trueWorkTimeMillis`**: arbetsvaraktigheten på plats med pauser exkluderade. Det här är siffran att använda för arbetsverifiering, eftersom rådata från incheckning till utcheckning innehåller raster och avbrott.
 
 <Warning>
-**En tom arbetslogg betyder inte att inget arbete utfördes.** WrenchMode-händelser spelas in av OpenWrench-apparna. En leverantör som i stället driver in- och utcheckning via Supplier API producerar ett servicebesök med korrekta `checkInTime` och `checkOutTime` men **utan arbetsloggshändelser och utan `trueWorkTimeMillis`**.
+**`trueWorkTimeMillis` är inte alltid exklusive pauser, så kontrollera arbetsloggen innan du litar på det mot fakturerade timmar.** Det beräknas på två olika sätt och svaret säger inte vilket du fick:
 
-Behandla därför ett saknat `trueWorkTimeMillis` som "inte uppmätt", inte som "noll timmar" — fall tillbaka på spannet `checkOutTime` minus `checkInTime` för de besöken, och kom ihåg att det spannet inkluderar eventuella raster. Samma förbehåll gäller `checkInGeoLocation`: det saknas vid fjärrincheckningar och vid besök som leverantören registrerade via API:et utan koordinater.
+- **Arbetsloggen innehåller `location_*`-händelser** → värdet är totalen exklusive pauser från de sessionerna. Det är siffran som avsnittet ovan beskriver.
+- **Arbetsloggen är tom** → värdet faller tyst tillbaka på det enkla spannet `checkOutTime` − `checkInTime`, raster inkluderade. Det ser rimligt ut och blir högt.
+
+Det tomma fallet får du när leverantörens tekniker aldrig körde WrenchMode-timern i appen — vanligt när leverantören driver besöket via Supplier API, som registrerar in- och utcheckningstider men inga timer-sessioner. Det är inte ett tecken på att inget arbete utfördes, och det är aldrig noll för ett incheckat besök.
+
+En tom `workLogs`-array betyder alltså "inte uppmätt", inte "inget arbete": arbetssiffran finns kvar, den är bara förfluten tid. Behandla de besöken som overifierade vad gäller varaktighet och luta dig på anteckningar, bilder och geokoordinater i stället. `checkInGeoLocation` har sin egen lucka: det saknas vid fjärrincheckningar, där koordinaterna kastas.
 </Warning>
 
 ## Teknikeruppgifter och synlighet för timpris
@@ -53,7 +58,7 @@ Innan du godkänner en avslutad arbetsorder eller dess faktura:
 
 1. Hämta arbetsordern och läs `associatedServiceCalls`.
 2. Begär `/with_work_logs/with_tech_details` för varje besök.
-3. Kontrollera `checkInGeoLocation` mot platsen, jämför `trueWorkTimeMillis` mot fakturerade arbetstimmar och granska utcheckningsanteckningar och bilder. Där `trueWorkTimeMillis` saknas, använd spannet från incheckning till utcheckning i stället.
+3. Kontrollera `checkInGeoLocation` mot platsen, jämför `trueWorkTimeMillis` mot fakturerade arbetstimmar och granska utcheckningsanteckningar och bilder. Kontrollera först om `workLogs` är tom — är den det är `trueWorkTimeMillis` förfluten tid inklusive raster, så räkna med att det överstiger verkliga arbetstimmar.
 4. Godkänn via [arbetsorderns statusåtgärder](/buyer-api/work-orders#buyer-status-actions) eller bestrid via `work_unsatisfactory` och citera det du hittade i anteckningen.
 
 Fel följer standardhöljet: `404` för ett okänt besök, `400` för ett besök utanför ditt omfång.

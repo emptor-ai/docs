@@ -195,11 +195,18 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-<Warning>
-**Los check-in y check-out hechos por API no generan eventos WrenchMode.** El par `started_work` / `ended_work` detrás de `with_work_logs` lo registran las apps de OpenWrench, no estos endpoints. Una visita cuyo ciclo de vida completo se condujo por la Supplier API vuelve por tanto con un registro de trabajo vacío y sin `trueWorkTimeMillis`, aunque sus horas de check-in y check-out estén correctamente establecidas.
+<Note>
+**Los check-in por API no registran el par `started_work` / `ended_work`.** Esos dos eventos los escriben las apps de OpenWrench, no los endpoints de actualización de estado, así que faltan en el registro de trabajo de una visita cuyo check-in y check-out se hicieron por la API.
 
-Usa `checkInTime` y `checkOutTime` de la propia llamada de servicio para el lapso de labor en visitas conducidas por API, y considera `trueWorkTimeMillis` disponible solo para visitas que tus técnicos ejecutaron en la app.
-</Warning>
+Todo lo demás del registro no se ve afectado. Los eventos `location_*` se asocian a la visita por instalación, ubicación y solapamiento con la ventana check-in→check-out —no por id de llamada de servicio—, así que una visita que programaste y cerraste por la API sigue mostrando las sesiones de temporizador que tu técnico ejecutó en la app.
+
+`trueWorkTimeMillis` siempre se devuelve, pero significa una de dos cosas:
+
+- **Existen sesiones de temporizador** → el total excluyendo pausas de esas sesiones. Este es el tiempo real de trabajo.
+- **No hay sesiones de temporizador** → el lapso simple de `checkOutTime` − `checkInTime`, que todavía incluye los descansos.
+
+Así que en una visita conducida enteramente por la API sin uso del temporizador en la app, lee `trueWorkTimeMillis` como tiempo transcurrido, no como tiempo trabajado. Un arreglo `workLogs` vacío es cómo distingues ambos casos.
+</Note>
 
 Para reportes de tiempo a nivel de flota entre todos los técnicos, usa [WrenchMode](/es/supplier-api/wrenchmode) en lugar de iterar llamadas.
 
