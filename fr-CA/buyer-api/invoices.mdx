@@ -2,7 +2,7 @@
 
 > Lisez, approuvez et payez les factures des fournisseurs avec l'API Acheteur OpenWrench, incluant les transitions de statut, la synchronisation avec les comptes fournisseurs, les exports aplatis et les mises à jour en lot.
 
-Les fournisseurs facturent les bons de travail terminés au moyen de factures; l'API Acheteur est l'endroit où votre intégration comptes fournisseurs les lit, les fait progresser dans l'approbation et les marque payées.
+Les fournisseurs facturent les bons de travail terminés au moyen de factures; l'API Acheteur est l'endroit où votre intégration comptes fournisseurs les lit, les fait progresser dans l'approbation et les marque payées. Les factures peuvent aussi être rattachées à un projet plutôt qu'à un bon de travail. Les mêmes statuts et endpoints de paiement s'appliquent, avec les différences précisées ci-dessous.
 
 Tous les exemples supposent :
 
@@ -43,11 +43,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-Une facture est reliée à son `workOrderId`, `locationId` et `supplierFacilityId`, et porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`, se totalisant à `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées en chaînes de caractères. Le PDF rendu se trouve dans `invoicePDFs`; les fichiers de soutien sont dans `attachments` (voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments)).
+Une facture est reliée à son `supplierFacilityId` en plus d'**exactement un** de `workOrderId` ou `projectId` (l'autre est `null`, tout comme l'objet hydraté `workOrder` / `project`). Les factures de bon de travail portent toujours `locationId` et `buyerFacilityId`; les factures de projet ne les portent que si le client les a fournis, alors les deux peuvent être `null`. La facture porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`, se totalisant à `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées en chaînes de caractères. Un court résumé de la portée dérivé par IA peut apparaître dans `title`. Le PDF rendu se trouve dans `invoicePDFs`; les fichiers de soutien sont dans `attachments` (voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments)).
+
+### Filtrer par type d'entité
+
+Ajoutez `invoiceEntityType=work_order` ou `invoiceEntityType=project` à `GET /invoices`, `/invoices/count_by` et `/invoices/download` pour restreindre à un seul onglet; omettez-le pour obtenir les deux. `projectId` et `projectIdSeq` filtrent vers des projets précis de la même façon que `workOrderId` / `workOrderIdSeq` filtrent vers des bons de travail précis.
+
+```bash
+# Uniquement les factures de projet pour ce projet
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
+```
 
 ### Export aplati
 
-`GET /v1/buyer/invoice/invoices/download` retourne les mêmes données en lignes plates (une ligne par facture avec les totaux dénormalisés), conçu pour l'export en tableur et les importations vers les systèmes de comptes fournisseurs. Mêmes filtres que l'endpoint de liste.
+`GET /v1/buyer/invoice/invoices/download` retourne les mêmes données en lignes plates (une ligne par facture avec les totaux dénormalisés), conçu pour l'export en tableur et les importations vers les systèmes de comptes fournisseurs. Mêmes filtres que l'endpoint de liste. Sur les lignes de factures de projet, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId` et `locationName` sont `null`; `projectId` est renseigné.
 
 ## Faire progresser une facture dans l'approbation
 
@@ -79,6 +89,23 @@ curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
 
 La recherche essaie d'abord `workOrderId` puis retombe sur `externalWorkOrderId`, toujours à l'intérieur de votre entreprise. Les factures déjà `paid` sont retournées inchangées (sécuritaire à réessayer); les factures `approved` ou `processing` sont marquées payées; une facture dans tout autre statut renvoie `400` avec « Invoice not found ».
 
+## Factures de projet
+
+Les factures de projet sont rattachées à un projet (`projectId`) plutôt qu'à un bon de travail (`workOrderId`), et contournent le volet bon de travail du pipeline. Pour une facture sans `workOrderId`, OpenWrench saute :
+
+- La vérification NTE à la création et à la mise à jour.
+- La dérivation du code GL à partir du bon de travail.
+- La répercussion des dépenses de budget et des dépenses d'actifs.
+- La synchronisation de statut du bon de travail qui s'exécute normalement à chaque transition de statut (une transition de statut sur une facture de projet n'annule jamais et ne retourne pas `400` pour une correspondance BT rompue).
+- L'annexion de la page de détail du bon de travail dans l'utilitaire de PDF de facture.
+- Les hiérarchies d'approbation rattachées au BT et leurs notifications d'approbation, de rappel et d'escalade.
+- La vérification de doublons « une facture par fournisseur » par BT.
+- La validation à portée devise sur `taxLineItems` (les montants sont tout de même validés comme numériques).
+
+Les analyses de coût par emplacement et de coût par établissement n'incluent que les factures qui portent le champ correspondant, alors une facture de projet créée sans `locationId` ou `buyerFacilityId` est exclue de ces rapports.
+
+Le raccourci `POST status/paid/by_work_order_id` ne correspond qu'aux factures de bon de travail; pour une facture de projet, marquez-la payée par `id` via `POST status/paid`.
+
 ## Utilitaires
 
 **Annexer la page de détail du bon de travail au PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` régénère le PDF de la facture avec la page de détail du bon de travail annexée et retourne le nouveau lien du PDF (enveloppe de type `UpdatedInvoicePdf`). Aucun corps de requête; non limité en débit.
@@ -101,7 +128,7 @@ Il retourne le nombre de factures mises à jour. C'est un outil puissant qui con
 Une synchronisation robuste des comptes fournisseurs :
 
 1. Sondez `GET /invoices?status=pending` (ou des fenêtres `publishedAt`) selon un horaire.
-2. Récupérez chaque facture, comparez les totaux à la [proposition](/buyer-api/quotes-and-proposals) approuvée et au `nte` du bon de travail.
+2. Récupérez chaque facture. Pour les factures de bon de travail, comparez les totaux à la [proposition](/buyer-api/quotes-and-proposals) approuvée et au `nte` du bon de travail. Pour les factures de projet, comparez plutôt à votre budget de projet. La vérification NTE ne s'exécute pas côté serveur pour les factures de projet.
 3. `POST status/approved`, exportez vers votre système de comptes fournisseurs, puis `POST status/processing`.
 4. Au règlement, `POST status/paid` par id, ou `status/paid/by_work_order_id` en fonction de la référence de bon de travail que porte votre système de comptes fournisseurs.
 5. Journalisez le `traceId` de l'enveloppe sur tout `400`/`406` afin que le soutien puisse retracer la requête exacte.

@@ -4,7 +4,7 @@ sidebarTitle: "Invoices"
 description: "Read, approve, and pay supplier invoices with the OpenWrench Buyer API, including status transitions, AP-system sync, flattened exports, and bulk updates."
 ---
 
-Suppliers bill completed work orders through invoices; the Buyer API is where your AP integration reads them, moves them through approval, and marks them paid.
+Suppliers bill completed work orders through invoices; the Buyer API is where your AP integration reads them, moves them through approval, and marks them paid. Invoices can also be anchored to a project instead of a work order. The same statuses and payment endpoints apply, with the differences called out below.
 
 All examples assume:
 
@@ -45,11 +45,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-An invoice links back to its `workOrderId`, `locationId`, and `supplierFacilityId`, and carries the money breakdown in sections (labor, material, travel, freight, misc), each with line items, a `taxRate`, and a `totalBeforeTax`, rolling up to `invoiceTotalBeforeTax`, `invoiceTax`, and `invoiceTotalAfterTax`. Monetary values serialize as strings. The rendered PDF is in `invoicePDFs`; supporting files are in `attachments` (see [Files and attachments](/buyer-api/files-and-attachments)).
+An invoice links back to its `supplierFacilityId` plus **exactly one** of `workOrderId` or `projectId` (the other is `null`, along with the hydrated `workOrder` / `project`). Work-order invoices always carry `locationId` and `buyerFacilityId`; project invoices carry them only when the client supplied them, so both can be `null`. The invoice carries the money breakdown in sections (labor, material, travel, freight, misc), each with line items, a `taxRate`, and a `totalBeforeTax`, rolling up to `invoiceTotalBeforeTax`, `invoiceTax`, and `invoiceTotalAfterTax`. Monetary values serialize as strings. A short AI-derived summary of the scope may appear in `title`. The rendered PDF is in `invoicePDFs`; supporting files are in `attachments` (see [Files and attachments](/buyer-api/files-and-attachments)).
+
+### Filtering by entity type
+
+Add `invoiceEntityType=work_order` or `invoiceEntityType=project` to `GET /invoices`, `/invoices/count_by`, and `/invoices/download` to narrow to one tab; omit it to get both. `projectId` and `projectIdSeq` filter to specific projects the same way `workOrderId` / `workOrderIdSeq` filter to specific work orders.
+
+```bash
+# Just project invoices for this project
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
+```
 
 ### Flattened export
 
-`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. Same filters as the list endpoint.
+`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. Same filters as the list endpoint. On project invoice rows, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId`, and `locationName` are `null`; `projectId` is set.
 
 ## Moving an invoice through approval
 
@@ -81,6 +91,23 @@ curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
 
 Lookup tries `workOrderId` first and falls back to `externalWorkOrderId`, always within your company. Already-`paid` invoices are returned unchanged (safe to retry); `approved` or `processing` invoices are marked paid; an invoice in any other status returns `400` with "Invoice not found".
 
+## Project invoices
+
+Project invoices are anchored to a project (`projectId`) instead of a work order (`workOrderId`), and skip the work-order side of the pipeline. For an invoice with no `workOrderId`, OpenWrench skips:
+
+- The NTE check on create and update.
+- GL-code derivation from the work order.
+- Budget spend and asset spend mirroring.
+- The work-order status sync that normally runs on every status transition (a status transition on a project invoice never voids and returns `400` for a broken WO mapping).
+- The work-order detail page append on the invoice PDF utility.
+- WO-anchored approval hierarchies and their approval / reminder / escalation notifications.
+- The per-WO "one invoice per supplier" duplicate check.
+- The currency-scoped validation on `taxLineItems` (amounts are still validated as numeric).
+
+Cost-by-location and cost-by-facility analytics only include invoices that carry the respective field, so a project invoice created without `locationId` or `buyerFacilityId` is excluded from those reports.
+
+The `POST status/paid/by_work_order_id` shortcut only matches work-order invoices; for a project invoice, mark paid by `id` via `POST status/paid`.
+
 ## Utilities
 
 **Append the work order detail page to the PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` regenerates the invoice PDF with the work order detail page appended and returns the new PDF link (envelope type `UpdatedInvoicePdf`). No request body; not rate limited.
@@ -103,7 +130,7 @@ It returns the number of invoices updated. This is a power tool that bypasses th
 A robust accounts-payable sync:
 
 1. Poll `GET /invoices?status=pending` (or `publishedAt` windows) on a schedule.
-2. Pull each invoice, match totals against the approved [proposal](/buyer-api/quotes-and-proposals) and the work order's `nte`.
+2. Pull each invoice. For work-order invoices, match totals against the approved [proposal](/buyer-api/quotes-and-proposals) and the work order's `nte`. For project invoices, match against your project budget instead. The NTE check does not run server-side for project invoices.
 3. `POST status/approved`, export to your AP system, then `POST status/processing`.
 4. On settlement, `POST status/paid` by id, or `status/paid/by_work_order_id` keyed on the work order reference your AP system carries.
 5. Log the envelope `traceId` on any `400`/`406` so support can trace the exact request.
