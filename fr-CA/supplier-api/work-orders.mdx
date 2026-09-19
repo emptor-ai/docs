@@ -36,16 +36,23 @@ Les endpoints de liste et de comptage servent aux deux moments qu'un webhook ne 
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=assignedAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Count by filter, without fetching rows
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête filtre sur les colonnes indexées de l'entité. Tout est restreint à votre établissement. Si un appel de liste est lent, resserrez le filtre (un statut, une fenêtre `statusChangedAt` ou `assignedAt`) plutôt que de le réessayer tel quel. Une liste non filtrée sur une grande file peut expirer. Deux autres choses à retenir :
+La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête agit comme un filtre de champ. Tout est restreint à votre établissement.
 
-- **Les lectures proviennent d'un réplica de lecture**, alors votre propre changement fraîchement écrit peut prendre un moment à apparaître dans les résultats de liste.
+La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. L'endpoint de comptage exécute la même requête que la liste, alors les deux concordent toujours. Comportement à connaître :
+
+- **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Encadrez la valeur de guillemets doubles pour exiger la phrase exacte.
+- **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'id donné.
+- **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
+- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur une fenêtre `statusChangedAt` ou d'autres colonnes indexées.
+- **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures. Votre propre changement fraîchement écrit, ou un bon de travail assigné il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
+- **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
 - **Masquage de données.** Si vous êtes un fournisseur tiers (pas l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, les emplacements et les factures avant que la réponse soit retournée. Les champs manquants sont généralement du masquage, pas des bogues. Voir [Données de référence](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les détails.
 
 ## Accepter ou refuser
