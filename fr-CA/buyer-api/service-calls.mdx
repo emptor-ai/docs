@@ -37,6 +37,12 @@ L'`{id}` est l'id de l'appel de service, que vous lisez sur les `associatedServi
 
 `with_work_logs` retourne la trace d'événements WrenchMode enregistrée pendant la visite (travail commencé, en pause, repris, terminé) avec **`trueWorkTimeMillis`** : la durée de travail sur place, pauses exclues. C'est le nombre à utiliser pour la vérification de la main-d'œuvre, puisque les intervalles bruts entre arrivée et départ incluent les pauses et interruptions.
 
+<Warning>
+**Un journal de travail vide ne veut pas dire qu'aucun travail n'a eu lieu.** Les événements WrenchMode sont enregistrés par les applications OpenWrench. Un fournisseur qui pilote l'arrivée et le départ via l'API Fournisseur produit plutôt un appel de service avec des `checkInTime` et `checkOutTime` corrects mais **sans événements de journal et sans `trueWorkTimeMillis`**.
+
+Traitez donc un `trueWorkTimeMillis` absent comme « non mesuré » et non comme « zéro heure » : repliez-vous sur l'intervalle `checkOutTime` moins `checkInTime` pour ces visites, en gardant à l'esprit que cet intervalle inclut les pauses. La même réserve s'applique à `checkInGeoLocation` : il est absent sur les arrivées à distance et sur les visites que le fournisseur a enregistrées via l'API sans coordonnées.
+</Warning>
+
 ## Détails des techniciens et visibilité des tarifs
 
 `with_tech_details` retourne les techniciens de l'appel sous forme de fiches de contact. **`hourlyRate` n'est renseigné que lorsque l'appel a été effectué par votre propre équipe de service interne.** Les tarifs des fournisseurs tiers ne sont jamais exposés aux acheteurs, donc attendez-vous à ce que `hourlyRate` soit absent des visites de sous-traitants.
@@ -47,7 +53,7 @@ Avant d'approuver un bon de travail terminé ou sa facture :
 
 1. Récupérez le bon de travail et lisez `associatedServiceCalls`.
 2. Pour chaque appel, demandez `/with_work_logs/with_tech_details`.
-3. Vérifiez `checkInGeoLocation` par rapport à l'emplacement, comparez `trueWorkTimeMillis` aux heures de main-d'œuvre facturées et révisez les notes et images de départ.
+3. Vérifiez `checkInGeoLocation` par rapport à l'emplacement, comparez `trueWorkTimeMillis` aux heures de main-d'œuvre facturées et révisez les notes et images de départ. Là où `trueWorkTimeMillis` est absent, utilisez plutôt l'intervalle entre l'arrivée et le départ.
 4. Approuvez via les [actions de statut de bon de travail](/buyer-api/work-orders#buyer-status-actions) ou contestez via `work_unsatisfactory`, en citant ce que vous avez constaté dans la note.
 
 Les erreurs suivent l'enveloppe standard : `404` pour un appel inconnu, `400` pour un appel hors de votre portée.

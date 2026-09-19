@@ -39,6 +39,12 @@ The `{id}` is the service call id, which you read off the work order's `associat
 
 `with_work_logs` returns the WrenchMode event trail recorded during the visit (work started, paused, resumed, ended) together with **`trueWorkTimeMillis`**: the on-site work duration with pauses excluded. This is the number to use for labor verification, since raw check-in to check-out spans include breaks and interruptions.
 
+<Warning>
+**An empty work log does not mean no work happened.** WrenchMode events are recorded by the OpenWrench apps. A supplier who drives check-in and check-out through the Supplier API instead produces a service call with correct `checkInTime` and `checkOutTime` but **no work-log events and no `trueWorkTimeMillis`**.
+
+So treat a missing `trueWorkTimeMillis` as "not measured", not as "zero hours" — fall back to the `checkOutTime` minus `checkInTime` span for those visits, and bear in mind that span includes any breaks. The same caveat applies to `checkInGeoLocation`: it is absent on remote check-ins and on visits the supplier recorded through the API without coordinates.
+</Warning>
+
 ## Technician details and rate visibility
 
 `with_tech_details` returns the technicians on the call as contact records. **`hourlyRate` is populated only when the call was performed by your own internal service team.** Third-party supplier rates are never exposed to buyers, so expect `hourlyRate` to be absent on contractor visits.
@@ -49,7 +55,7 @@ Before approving a completed work order or its invoice:
 
 1. Fetch the work order and read `associatedServiceCalls`.
 2. For each call, request `/with_work_logs/with_tech_details`.
-3. Check `checkInGeoLocation` against the location, compare `trueWorkTimeMillis` against invoiced labor hours, and review check-out notes and images.
+3. Check `checkInGeoLocation` against the location, compare `trueWorkTimeMillis` against invoiced labor hours, and review check-out notes and images. Where `trueWorkTimeMillis` is absent, use the check-in to check-out span instead.
 4. Approve via the [work order status actions](/buyer-api/work-orders#buyer-status-actions) or dispute via `work_unsatisfactory`, citing what you found in the note.
 
 Errors follow the standard envelope: `404` for an unknown call, `400` for a call outside your scope.

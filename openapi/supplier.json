@@ -2856,7 +2856,7 @@
       "post": {
         "operationId": "serviceCallTechScheduled",
         "summary": "Service call status update: tech scheduled",
-        "description": "Creates/updates a service call assigning technician(s). The work order status becomes TechScheduled when serviceScheduledAt is present in the body, otherwise TechAssigned. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Creates or updates a service call assigning technician(s). Requires workOrderId and at least one of leadTechnicianEmail / serviceScheduledAt; sending neither returns 400. Without an id, an existing OPEN service call on the same work order and facility is REUSED when it has neither checked in nor checked out and its lead does not conflict with the incoming lead (compared trimmed and case-insensitively) \u2014 a new row is only inserted when no such call exists. numberOfTechs, partsWithQuantity and equipmentPerStockLocationIds are ignored. The work order status becomes TechScheduled when serviceScheduledAt is present in the body, otherwise TechAssigned. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated.",
         "tags": [
           "Service Calls"
         ],
@@ -2900,6 +2900,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Unhandled server error. Returned (without the standard error envelope's field detail) when a date-time field is not valid ISO 8601."
           }
         },
         "requestBody": {
@@ -2916,15 +2919,16 @@
                   },
                   "numberOfTechs": {
                     "type": "integer",
-                    "description": "REQUIRED. Number of technicians."
+                    "description": "IGNORED by this endpoint; the service call is always stored with numberOfTechs = 1. Set the real count at check_out."
                   },
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Service call id, when updating an existing call"
+                    "description": "Service call id; targets an existing call."
                   },
                   "leadTechnicianEmail": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Lead technician's email. Stored verbatim and NOT validated: any string is accepted and an address that does not match a provisioned SUPPLIER_TECH under this facility produces no error, but with_tech_details then returns a null name, role and hourlyRate and the visit is absent from per-technician reporting."
                   },
                   "additionalTechnicianEmails": {
                     "type": "array",
@@ -2946,14 +2950,15 @@
                       "properties": {},
                       "additionalProperties": true
                     },
-                    "description": "Part/quantity objects"
+                    "description": "IGNORED. Not persisted by any status-update endpoint; use the purchasing and inventory endpoints instead."
                   },
                   "equipmentPerStockLocationIds": {
                     "type": "array",
                     "items": {
                       "type": "integer",
                       "format": "int64"
-                    }
+                    },
+                    "description": "IGNORED. Not persisted by any status-update endpoint; use the purchasing and inventory endpoints instead."
                   },
                   "supplierFacilityId": {
                     "type": "integer",
@@ -2962,53 +2967,7 @@
                   "serviceScheduledAt": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "ISO 8601 date-time"
-                  },
-                  "checkInByEmail": {
-                    "type": "string"
-                  },
-                  "checkInStatus": {
-                    "type": "string"
-                  },
-                  "checkInTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkInStatus is set without a time"
-                  },
-                  "checkInNotes": {
-                    "type": "string"
-                  },
-                  "checkInImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkInGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
-                  },
-                  "checkOutByEmail": {
-                    "type": "string"
-                  },
-                  "checkOutStatus": {
-                    "type": "string"
-                  },
-                  "checkOutTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkOutStatus is set without a time"
-                  },
-                  "checkOutNotes": {
-                    "type": "string"
-                  },
-                  "checkOutImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkOutGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
+                    "description": "ISO 8601 date-time with offset, e.g. 2026-08-22T09:00:00.000-07:00. Parsed strictly: a value that is not ISO 8601 (a space instead of the 'T' separator is the usual mistake) fails with an uncaught 500, not a 400."
                   },
                   "createdAt": {
                     "type": "string",
@@ -3017,8 +2976,7 @@
                   }
                 },
                 "required": [
-                  "workOrderId",
-                  "numberOfTechs"
+                  "workOrderId"
                 ],
                 "description": "Service-call payload parsed by the shared service-call constructor. locationId, buyerFacilityId and buyerCompanyId are derived from the work order.",
                 "additionalProperties": true
@@ -3032,7 +2990,7 @@
       "post": {
         "operationId": "serviceCallTechRescheduled",
         "summary": "Service call status update: tech rescheduled",
-        "description": "Reschedules a service call. The work order status becomes TechRescheduled when serviceScheduledAt is present, otherwise TechAssigned. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Moves an existing service call's appointment. Requires id and workOrderId plus at least one of leadTechnicianEmail / serviceScheduledAt; sending neither returns 400. REPLACES rather than merges: serviceScheduledAt, leadTechnicianEmail and additionalTechnicianEmails are each overwritten with the request's value, so a field you omit is CLEARED (stockLocationIds is the exception and is preserved when omitted). numberOfTechs, partsWithQuantity and equipmentPerStockLocationIds are ignored. The work order status becomes TechRescheduled when serviceScheduledAt is present, otherwise TechAssigned. On success the ASSOCIATED WORK ORDER is returned.",
         "tags": [
           "Service Calls"
         ],
@@ -3076,6 +3034,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Unhandled server error. Returned (without the standard error envelope's field detail) when a date-time field is not valid ISO 8601."
           }
         },
         "requestBody": {
@@ -3092,28 +3053,31 @@
                   },
                   "numberOfTechs": {
                     "type": "integer",
-                    "description": "REQUIRED. Number of technicians."
+                    "description": "IGNORED by this endpoint; the stored numberOfTechs is unchanged. Set the real count at check_out."
                   },
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Service call id, when updating an existing call"
+                    "description": "REQUIRED unless creating the first service call with tech_scheduled. Service call id; targets an existing call."
                   },
                   "leadTechnicianEmail": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Lead technician's email. Stored verbatim and NOT validated: any string is accepted and an address that does not match a provisioned SUPPLIER_TECH under this facility produces no error, but with_tech_details then returns a null name, role and hourlyRate and the visit is absent from per-technician reporting."
                   },
                   "additionalTechnicianEmails": {
                     "type": "array",
                     "items": {
                       "type": "string"
-                    }
+                    },
+                    "description": "REPLACES the stored list. Omitting this field clears the additional technicians; resend the full list on every reschedule."
                   },
                   "stockLocationIds": {
                     "type": "array",
                     "items": {
                       "type": "integer",
                       "format": "int64"
-                    }
+                    },
+                    "description": "Replaces the stored list, but is preserved when omitted (unlike the technician fields)."
                   },
                   "partsWithQuantity": {
                     "type": "array",
@@ -3122,14 +3086,15 @@
                       "properties": {},
                       "additionalProperties": true
                     },
-                    "description": "Part/quantity objects"
+                    "description": "IGNORED. Not persisted by any status-update endpoint; use the purchasing and inventory endpoints instead."
                   },
                   "equipmentPerStockLocationIds": {
                     "type": "array",
                     "items": {
                       "type": "integer",
                       "format": "int64"
-                    }
+                    },
+                    "description": "IGNORED. Not persisted by any status-update endpoint; use the purchasing and inventory endpoints instead."
                   },
                   "supplierFacilityId": {
                     "type": "integer",
@@ -3138,53 +3103,7 @@
                   "serviceScheduledAt": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "ISO 8601 date-time"
-                  },
-                  "checkInByEmail": {
-                    "type": "string"
-                  },
-                  "checkInStatus": {
-                    "type": "string"
-                  },
-                  "checkInTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkInStatus is set without a time"
-                  },
-                  "checkInNotes": {
-                    "type": "string"
-                  },
-                  "checkInImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkInGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
-                  },
-                  "checkOutByEmail": {
-                    "type": "string"
-                  },
-                  "checkOutStatus": {
-                    "type": "string"
-                  },
-                  "checkOutTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkOutStatus is set without a time"
-                  },
-                  "checkOutNotes": {
-                    "type": "string"
-                  },
-                  "checkOutImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkOutGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
+                    "description": "ISO 8601 date-time with offset, e.g. 2026-08-22T09:00:00.000-07:00. Parsed strictly: a value that is not ISO 8601 (a space instead of the 'T' separator is the usual mistake) fails with an uncaught 500, not a 400."
                   },
                   "createdAt": {
                     "type": "string",
@@ -3193,8 +3112,8 @@
                   }
                 },
                 "required": [
-                  "workOrderId",
-                  "numberOfTechs"
+                  "id",
+                  "workOrderId"
                 ],
                 "description": "Service-call payload parsed by the shared service-call constructor. locationId, buyerFacilityId and buyerCompanyId are derived from the work order.",
                 "additionalProperties": true
@@ -3208,7 +3127,7 @@
       "post": {
         "operationId": "serviceCallCheckIn",
         "summary": "Service call status update: check in",
-        "description": "Records an on-site check-in on the service call; the work order status becomes TechWorkingOnSite. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Records an on-site check-in against an EXISTING service call. id is the only required field; workOrderId is not read. checkInStatus is ignored \u2014 the status is always set to TechWorkingOnSite. checkInTime defaults to the server's current time when omitted. numberOfTechs is ignored and stored as 1. Does NOT emit WrenchMode started_work events, so with_work_logs and trueWorkTimeMillis stay empty for API-driven visits. The work order status becomes TechWorkingOnSite. On success the ASSOCIATED WORK ORDER is returned.",
         "tags": [
           "Service Calls"
         ],
@@ -3252,6 +3171,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Unhandled server error. Returned (without the standard error envelope's field detail) when a date-time field is not valid ISO 8601."
           }
         },
         "requestBody": {
@@ -3261,71 +3183,23 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "workOrderId": {
-                    "type": "integer",
-                    "format": "int64",
-                    "description": "REQUIRED. Work order the service call belongs to; must exist."
-                  },
-                  "numberOfTechs": {
-                    "type": "integer",
-                    "description": "REQUIRED. Number of technicians."
-                  },
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Service call id, when updating an existing call"
-                  },
-                  "leadTechnicianEmail": {
-                    "type": "string"
-                  },
-                  "additionalTechnicianEmails": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "stockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "partsWithQuantity": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": true
-                    },
-                    "description": "Part/quantity objects"
-                  },
-                  "equipmentPerStockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "supplierFacilityId": {
-                    "type": "integer",
-                    "description": "Required for internal-service-team keys; for third-party suppliers it is overwritten with the API key's own facility id."
-                  },
-                  "serviceScheduledAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "ISO 8601 date-time"
+                    "description": "REQUIRED unless creating the first service call with tech_scheduled. Service call id; targets an existing call."
                   },
                   "checkInByEmail": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Email of the user performing the remote check-in."
                   },
                   "checkInStatus": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "IGNORED. The check-in status is always set to TechWorkingOnSite."
                   },
                   "checkInTime": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "Defaults to now when checkInStatus is set without a time"
+                    "description": "ISO 8601 date-time with offset, e.g. 2026-08-22T09:00:00.000-07:00. Parsed strictly: a value that is not ISO 8601 (a space instead of the 'T' separator is the usual mistake) fails with an uncaught 500, not a 400."
                   },
                   "checkInNotes": {
                     "type": "string"
@@ -3337,30 +3211,8 @@
                     }
                   },
                   "checkInGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
-                  },
-                  "checkOutByEmail": {
-                    "type": "string"
-                  },
-                  "checkOutStatus": {
-                    "type": "string"
-                  },
-                  "checkOutTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkOutStatus is set without a time"
-                  },
-                  "checkOutNotes": {
-                    "type": "string"
-                  },
-                  "checkOutImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkOutGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
+                    "$ref": "#/components/schemas/ServiceLatLong",
+                    "description": "On-site coordinates, surfaced to the buyer as proof of attendance."
                   },
                   "createdAt": {
                     "type": "string",
@@ -3369,8 +3221,7 @@
                   }
                 },
                 "required": [
-                  "workOrderId",
-                  "numberOfTechs"
+                  "id"
                 ],
                 "description": "Service-call payload parsed by the shared service-call constructor. locationId, buyerFacilityId and buyerCompanyId are derived from the work order.",
                 "additionalProperties": true
@@ -3384,7 +3235,7 @@
       "post": {
         "operationId": "serviceCallCheckOut",
         "summary": "Service call status update: check out",
-        "description": "Records an on-site check-out. The body's checkOutStatus (REQUIRED) must be a valid work-order status name and becomes the work order's new status. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Records an on-site check-out against an EXISTING service call and sets the work order's next status. Requires id, checkOutStatus and numberOfTechs; workOrderId is not read. checkOutStatus must be a valid work-order status name and becomes the work order's status. checkOutTime defaults to the server's current time when omitted. partsWithQuantity, stockLocationIds and equipmentPerStockLocationIds are ignored here. Does NOT emit WrenchMode ended_work events. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted. On success the ASSOCIATED WORK ORDER is returned.",
         "tags": [
           "Service Calls"
         ],
@@ -3428,6 +3279,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Unhandled server error. Returned (without the standard error envelope's field detail) when a date-time field is not valid ISO 8601."
           }
         },
         "requestBody": {
@@ -3437,94 +3291,27 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "workOrderId": {
-                    "type": "integer",
-                    "format": "int64",
-                    "description": "REQUIRED. Work order the service call belongs to; must exist."
-                  },
                   "numberOfTechs": {
                     "type": "integer",
-                    "description": "REQUIRED. Number of technicians."
+                    "description": "REQUIRED. Number of technicians on the visit."
                   },
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Service call id, when updating an existing call"
-                  },
-                  "leadTechnicianEmail": {
-                    "type": "string"
-                  },
-                  "additionalTechnicianEmails": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "stockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "partsWithQuantity": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": true
-                    },
-                    "description": "Part/quantity objects"
-                  },
-                  "equipmentPerStockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "supplierFacilityId": {
-                    "type": "integer",
-                    "description": "Required for internal-service-team keys; for third-party suppliers it is overwritten with the API key's own facility id."
-                  },
-                  "serviceScheduledAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "ISO 8601 date-time"
-                  },
-                  "checkInByEmail": {
-                    "type": "string"
-                  },
-                  "checkInStatus": {
-                    "type": "string"
-                  },
-                  "checkInTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkInStatus is set without a time"
-                  },
-                  "checkInNotes": {
-                    "type": "string"
-                  },
-                  "checkInImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkInGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
+                    "description": "REQUIRED unless creating the first service call with tech_scheduled. Service call id; targets an existing call."
                   },
                   "checkOutByEmail": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Email of the user performing the remote check-out."
                   },
                   "checkOutStatus": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "REQUIRED. Must be a valid work-order status name; becomes the work order's new status."
                   },
                   "checkOutTime": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "Defaults to now when checkOutStatus is set without a time"
+                    "description": "ISO 8601 date-time with offset, e.g. 2026-08-22T09:00:00.000-07:00. Parsed strictly: a value that is not ISO 8601 (a space instead of the 'T' separator is the usual mistake) fails with an uncaught 500, not a 400."
                   },
                   "checkOutNotes": {
                     "type": "string"
@@ -3545,9 +3332,9 @@
                   }
                 },
                 "required": [
-                  "workOrderId",
-                  "numberOfTechs",
-                  "checkOutStatus"
+                  "id",
+                  "checkOutStatus",
+                  "numberOfTechs"
                 ],
                 "description": "Service-call payload parsed by the shared service-call constructor. locationId, buyerFacilityId and buyerCompanyId are derived from the work order.",
                 "additionalProperties": true
@@ -3561,7 +3348,7 @@
       "post": {
         "operationId": "serviceCallRemoteCheckIn",
         "summary": "Service call status update: remote check in",
-        "description": "Records a remote check-in on the service call; the work order status becomes TechWorkingOnSite. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Records a remote check-in against an EXISTING service call. Requires id and checkInByEmail (the on-site check_in treats the email as optional). checkInGeoLocation is NOT stored for remote check-ins. checkInStatus is ignored \u2014 the status is always set to TechWorkingOnSite. checkInTime defaults to the server's current time when omitted. numberOfTechs is ignored and stored as 1. Does NOT emit WrenchMode started_work events. The work order status becomes TechWorkingOnSite. On success the ASSOCIATED WORK ORDER is returned.",
         "tags": [
           "Service Calls"
         ],
@@ -3605,6 +3392,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Unhandled server error. Returned (without the standard error envelope's field detail) when a date-time field is not valid ISO 8601."
           }
         },
         "requestBody": {
@@ -3614,71 +3404,23 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "workOrderId": {
-                    "type": "integer",
-                    "format": "int64",
-                    "description": "REQUIRED. Work order the service call belongs to; must exist."
-                  },
-                  "numberOfTechs": {
-                    "type": "integer",
-                    "description": "REQUIRED. Number of technicians."
-                  },
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Service call id, when updating an existing call"
-                  },
-                  "leadTechnicianEmail": {
-                    "type": "string"
-                  },
-                  "additionalTechnicianEmails": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "stockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "partsWithQuantity": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": true
-                    },
-                    "description": "Part/quantity objects"
-                  },
-                  "equipmentPerStockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "supplierFacilityId": {
-                    "type": "integer",
-                    "description": "Required for internal-service-team keys; for third-party suppliers it is overwritten with the API key's own facility id."
-                  },
-                  "serviceScheduledAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "ISO 8601 date-time"
+                    "description": "REQUIRED unless creating the first service call with tech_scheduled. Service call id; targets an existing call."
                   },
                   "checkInByEmail": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "REQUIRED. Email of the user performing the remote check-in."
                   },
                   "checkInStatus": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "IGNORED. The check-in status is always set to TechWorkingOnSite."
                   },
                   "checkInTime": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "Defaults to now when checkInStatus is set without a time"
+                    "description": "ISO 8601 date-time with offset, e.g. 2026-08-22T09:00:00.000-07:00. Parsed strictly: a value that is not ISO 8601 (a space instead of the 'T' separator is the usual mistake) fails with an uncaught 500, not a 400."
                   },
                   "checkInNotes": {
                     "type": "string"
@@ -3689,32 +3431,6 @@
                       "type": "string"
                     }
                   },
-                  "checkInGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
-                  },
-                  "checkOutByEmail": {
-                    "type": "string"
-                  },
-                  "checkOutStatus": {
-                    "type": "string"
-                  },
-                  "checkOutTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkOutStatus is set without a time"
-                  },
-                  "checkOutNotes": {
-                    "type": "string"
-                  },
-                  "checkOutImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkOutGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
-                  },
                   "createdAt": {
                     "type": "string",
                     "format": "date-time",
@@ -3722,8 +3438,8 @@
                   }
                 },
                 "required": [
-                  "workOrderId",
-                  "numberOfTechs"
+                  "id",
+                  "checkInByEmail"
                 ],
                 "description": "Service-call payload parsed by the shared service-call constructor. locationId, buyerFacilityId and buyerCompanyId are derived from the work order.",
                 "additionalProperties": true
@@ -3737,7 +3453,7 @@
       "post": {
         "operationId": "serviceCallRemoteCheckOut",
         "summary": "Service call status update: remote check out",
-        "description": "Records a remote check-out. The body's checkOutStatus (REQUIRED) must be a valid work-order status name and becomes the work order's new status. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Records a remote check-out against an EXISTING service call and sets the work order's next status. Requires id, checkOutByEmail (the on-site check_out treats the email as optional), checkOutStatus and numberOfTechs; workOrderId is not read. checkOutGeoLocation is NOT stored for remote check-outs. checkOutStatus must be a valid work-order status name and becomes the work order's status. checkOutTime defaults to the server's current time when omitted. Does NOT emit WrenchMode ended_work events. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run, and a WaitingForReview outcome is auto-promoted for third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled. On success the ASSOCIATED WORK ORDER is returned.",
         "tags": [
           "Service Calls"
         ],
@@ -3781,6 +3497,9 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "Unhandled server error. Returned (without the standard error envelope's field detail) when a date-time field is not valid ISO 8601."
           }
         },
         "requestBody": {
@@ -3790,94 +3509,27 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "workOrderId": {
-                    "type": "integer",
-                    "format": "int64",
-                    "description": "REQUIRED. Work order the service call belongs to; must exist."
-                  },
                   "numberOfTechs": {
                     "type": "integer",
-                    "description": "REQUIRED. Number of technicians."
+                    "description": "REQUIRED. Number of technicians on the visit."
                   },
                   "id": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Service call id, when updating an existing call"
-                  },
-                  "leadTechnicianEmail": {
-                    "type": "string"
-                  },
-                  "additionalTechnicianEmails": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "stockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "partsWithQuantity": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {},
-                      "additionalProperties": true
-                    },
-                    "description": "Part/quantity objects"
-                  },
-                  "equipmentPerStockLocationIds": {
-                    "type": "array",
-                    "items": {
-                      "type": "integer",
-                      "format": "int64"
-                    }
-                  },
-                  "supplierFacilityId": {
-                    "type": "integer",
-                    "description": "Required for internal-service-team keys; for third-party suppliers it is overwritten with the API key's own facility id."
-                  },
-                  "serviceScheduledAt": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "ISO 8601 date-time"
-                  },
-                  "checkInByEmail": {
-                    "type": "string"
-                  },
-                  "checkInStatus": {
-                    "type": "string"
-                  },
-                  "checkInTime": {
-                    "type": "string",
-                    "format": "date-time",
-                    "description": "Defaults to now when checkInStatus is set without a time"
-                  },
-                  "checkInNotes": {
-                    "type": "string"
-                  },
-                  "checkInImages": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "checkInGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
+                    "description": "REQUIRED unless creating the first service call with tech_scheduled. Service call id; targets an existing call."
                   },
                   "checkOutByEmail": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "REQUIRED. Email of the user performing the remote check-out."
                   },
                   "checkOutStatus": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "REQUIRED. Must be a valid work-order status name; becomes the work order's new status."
                   },
                   "checkOutTime": {
                     "type": "string",
                     "format": "date-time",
-                    "description": "Defaults to now when checkOutStatus is set without a time"
+                    "description": "ISO 8601 date-time with offset, e.g. 2026-08-22T09:00:00.000-07:00. Parsed strictly: a value that is not ISO 8601 (a space instead of the 'T' separator is the usual mistake) fails with an uncaught 500, not a 400."
                   },
                   "checkOutNotes": {
                     "type": "string"
@@ -3888,9 +3540,6 @@
                       "type": "string"
                     }
                   },
-                  "checkOutGeoLocation": {
-                    "$ref": "#/components/schemas/ServiceLatLong"
-                  },
                   "createdAt": {
                     "type": "string",
                     "format": "date-time",
@@ -3898,9 +3547,10 @@
                   }
                 },
                 "required": [
-                  "workOrderId",
-                  "numberOfTechs",
-                  "checkOutStatus"
+                  "id",
+                  "checkOutByEmail",
+                  "checkOutStatus",
+                  "numberOfTechs"
                 ],
                 "description": "Service-call payload parsed by the shared service-call constructor. locationId, buyerFacilityId and buyerCompanyId are derived from the work order.",
                 "additionalProperties": true
@@ -3914,7 +3564,7 @@
       "get": {
         "operationId": "getServiceCallWithWorkLogs",
         "summary": "Get a service call with work logs",
-        "description": "Retrieves a service call expanded with its WrenchMode work-log events (started_work, ended_work and the location_* timer events within the check-in/check-out window) and trueWorkTimeMillis (pause-excluded work duration).",
+        "description": "Retrieves a service call expanded with its WrenchMode work-log events (started_work, ended_work and the location_* timer events within the check-in/check-out window) and trueWorkTimeMillis (pause-excluded work duration). Work-log events are recorded by the OpenWrench apps, so a visit whose check-in and check-out were driven through the Supplier API returns an empty event list and no trueWorkTimeMillis \u2014 treat that as \"not measured\" rather than zero hours and fall back to the checkInTime/checkOutTime span.",
         "tags": [
           "Service Calls"
         ],
@@ -4062,7 +3712,7 @@
       "get": {
         "operationId": "getServiceCallWithWorkLogsAndTechDetails",
         "summary": "Get a service call with work logs and tech details",
-        "description": "Retrieves a service call expanded with both its WrenchMode work-log events (plus trueWorkTimeMillis) and its technician details (hourlyRate only for the key's own facility).",
+        "description": "Retrieves a service call expanded with both its WrenchMode work-log events (plus trueWorkTimeMillis) and its technician details (hourlyRate only for the key's own facility). Work-log events are recorded by the OpenWrench apps, so a visit whose check-in and check-out were driven through the Supplier API returns an empty event list and no trueWorkTimeMillis \u2014 treat that as \"not measured\" rather than zero hours and fall back to the checkInTime/checkOutTime span.",
         "tags": [
           "Service Calls"
         ],

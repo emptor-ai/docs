@@ -37,6 +37,12 @@ El `{id}` es el id de la llamada de servicio, que lees de `associatedServiceCall
 
 `with_work_logs` devuelve el rastro de eventos WrenchMode registrados durante la visita (trabajo iniciado, pausado, reanudado, finalizado) junto con **`trueWorkTimeMillis`**: la duración del trabajo en sitio excluyendo pausas. Este es el número a usar para la verificación de labor, ya que los tramos brutos de check-in a check-out incluyen descansos e interrupciones.
 
+<Warning>
+**Un registro de trabajo vacío no significa que no hubo trabajo.** Los eventos WrenchMode los registran las apps de OpenWrench. Un proveedor que conduce el check-in y el check-out por la Supplier API produce en cambio una llamada de servicio con `checkInTime` y `checkOutTime` correctos pero **sin eventos de registro de trabajo y sin `trueWorkTimeMillis`**.
+
+Así que trata un `trueWorkTimeMillis` faltante como "no medido", no como "cero horas": recurre al tramo de `checkOutTime` menos `checkInTime` para esas visitas, y ten en cuenta que ese tramo incluye cualquier descanso. La misma salvedad aplica a `checkInGeoLocation`: está ausente en check-ins remotos y en visitas que el proveedor registró por la API sin coordenadas.
+</Warning>
+
 ## Detalles del técnico y visibilidad de tarifas
 
 `with_tech_details` devuelve los técnicos de la llamada como registros de contacto. **`hourlyRate` se llena solo cuando la llamada fue realizada por tu propio equipo de servicio interno.** Las tarifas de proveedores terceros nunca se exponen a los compradores, así que espera que `hourlyRate` esté ausente en visitas de contratistas.
@@ -47,7 +53,7 @@ Antes de aprobar una orden de trabajo completada o su factura:
 
 1. Obtén la orden de trabajo y lee `associatedServiceCalls`.
 2. Para cada llamada, solicita `/with_work_logs/with_tech_details`.
-3. Contrasta `checkInGeoLocation` contra la ubicación, compara `trueWorkTimeMillis` contra las horas de trabajo facturadas y revisa las notas e imágenes de check-out.
+3. Contrasta `checkInGeoLocation` contra la ubicación, compara `trueWorkTimeMillis` contra las horas de trabajo facturadas y revisa las notas e imágenes de check-out. Donde `trueWorkTimeMillis` esté ausente, usa en su lugar el tramo de check-in a check-out.
 4. Aprueba mediante las [acciones de estado de la orden de trabajo](/buyer-api/work-orders#buyer-status-actions) o disputa mediante `work_unsatisfactory`, citando en la nota lo que encontraste.
 
 Los errores siguen la envoltura estándar: `404` para una llamada desconocida, `400` para una llamada fuera de tu alcance.

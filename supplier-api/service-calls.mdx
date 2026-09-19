@@ -4,7 +4,7 @@ sidebarTitle: "Service calls"
 description: "Drive the visit lifecycle with the Supplier API: schedule and reschedule technicians, check in and out, set completion statuses, and read work logs."
 ---
 
-A **service call** is one technician visit against a work order. The Supplier API drives the whole visit lifecycle through five status-update endpoints plus read expansions. This is the most nuanced part of the API; the details below are worth reading before you write code.
+A **service call** is one technician visit against a work order. The Supplier API drives the whole visit lifecycle through six status-update endpoints plus read expansions. This is the most nuanced part of the API; the details below are worth reading before you write code.
 
 All examples assume:
 
@@ -16,15 +16,34 @@ export SECRET="<shared-secret>"
 
 ## How the status-update endpoints work
 
-All five share one request shape (a service-call payload) and one crucial behavior:
+All six share one request shape (a service-call payload) and one crucial behavior:
 
 <Warning>
 **The response is the associated work order, not the service call.** Each call creates or updates a service call, moves the work order's status, and returns the updated work order in the envelope. Read the new service call state off the work order's `associatedServiceCalls` / `lastServiceCall`.
 </Warning>
 
-Shared request fields: `workOrderId` and `numberOfTechs` are always required. `id` targets an existing service call (omit it on first creation, then reuse the id for every later update of the same visit). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, the `checkIn*`/`checkOut*` groups, `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` fill in as the visit progresses.
+They take the same payload, but **the required fields differ per endpoint** — there is no set that applies to all of them:
 
-`supplierFacilityId` is required for internal-service-team keys; for third-party supplier keys it is overwritten with your own facility id regardless of what you send.
+| Endpoint | Required in the body |
+| --- | --- |
+| `tech_scheduled` | `workOrderId`, plus at least one of `leadTechnicianEmail` / `serviceScheduledAt` |
+| `tech_rescheduled` | `id`, `workOrderId`, plus at least one of `leadTechnicianEmail` / `serviceScheduledAt` |
+| `check_in` | `id` |
+| `check_out` | `id`, `checkOutStatus`, `numberOfTechs` |
+| `remote_check_in` | `id`, `checkInByEmail` |
+| `remote_check_out` | `id`, `checkOutByEmail`, `checkOutStatus`, `numberOfTechs` |
+
+A missing required field returns `400 InvalidInputException` with `"required param: <name>"`.
+
+`id` targets an existing service call. Omit it on first creation, then reuse the id for every later update of the same visit — but read [Multi-visit jobs](#multi-visit-jobs) before assuming that omitting it always creates a new call.
+
+`supplierFacilityId` is required for internal-service-team keys; for third-party supplier keys it is overwritten with your own facility id regardless of what you send, so you can leave it out.
+
+<Note>
+**`numberOfTechs` is only read by `check_out` and `remote_check_out`.** The other four endpoints ignore whatever you send and store `1`. If a visit really has more than one technician, list the others in `additionalTechnicianEmails` and set the true count at check-out.
+
+**`partsWithQuantity` and `equipmentPerStockLocationIds` are ignored by all six endpoints.** Only `stockLocationIds` is read, and only by `tech_scheduled` and `tech_rescheduled`.
+</Note>
 
 | Endpoint | Work order status becomes |
 | --- | --- |
@@ -32,14 +51,31 @@ Shared request fields: `workOrderId` and `numberOfTechs` are always required. `i
 | `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` when `serviceScheduledAt` is present, else `TechAssigned` |
 | `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
 | `POST .../service_calls/status_update/check_out` | The `checkOutStatus` you send (required) |
-| `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Same as their on-site counterparts, for remote work |
+| `POST .../service_calls/status_update/remote_check_in` | `TechWorkingOnSite` |
+| `POST .../service_calls/status_update/remote_check_out` | The `checkOutStatus` you send (required) |
 
 All paths are under `/v1/supplier/work_order/`. There are no buyer-side equivalents: check-in and check-out cannot be driven from the Buyer API.
 
 <Warning>
-**`check_in`, `check_out`, and their `remote_` variants require an existing service call `id`.** They update a visit; they do not create one. Sending them without `id` returns `400 InvalidInputException` with `"required param: id"`. Start the visit with `tech_scheduled` (which creates the first service call and returns the work order with the new call in `associatedServiceCalls` / `lastServiceCall`), then reuse that `id` on every later update of the same visit.
+**`tech_rescheduled`, `check_in`, `check_out`, and the `remote_` variants require an existing service call `id`.** They update a visit; they do not create one. Sending them without `id` returns `400 InvalidInputException` with `"required param: id"`. Start the visit with `tech_scheduled` (which creates the first service call and returns the work order with the new call in `associatedServiceCalls` / `lastServiceCall`), then reuse that `id` on every later update of the same visit.
 
 The work order also has to be past acceptance before `tech_scheduled` is valid. If it is still in `PendingConfirmationByServiceProvider` (the buyer status "Open - Pending Contractor Confirmation"), [accept it first](/supplier-api/work-orders#accept-or-decline) with `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
+</Warning>
+
+### Date-times must be ISO 8601
+
+<Warning>
+**A malformed `serviceScheduledAt`, `checkInTime`, or `checkOutTime` returns a bare `500`, not a validation error.** These three fields are parsed strictly as ISO 8601, and the parse failure is not caught: instead of `400 ParseException` naming the field, you get a generic "unhandled exception" response with no indication of which value was wrong.
+
+So if a status update fails with an undetailed `500`, check your timestamps first. The most common mistake is a space instead of the `T` separator:
+
+```text
+2026-09-10 10:43:00+00:00   ✗ rejected — space instead of T, returns 500
+2026-09-10T10:43:00+00:00   ✓ accepted
+2026-09-10T10:43:00.000Z    ✓ accepted
+```
+
+Milliseconds are optional; the offset may be written as `+00:00`, `-07:00`, or `Z`. See [Date formats](/supplier-api/introduction#date-formats).
 </Warning>
 
 ## 1. Schedule the visit
@@ -50,13 +86,36 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   -H "Content-Type: application/json" \
   -d '{
     "workOrderId": 9001,
-    "numberOfTechs": 1,
     "leadTechnicianEmail": "tech@supplier.com",
     "serviceScheduledAt": "2026-08-22T09:00:00.000-07:00"
   }'
 ```
 
-To move the appointment later, call `tech_rescheduled` with the service call's `id` and the new `serviceScheduledAt`.
+At least one of `leadTechnicianEmail` and `serviceScheduledAt` must be present; sending neither returns `400` with `"Both Lead Technician and Scheduled At are empty"`.
+
+**`leadTechnicianEmail` is stored as you send it and is never validated.** Any string is accepted — the endpoint does not check that the address belongs to one of your users, and an unrecognized address produces no error. What it costs you is everything keyed off the technician: `with_tech_details` returns the email with a null name, role, and hourly rate, and the visit is missing from per-technician reporting. To get those, [provision the technician first](/supplier-api/files-and-users#provisioning-supplier-users) with the `SUPPLIER_TECH` role under the same facility, and send that exact address.
+
+### Rescheduling
+
+To move the appointment later, call `tech_rescheduled` with the service call's `id`, its `workOrderId`, and the new `serviceScheduledAt`.
+
+<Warning>
+**`tech_rescheduled` replaces the technician assignment; it does not merge into it.** `serviceScheduledAt`, `leadTechnicianEmail`, and `additionalTechnicianEmails` are each overwritten with whatever the request carries, so a field you omit is **cleared**, not preserved. Rescheduling with only `id`, `workOrderId`, and `serviceScheduledAt` therefore wipes the lead technician and the additional technicians off the call.
+
+Always resend the full assignment:
+
+```json
+{
+  "id": 4402,
+  "workOrderId": 9001,
+  "leadTechnicianEmail": "tech@supplier.com",
+  "additionalTechnicianEmails": ["helper@supplier.com"],
+  "serviceScheduledAt": "2026-08-23T13:00:00.000-07:00"
+}
+```
+
+(`stockLocationIds` is the exception — omitting it keeps the existing value.)
+</Warning>
 
 ## 2. Check in
 
@@ -66,16 +125,19 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
   -H "Content-Type: application/json" \
   -d '{
     "id": 4402,
-    "workOrderId": 9001,
-    "numberOfTechs": 1,
     "checkInByEmail": "tech@supplier.com",
-    "checkInStatus": "TechWorkingOnSite",
     "checkInNotes": "On site, starting diagnosis.",
     "checkInGeoLocation": { "lat": "37.7749", "long": "-122.4194" }
   }'
 ```
 
-`checkInTime` defaults to the server's current time when you set a `checkInStatus` without a time, so live integrations can omit it; backfills should pass it explicitly. `checkInImages` takes photo references, and geo coordinates give the buyer on-site proof.
+`id` is the only required field. `workOrderId` is not read — the visit is identified by `id` alone, and its work order, location, and buyer come from the stored call.
+
+`checkInTime` always defaults to the server's current time when you omit it, so live integrations can leave it out; backfills should pass it explicitly. `checkInImages` takes photo references, and geo coordinates give the buyer on-site proof.
+
+<Note>
+**`checkInStatus` is ignored.** The check-in status is always set to `TechWorkingOnSite` server-side, whatever you send. (`checkOutStatus`, by contrast, is required and is honored — see below.)
+</Note>
 
 ## 3. Check out and set the outcome
 
@@ -87,7 +149,6 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   -H "Content-Type: application/json" \
   -d '{
     "id": 4402,
-    "workOrderId": 9001,
     "numberOfTechs": 1,
     "checkOutByEmail": "tech@supplier.com",
     "checkOutStatus": "WaitingForReview",
@@ -96,19 +157,30 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
+`numberOfTechs` is required here (this is the one status update that reads it, so it is where the visit's real technician count gets recorded). `workOrderId` is not read.
+
 Common `checkOutStatus` choices:
 
 - `WaitingForReview` — work finished, hand off to the buyer for review.
 - `TechScheduled` or `PartsRequested` and friends — the visit ended but the job continues (follow-up visit, waiting on parts).
 
-Parts and stock consumed on the visit are recorded through `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` on the same payload; the ids come from your [inventory catalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+<Warning>
+**Parts consumed on the visit cannot be recorded through the check-out payload.** `partsWithQuantity` and `equipmentPerStockLocationIds` are silently dropped by every status-update endpoint — the request succeeds and the parts are simply not saved. Record parts and stock through the [purchasing and inventory endpoints](/supplier-api/purchasing-and-inventory) instead. `stockLocationIds` does work, but only on `tech_scheduled` and `tech_rescheduled`, not at check-out.
+</Warning>
 
 Two automation behaviors trigger at this point:
 
 - **Auto-approval.** For third-party suppliers whose buyer company has `autoApproveWorkOrdersCompletedByThirdParty` enabled, a `WaitingForReview` outcome is auto-promoted to `WorkReviewedAndCompleted`.
 - **Invoice auto-publishing.** Whenever the resulting status is `WorkReviewedAndCompleted`, invoice auto-publishing rules may run and publish your draft invoice. See [Quotes and invoicing](/supplier-api/quotes-and-invoicing).
 
-`remote_check_in` and `remote_check_out` behave identically for work done off-site.
+### The remote variants
+
+`remote_check_in` and `remote_check_out` record the same lifecycle for work done off-site, with two differences from their on-site counterparts:
+
+- **The acting email is required.** `remote_check_in` requires `checkInByEmail` and `remote_check_out` requires `checkOutByEmail`, where the on-site versions treat them as optional.
+- **Geo coordinates are discarded.** `checkInGeoLocation` and `checkOutGeoLocation` are not stored on a remote check-in or check-out, which makes sense for off-site work but means the buyer gets no location evidence for these visits.
+
+Everything else — the required `checkOutStatus` and `numberOfTechs` on `remote_check_out`, the auto-approval and invoice behaviors above — is the same.
 
 ## Reading a service call back
 
@@ -125,8 +197,23 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
+<Warning>
+**API-driven check-ins and check-outs do not generate WrenchMode events.** The `started_work` / `ended_work` pair behind `with_work_logs` is recorded by the OpenWrench apps, not by these endpoints. A visit whose whole lifecycle was driven through the Supplier API therefore comes back with an empty work log and no `trueWorkTimeMillis`, even though its check-in and check-out times are set correctly.
+
+Use `checkInTime` and `checkOutTime` from the service call itself for the labor span on API-driven visits, and treat `trueWorkTimeMillis` as available only for visits your technicians ran in the app.
+</Warning>
+
 For fleet-level time reporting across all technicians, use [WrenchMode](/supplier-api/wrenchmode) instead of iterating calls.
 
 ## Multi-visit jobs
 
 One work order can carry many service calls (diagnosis, repair, follow-up). Create each visit with its own `tech_scheduled` call (no `id`), and keep each visit's subsequent updates keyed to its service-call `id`. Check out intermediate visits with a continuing status such as `PartsRequested` or `TechScheduled`, and only the final visit with `WaitingForReview`.
+
+<Warning>
+**Omitting `id` does not always create a new service call.** To stop duplicate calls stacking up on a work order, a `tech_scheduled` request without an `id` first looks for a reusable open call on the same work order and facility, and updates that one instead of inserting a new row. A call is reusable when **both** of these hold:
+
+- It has neither checked in nor checked out (`checkInTime` and `checkOutTime` are both empty).
+- Its lead does not conflict with yours — the two lead emails match (trimmed, case-insensitive), or either side has no lead at all.
+
+In practice this means the follow-up visit you intended to create will silently merge into the previous one if that one was scheduled but never checked out. **Check each visit out before scheduling the next**, and the next `tech_scheduled` will correctly open a new call. Confirm either way by comparing the service-call id in `lastServiceCall` on the returned work order against the one you already hold.
+</Warning>

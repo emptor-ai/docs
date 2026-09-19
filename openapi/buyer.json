@@ -4068,7 +4068,7 @@
         "tags": [
           "Service Calls"
         ],
-        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden.",
+        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden. Work-log events are recorded by the OpenWrench apps, so a visit whose check-in and check-out were driven through the Supplier API returns an empty event list and no trueWorkTimeMillis \u2014 treat that as \"not measured\" rather than zero hours and fall back to the checkInTime/checkOutTime span.",
         "parameters": [
           {
             "name": "id",
@@ -4212,7 +4212,7 @@
         "tags": [
           "Service Calls"
         ],
-        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden.",
+        "description": "Service call helicopter expansion: each /with_* path segment hoists one section into the response. with_work_logs returns the call's wrench-mode events plus trueWorkTimeMillis (pause-excluded); with_tech_details returns the call's technicians, with hourlyRate populated only for the buyer's own internal service team \u2014 third-party rates stay hidden. Work-log events are recorded by the OpenWrench apps, so a visit whose check-in and check-out were driven through the Supplier API returns an empty event list and no trueWorkTimeMillis \u2014 treat that as \"not measured\" rather than zero hours and fall back to the checkInTime/checkOutTime span.",
         "parameters": [
           {
             "name": "id",

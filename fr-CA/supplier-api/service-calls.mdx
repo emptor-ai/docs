@@ -2,7 +2,7 @@
 
 > Pilotez le cycle de vie de la visite avec l'API Fournisseur : planifier et replanifier les techniciens, s'enregistrer et quitter, définir les statuts de complétion et lire les journaux de travail.
 
-Un **appel de service** est une visite de technicien sur un bon de travail. L'API Fournisseur pilote l'ensemble du cycle de vie de la visite à travers cinq endpoints de mise à jour de statut ainsi que des expansions de lecture. C'est la partie la plus nuancée de l'API; les détails ci-dessous méritent d'être lus avant d'écrire du code.
+Un **appel de service** est une visite de technicien sur un bon de travail. L'API Fournisseur pilote l'ensemble du cycle de vie de la visite à travers six endpoints de mise à jour de statut ainsi que des expansions de lecture. C'est la partie la plus nuancée de l'API; les détails ci-dessous méritent d'être lus avant d'écrire du code.
 
 Tous les exemples supposent :
 
@@ -14,15 +14,34 @@ export SECRET="<shared-secret>"
 
 ## Comment fonctionnent les endpoints de mise à jour de statut
 
-Les cinq partagent une même forme de requête (une charge utile d'appel de service) et un comportement crucial :
+Les six partagent une même forme de requête (une charge utile d'appel de service) et un comportement crucial :
 
 <Warning>
 **La réponse est le bon de travail associé, pas l'appel de service.** Chaque appel crée ou met à jour un appel de service, fait avancer le statut du bon de travail, et retourne le bon de travail mis à jour dans l'enveloppe. Lisez le nouvel état de l'appel de service sur les `associatedServiceCalls` / `lastServiceCall` du bon de travail.
 </Warning>
 
-Champs de requête partagés : `workOrderId` et `numberOfTechs` sont toujours requis. `id` cible un appel de service existant (omettez-le à la première création, puis réutilisez l'id pour chaque mise à jour ultérieure de la même visite). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, les groupes `checkIn*`/`checkOut*`, `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` se remplissent à mesure que la visite progresse.
+Ils prennent tous la même charge utile, mais **les champs requis diffèrent selon l'endpoint** : aucun ensemble ne s'applique à tous.
 
-`supplierFacilityId` est requis pour les clés d'équipes de service internes; pour les clés de fournisseur tiers, il est écrasé par votre propre id d'établissement peu importe ce que vous envoyez.
+| Endpoint | Requis dans le corps |
+| --- | --- |
+| `tech_scheduled` | `workOrderId`, plus au moins un de `leadTechnicianEmail` / `serviceScheduledAt` |
+| `tech_rescheduled` | `id`, `workOrderId`, plus au moins un de `leadTechnicianEmail` / `serviceScheduledAt` |
+| `check_in` | `id` |
+| `check_out` | `id`, `checkOutStatus`, `numberOfTechs` |
+| `remote_check_in` | `id`, `checkInByEmail` |
+| `remote_check_out` | `id`, `checkOutByEmail`, `checkOutStatus`, `numberOfTechs` |
+
+Un champ requis manquant retourne `400 InvalidInputException` avec `"required param: <nom>"`.
+
+`id` cible un appel de service existant. Omettez-le à la première création, puis réutilisez l'id pour chaque mise à jour ultérieure de la même visite — mais lisez [Travaux à plusieurs visites](#travaux-à-plusieurs-visites) avant de supposer que l'omettre crée toujours un nouvel appel.
+
+`supplierFacilityId` est requis pour les clés d'équipes de service internes; pour les clés de fournisseur tiers, il est écrasé par votre propre id d'établissement peu importe ce que vous envoyez, vous pouvez donc l'omettre.
+
+<Note>
+**`numberOfTechs` n'est lu que par `check_out` et `remote_check_out`.** Les quatre autres endpoints ignorent ce que vous envoyez et enregistrent `1`. Si une visite compte réellement plus d'un technicien, listez les autres dans `additionalTechnicianEmails` et fixez le vrai compte au départ.
+
+**`partsWithQuantity` et `equipmentPerStockLocationIds` sont ignorés par les six endpoints.** Seul `stockLocationIds` est lu, et seulement par `tech_scheduled` et `tech_rescheduled`.
+</Note>
 
 | Endpoint | Le statut du bon de travail devient |
 | --- | --- |
@@ -30,14 +49,31 @@ Champs de requête partagés : `workOrderId` et `numberOfTechs` sont toujours re
 | `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` lorsque `serviceScheduledAt` est présent, sinon `TechAssigned` |
 | `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
 | `POST .../service_calls/status_update/check_out` | Le `checkOutStatus` que vous envoyez (requis) |
-| `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Identique à leurs équivalents sur place, pour le travail à distance |
+| `POST .../service_calls/status_update/remote_check_in` | `TechWorkingOnSite` |
+| `POST .../service_calls/status_update/remote_check_out` | Le `checkOutStatus` que vous envoyez (requis) |
 
 Tous les chemins sont sous `/v1/supplier/work_order/`. Il n'existe pas d'équivalents côté acheteur : le check-in et le check-out ne peuvent pas être pilotés depuis la Buyer API.
 
 <Warning>
-**`check_in`, `check_out` et leurs variantes `remote_` exigent un `id` de service call existant.** Ils mettent à jour une visite; ils n'en créent pas. Les envoyer sans `id` retourne `400 InvalidInputException` avec `"required param: id"`. Commencez la visite par `tech_scheduled` (qui crée le premier service call et retourne le bon de travail avec le nouveau call dans `associatedServiceCalls` / `lastServiceCall`), puis réutilisez cet `id` à chaque mise à jour ultérieure de la même visite.
+**`tech_rescheduled`, `check_in`, `check_out` et les variantes `remote_` exigent un `id` de service call existant.** Ils mettent à jour une visite; ils n'en créent pas. Les envoyer sans `id` retourne `400 InvalidInputException` avec `"required param: id"`. Commencez la visite par `tech_scheduled` (qui crée le premier service call et retourne le bon de travail avec le nouveau call dans `associatedServiceCalls` / `lastServiceCall`), puis réutilisez cet `id` à chaque mise à jour ultérieure de la même visite.
 
 Le bon de travail doit aussi avoir dépassé l'acceptation avant que `tech_scheduled` soit valide. S'il est encore à `PendingConfirmationByServiceProvider` (le statut acheteur « Open - Pending Contractor Confirmation »), [acceptez-le d'abord](/fr-CA/supplier-api/work-orders#accepter-ou-refuser) avec `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
+</Warning>
+
+### Les dates-heures doivent être en ISO 8601
+
+<Warning>
+**Un `serviceScheduledAt`, `checkInTime` ou `checkOutTime` malformé retourne un `500` nu, pas une erreur de validation.** Ces trois champs sont analysés strictement comme de l'ISO 8601, et l'échec d'analyse n'est pas intercepté : au lieu d'un `400 ParseException` nommant le champ, vous obtenez une réponse générique « unhandled exception » sans aucune indication de la valeur fautive.
+
+Donc si une mise à jour de statut échoue avec un `500` sans détail, vérifiez d'abord vos horodatages. L'erreur la plus fréquente est une espace à la place du séparateur `T` :
+
+```text
+2026-09-10 10:43:00+00:00   ✗ rejeté — espace au lieu de T, retourne 500
+2026-09-10T10:43:00+00:00   ✓ accepté
+2026-09-10T10:43:00.000Z    ✓ accepté
+```
+
+Les millisecondes sont facultatives; le décalage peut s'écrire `+00:00`, `-07:00` ou `Z`. Voir [Formats de date](/fr-CA/supplier-api/introduction#formats-de-date).
 </Warning>
 
 ## 1. Planifier la visite
@@ -48,13 +84,36 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   -H "Content-Type: application/json" \
   -d '{
     "workOrderId": 9001,
-    "numberOfTechs": 1,
     "leadTechnicianEmail": "tech@supplier.com",
     "serviceScheduledAt": "2026-08-22T09:00:00.000-07:00"
   }'
 ```
 
-Pour déplacer le rendez-vous plus tard, appelez `tech_rescheduled` avec l'`id` de l'appel de service et le nouveau `serviceScheduledAt`.
+Au moins un de `leadTechnicianEmail` et `serviceScheduledAt` doit être présent; n'en envoyer aucun retourne `400` avec `"Both Lead Technician and Scheduled At are empty"`.
+
+**`leadTechnicianEmail` est enregistré tel que vous l'envoyez et n'est jamais validé.** N'importe quelle chaîne est acceptée : l'endpoint ne vérifie pas que l'adresse appartient à l'un de vos utilisateurs, et une adresse non reconnue ne produit aucune erreur. Ce que cela vous coûte, c'est tout ce qui dépend du technicien : `with_tech_details` retourne l'adresse avec un nom, un rôle et un taux horaire nuls, et la visite est absente des rapports par technicien. Pour les obtenir, [approvisionnez d'abord le technicien](/fr-CA/supplier-api/files-and-users#approvisionner-des-utilisateurs-fournisseurs) avec le rôle `SUPPLIER_TECH` sous le même établissement, et envoyez exactement cette adresse.
+
+### Replanifier
+
+Pour déplacer le rendez-vous plus tard, appelez `tech_rescheduled` avec l'`id` de l'appel de service, son `workOrderId` et le nouveau `serviceScheduledAt`.
+
+<Warning>
+**`tech_rescheduled` remplace l'affectation des techniciens; il ne la fusionne pas.** `serviceScheduledAt`, `leadTechnicianEmail` et `additionalTechnicianEmails` sont chacun écrasés par ce que porte la requête, si bien qu'un champ omis est **effacé**, pas préservé. Replanifier avec seulement `id`, `workOrderId` et `serviceScheduledAt` efface donc le technicien principal et les techniciens additionnels de l'appel.
+
+Renvoyez toujours l'affectation complète :
+
+```json
+{
+  "id": 4402,
+  "workOrderId": 9001,
+  "leadTechnicianEmail": "tech@supplier.com",
+  "additionalTechnicianEmails": ["helper@supplier.com"],
+  "serviceScheduledAt": "2026-08-23T13:00:00.000-07:00"
+}
+```
+
+(`stockLocationIds` fait exception : l'omettre conserve la valeur existante.)
+</Warning>
 
 ## 2. S'enregistrer
 
@@ -64,16 +123,19 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
   -H "Content-Type: application/json" \
   -d '{
     "id": 4402,
-    "workOrderId": 9001,
-    "numberOfTechs": 1,
     "checkInByEmail": "tech@supplier.com",
-    "checkInStatus": "TechWorkingOnSite",
     "checkInNotes": "On site, starting diagnosis.",
     "checkInGeoLocation": { "lat": "37.7749", "long": "-122.4194" }
   }'
 ```
 
-`checkInTime` prend par défaut l'heure actuelle du serveur lorsque vous définissez un `checkInStatus` sans heure, alors les intégrations en direct peuvent l'omettre; les remplissages rétroactifs devraient le passer explicitement. `checkInImages` prend des références de photo, et les coordonnées géographiques donnent à l'acheteur une preuve de présence sur place.
+`id` est le seul champ requis. `workOrderId` n'est pas lu : la visite est identifiée par `id` seul, et son bon de travail, son emplacement et son acheteur proviennent de l'appel enregistré.
+
+`checkInTime` prend toujours par défaut l'heure actuelle du serveur lorsque vous l'omettez, alors les intégrations en direct peuvent le laisser de côté; les remplissages rétroactifs devraient le passer explicitement. `checkInImages` prend des références de photo, et les coordonnées géographiques donnent à l'acheteur une preuve de présence sur place.
+
+<Note>
+**`checkInStatus` est ignoré.** Le statut d'arrivée est toujours fixé à `TechWorkingOnSite` côté serveur, peu importe ce que vous envoyez. (`checkOutStatus`, lui, est requis et est honoré — voir ci-dessous.)
+</Note>
 
 ## 3. Quitter et définir le résultat
 
@@ -85,7 +147,6 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   -H "Content-Type: application/json" \
   -d '{
     "id": 4402,
-    "workOrderId": 9001,
     "numberOfTechs": 1,
     "checkOutByEmail": "tech@supplier.com",
     "checkOutStatus": "WaitingForReview",
@@ -94,19 +155,30 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
+`numberOfTechs` est requis ici (c'est la seule mise à jour de statut qui le lit, donc c'est là que le vrai nombre de techniciens de la visite est enregistré). `workOrderId` n'est pas lu.
+
 Choix courants pour `checkOutStatus` :
 
 - `WaitingForReview` — travail terminé, remise à l'acheteur pour révision.
 - `TechScheduled` ou `PartsRequested` et compagnie — la visite s'est terminée mais le travail se poursuit (visite de suivi, en attente de pièces).
 
-Les pièces et le stock consommés durant la visite sont enregistrés via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile; les ids proviennent de votre [catalogue d'inventaire](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+<Warning>
+**Les pièces consommées durant la visite ne peuvent pas être enregistrées via la charge utile de départ.** `partsWithQuantity` et `equipmentPerStockLocationIds` sont silencieusement écartés par tous les endpoints de mise à jour de statut : la requête réussit et les pièces ne sont tout simplement pas sauvegardées. Enregistrez plutôt les pièces et le stock via les [endpoints d'achats et d'inventaire](/fr-CA/supplier-api/purchasing-and-inventory). `stockLocationIds` fonctionne, mais seulement sur `tech_scheduled` et `tech_rescheduled`, pas au départ.
+</Warning>
 
 Deux comportements d'automatisation se déclenchent à ce moment :
 
 - **Approbation automatique.** Pour les fournisseurs tiers dont l'entreprise acheteuse a `autoApproveWorkOrdersCompletedByThirdParty` activé, un résultat `WaitingForReview` est automatiquement promu à `WorkReviewedAndCompleted`.
 - **Publication automatique de facture.** Chaque fois que le statut résultant est `WorkReviewedAndCompleted`, les règles de publication automatique de facture peuvent s'exécuter et publier votre brouillon de facture. Voir [Soumissions et facturation](/supplier-api/quotes-and-invoicing).
 
-`remote_check_in` et `remote_check_out` se comportent de façon identique pour le travail effectué hors site.
+### Les variantes à distance
+
+`remote_check_in` et `remote_check_out` enregistrent le même cycle de vie pour le travail effectué hors site, avec deux différences par rapport à leurs équivalents sur place :
+
+- **L'adresse de l'intervenant est requise.** `remote_check_in` exige `checkInByEmail` et `remote_check_out` exige `checkOutByEmail`, alors que les versions sur place les traitent comme facultatifs.
+- **Les coordonnées géographiques sont écartées.** `checkInGeoLocation` et `checkOutGeoLocation` ne sont pas enregistrés lors d'une arrivée ou d'un départ à distance, ce qui est logique pour du travail hors site mais signifie que l'acheteur n'obtient aucune preuve d'emplacement pour ces visites.
+
+Tout le reste — le `checkOutStatus` et le `numberOfTechs` requis sur `remote_check_out`, l'approbation automatique et les comportements de facturation ci-dessus — est identique.
 
 ## Relire un appel de service
 
@@ -123,8 +195,23 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-Pour un rapport de temps à l'échelle de la flotte à travers tous les techniciens, utilisez [WrenchMode](/supplier-api/wrenchmode) plutôt que d'itérer sur les appels.
+<Warning>
+**Les arrivées et départs pilotés par l'API ne génèrent pas d'événements WrenchMode.** La paire `started_work` / `ended_work` derrière `with_work_logs` est enregistrée par les applications OpenWrench, pas par ces endpoints. Une visite dont tout le cycle de vie a été piloté via l'API Fournisseur revient donc avec un journal de travail vide et sans `trueWorkTimeMillis`, même si ses heures d'arrivée et de départ sont correctement fixées.
+
+Utilisez `checkInTime` et `checkOutTime` de l'appel de service lui-même pour l'intervalle de main-d'œuvre sur les visites pilotées par l'API, et considérez `trueWorkTimeMillis` comme disponible seulement pour les visites que vos techniciens ont menées dans l'application.
+</Warning>
+
+Pour un rapport de temps à l'échelle de la flotte à travers tous les techniciens, utilisez [WrenchMode](/fr-CA/supplier-api/wrenchmode) plutôt que d'itérer sur les appels.
 
 ## Travaux à plusieurs visites
 
 Un même bon de travail peut porter plusieurs appels de service (diagnostic, réparation, suivi). Créez chaque visite avec son propre appel `tech_scheduled` (sans `id`), et gardez les mises à jour subséquentes de chaque visite indexées sur l'`id` de son appel de service. Quittez les visites intermédiaires avec un statut de continuation tel que `PartsRequested` ou `TechScheduled`, et seulement la visite finale avec `WaitingForReview`.
+
+<Warning>
+**Omettre `id` ne crée pas toujours un nouvel appel de service.** Pour éviter que des appels en double s'empilent sur un bon de travail, une requête `tech_scheduled` sans `id` cherche d'abord un appel ouvert réutilisable sur le même bon de travail et le même établissement, et met celui-là à jour au lieu d'insérer une nouvelle ligne. Un appel est réutilisable lorsque **les deux** conditions tiennent :
+
+- Il n'a ni arrivée ni départ (`checkInTime` et `checkOutTime` sont tous deux vides).
+- Son technicien principal n'entre pas en conflit avec le vôtre — les deux adresses concordent (rognées, sans distinction de casse), ou l'un des deux côtés n'a pas de technicien principal.
+
+En pratique, cela veut dire que la visite de suivi que vous pensiez créer fusionnera silencieusement avec la précédente si celle-ci a été planifiée mais jamais quittée. **Quittez chaque visite avant de planifier la suivante**, et le `tech_scheduled` suivant ouvrira correctement un nouvel appel. Confirmez-le dans tous les cas en comparant l'id d'appel de service dans `lastServiceCall` du bon de travail retourné avec celui que vous détenez déjà.
+</Warning>
