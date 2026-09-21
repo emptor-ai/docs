@@ -1,0 +1,67 @@
+# Fichiers et pièces jointes dans l'API Acheteur
+
+> Téléversez des fichiers vers le stockage privé OpenWrench et référencez-les comme pièces jointes de bons de travail, d'actifs et de factures avec l'API Acheteur.
+
+Les pièces jointes dans l'API Acheteur (bons de travail, actifs, types d'actifs, factures, propositions) sont des références vers le stockage de fichiers privé d'OpenWrench. Le flux est toujours le même : téléverser d'abord les octets, puis utiliser la référence de fichier retournée dans le champ de pièce jointe de l'entité.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Téléversement
+
+`POST /v1/buyer/file/upload` est une requête multipart avec une seule partie nommée `file`, jusqu'à **512 Mo** :
+
+```bash
+curl -X POST "$BASE/v1/buyer/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@site-photo.jpg"
+```
+
+La réponse (enveloppe de type `FileManager`) est un enregistrement `FileDetails` :
+
+```json
+{
+  "type": "FileManager",
+  "data": {
+    "fileName": "site-photo.jpg",
+    "fileId": "a1b2c3d4e5"
+  },
+  "status": "ok"
+}
+```
+
+Les caractères non-ASCII sont supprimés de `fileName` lors du téléversement. Un échec au niveau du stockage renvoie `500`; réessayez avec un délai croissant.
+
+## Référencer le fichier depuis une entité
+
+Les champs de pièce jointe (par exemple `buyerAttachments` lors de la création d'un bon de travail, ou `attachments` sur un type d'actif) prennent des tableaux d'objets `FileDetails`, exactement tels que retournés par le téléversement :
+
+```json
+{
+  "buyerAttachments": [
+    { "fileName": "site-photo.jpg", "fileId": "a1b2c3d4e5" }
+  ]
+}
+```
+
+## Téléchargement
+
+`GET /v1/buyer/file/download/{id}/{name}` diffuse les octets stockés avec `Content-Disposition: attachment`. `{id}` est le `fileId` du téléversement (ou de tout `FileDetails` lu sur une entité); `{name}` est le nom sous lequel servir le téléchargement :
+
+```bash
+curl -OJ -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/file/download/a1b2c3d4e5/site-photo.jpg"
+```
+
+Le type de contenu de la réponse est le type propre du fichier stocké. C'est aussi ainsi que vous récupérez les preuves soumises par le fournisseur : lisez `supplierAttachments` sur un bon de travail, ou `invoicePDFs`/`attachments` sur une facture, et téléchargez chaque `fileId`.
+
+## Notes pratiques
+
+- Les téléversements comptent dans la limite de débit (10 requêtes par fenêtre de 20 secondes), donc les migrations à volume élevé devraient se limiter à environ un téléversement toutes les 2 secondes.
+- Stockez le `fileId` avec vos propres enregistrements; il n'y a pas d'endpoint de listage pour redécouvrir des fichiers après coup.
+- Le même modèle en deux étapes s'applique côté fournisseur, et les PDF de factures ont un endpoint fournisseur dédié qui téléverse et publie en un seul appel.

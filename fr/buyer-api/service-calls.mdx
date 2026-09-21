@@ -1,0 +1,53 @@
+# Visites de service et preuves de visite dans l'API Acheteur
+
+> Lisez les visites de service avec les journaux de travail et les détails des techniciens depuis l'API Acheteur OpenWrench pour vérifier les visites, auditer le temps de main-d'œuvre et rapprocher les factures.
+
+Une **visite de service** est une visite d'un fournisseur pour un bon de travail : qui était prévu, quand ils ont pointé l'entrée et la sortie, ce qu'ils ont documenté. Les bons de travail intègrent leurs visites dans `associatedServiceCalls` (avec `lastServiceCall` comme raccourci), et l'API Acheteur ajoute trois endpoints de lecture qui enrichissent une visite unique avec des preuves plus riches.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ce que contient une visite de service
+
+À partir des objets intégrés à un bon de travail, vous obtenez, par visite : `leadTechnicianEmail` et `additionalTechnicianEmails`, `numberOfTechs`, `serviceScheduledAt`, et les paires d'entrée/sortie (`checkInTime`, `checkInNotes`, `checkInImages`, `checkInGeoLocation` et les équivalents `checkOut*`). Les coordonnées géographiques et les photos vous permettent de vérifier que le technicien était réellement sur place.
+
+## Les endpoints d'enrichissement
+
+Chaque segment de chemin `/with_*` hisse une section supplémentaire dans la réponse. Combinez-les en enchaînant les segments :
+
+| Endpoint | Ajoute |
+| --- | --- |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs` | Les événements WrenchMode de la visite ainsi que `trueWorkTimeMillis`. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_tech_details` | Les techniciens de la visite en tant qu'enregistrements de contact complets. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs/with_tech_details` | Les deux. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+L'`{id}` est celui de la visite de service, que vous lisez dans `associatedServiceCalls` du bon de travail.
+
+## Journaux de travail et temps de travail réel
+
+`with_work_logs` retourne la trace d'événements WrenchMode enregistrés pendant la visite (travail commencé, mis en pause, repris, terminé), ainsi que **`trueWorkTimeMillis`** : la durée de travail sur site avec les pauses exclues. C'est le nombre à utiliser pour la vérification de la main-d'œuvre, car les intervalles bruts entre entrée et sortie incluent les pauses et les interruptions.
+
+## Détails des techniciens et visibilité des taux
+
+`with_tech_details` retourne les techniciens de la visite en tant qu'enregistrements de contact. **`hourlyRate` n'est renseigné que lorsque la visite a été effectuée par votre propre équipe de service interne.** Les taux des fournisseurs tiers ne sont jamais exposés aux acheteurs, donc attendez-vous à ce que `hourlyRate` soit absent lors des visites d'entrepreneurs.
+
+## Modèle de vérification
+
+Avant d'approuver un bon de travail complété ou sa facture :
+
+1. Récupérez le bon de travail et lisez `associatedServiceCalls`.
+2. Pour chaque visite, demandez `/with_work_logs/with_tech_details`.
+3. Vérifiez `checkInGeoLocation` par rapport à l'emplacement, comparez `trueWorkTimeMillis` aux heures de main-d'œuvre facturées, et examinez les notes et images de sortie.
+4. Approuvez via les [actions de statut du bon de travail](/buyer-api/work-orders#buyer-status-actions) ou contestez via `work_unsatisfactory`, en citant vos constats dans la note.
+
+Les erreurs suivent l'enveloppe standard : `404` pour une visite inconnue, `400` pour une visite hors de votre portée.

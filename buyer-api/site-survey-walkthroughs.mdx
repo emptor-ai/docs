@@ -1,0 +1,72 @@
+---
+title: "Site survey walkthroughs in the Buyer API"
+sidebarTitle: "Site surveys"
+description: "Read site survey walkthrough answers, photos, and issues, then generate follow-up work orders linked to survey findings with the OpenWrench Buyer API."
+---
+
+A **walkthrough** is a completed site survey: an inspector walks a location against a task list and records answers, photos, and issues. The Buyer API exposes walkthroughs read-only, and lets you cut follow-up work orders that stay linked to the survey finding they came from.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Reading walkthroughs
+
+```bash
+# Recent walkthroughs for a location
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+
+# Count by filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/count_by?locationId=1204"
+
+# One walkthrough, with task answers
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/230"
+```
+
+Standard pagination and field filters apply, plus your role's location and brand scoping. Work orders referenced from a walkthrough's task answers are filtered by your read permission, so different keys may see different linked work orders on the same walkthrough.
+
+## Rendering scores with heat map ranges
+
+Each walkthrough response embeds the hydrated site survey it was run against, under `siteSurvey`. The site survey carries an optional `walkthroughHeatMapRanges` field: an array of color bands used to render walkthrough scores as a heat map.
+
+```json
+{
+  "siteSurvey": {
+    "id": 88,
+    "title": "Quarterly store audit",
+    "walkthroughHeatMapRanges": [
+      { "color": "#FF0000", "lowerRange": 0 },
+      { "color": "#FFFF00", "lowerRange": 60 },
+      { "color": "#00FF00", "lowerRange": 80 }
+    ]
+  }
+}
+```
+
+Each entry has two fields:
+
+- `color` — the color to render for the band, typically a hex code.
+- `lowerRange` — the lowest score that falls into the band. A band runs from its `lowerRange` up to the next band's `lowerRange`.
+
+To color a score from the walkthrough's `scores` array, pick the band with the highest `lowerRange` that is less than or equal to the score.
+
+You configure ranges on the site survey or on its template. If a survey has no ranges of its own, OpenWrench fills in the template's ranges at read time, so the embedded `siteSurvey.walkthroughHeatMapRanges` is already resolved. You never need to fetch the template to find the bands. The field is `null` when neither the survey nor its template defines ranges; skip heat map rendering in that case.
+
+## Creating follow-up work orders
+
+When a survey finding needs remediation, create the work order with the linkage fields set:
+
+- `walkThroughId` — the walkthrough the finding came from.
+- `siteSurveyTaskTitleId` — the specific task within it.
+- `includeWalkthroughTaskList` — optionally copy the walkthrough's task list onto the work order.
+
+`walkThroughId` and `siteSurveyTaskTitleId` **must be provided together or not at all**; the create is rejected otherwise. See [Create a work order](/buyer-api/work-orders#create-a-work-order) for the rest of the payload.
+
+The link is visible both ways: the work order carries `walkThroughId`, and the walkthrough's task answers reference the work orders cut from them. That makes "every open finding from last quarter's surveys, with remediation status" a two-query report.

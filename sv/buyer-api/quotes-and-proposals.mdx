@@ -1,0 +1,59 @@
+# Offerter och förslag i Buyer API
+
+> Läs leverantörsofferter med OpenWrench Buyer API: statusar, radsektioner, avgränsningsregler och hur förslag passar in i godkännandeflödet.
+
+När arbete behöver prissättas innan det fortsätter skickar leverantörer in **förslag** (offerter) mot arbetsordern. Via Buyer API är förslag **skrivskyddade**: du listar dem, inspekterar rader och stämmer av dem mot fakturor. Att godkänna eller avvisa ett förslag sker i OpenWrench-appen.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Förslagsstatusar
+
+| Status | Betydelse |
+| --- | --- |
+| `draft` | Leverantören redigerar fortfarande. Aldrig synlig för köpare. |
+| `pending` | Inlämnad, väntar på ditt beslut. |
+| `awarded` | Godkänd; arbetet fortsätter till det offererade priset. |
+| `declined` | Avvisad (avvisningsskäl finns i `declineNotes`). |
+
+Statusar behåller gemener.
+
+## Läsa förslag
+
+```bash
+# Väntande förslag över hela företaget
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+
+# Förslag på en arbetsorder
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?workOrderId=9001"
+
+# Ett förslag
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/quote/proposals/3320"
+```
+
+Avgränsningsregler värda att känna till:
+
+- Leverantörers ej inskickade utkast utesluts alltid från listor.
+- Om din API-nyckels kontakt är platsbegränsad ser du bara förslag för tillgängliga platser. En kontakt med en tom tillgänglig uppsättning får en tom sida, inte ett fel.
+- Den enskilda läsningen returnerar `404` för mjukt raderade förslag, utkast och förslag utanför ditt platsomfång. Behandla `404` som "inte synlig för dig", inte nödvändigtvis "existerar inte".
+
+## Inuti ett förslag
+
+Pengarna delas in i samma sektioner som fakturor: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` och `miscLineItems`, varje sektion med sin egen skattesats och `...TotalBeforeTax`, som rullar upp till `totalBeforeTax`, `tax` och `totalAfterTax`. **Monetära värden serialiseras som strängar**; parsa dem som decimaler, inte flyttal, om du gör aritmetik.
+
+Andra användbara fält: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (arbetsorderns ej-överskridande-belopp vid inlämningstillfället), `proposalPdfLink`, `attachments`, `submittedAt` och `approvedAt`.
+
+## Var förslag passar in i flödet
+
+1. Leverantören skickar in ett förslag; arbetsordern pausar oftast i väntan på godkännande.
+2. Dina godkännare tilldelar eller avvisar det i appen. En tilldelning höjer det effektiva utgiftstaket för jobbet.
+3. När den slutliga [fakturan](/buyer-api/invoices) anländer, jämför `invoiceTotalAfterTax` mot det tilldelade förslagets `totalAfterTax` innan du godkänner betalning. Flagga avvikelser över din tolerans för mänsklig granskning.
+
+En praktisk pollningsloop för en inköpsdashboard: filtrera `status=pending`, sortera efter `submittedAt` och paginera med `limit=25`, respekterande hastighetsgränsen på 10 förfrågningar per 20-sekundersfönster.

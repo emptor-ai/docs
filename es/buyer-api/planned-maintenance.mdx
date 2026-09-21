@@ -1,0 +1,74 @@
+# Cronogramas de mantenimiento preventivo en la Buyer API
+
+> Lee cronogramas de PM, omite ejecuciones próximas e integra un planificador externo con registros de ejecución usando la Buyer API de OpenWrench.
+
+Los cronogramas de mantenimiento preventivo (PM) generan órdenes de trabajo recurrentes sobre activos con una cadencia definida. La Buyer API te permite leer cronogramas, omitir una ejecución y registrar logs de ejecución cuando un sistema externo controla la programación.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Leer cronogramas
+
+```bash
+# Todos los cronogramas y un conteo filtrado
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules/count_by?locationId=1204"
+
+# Un cronograma
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules/512"
+```
+
+Aplica la paginación estándar y el filtrado por campos. Las órdenes de trabajo generadas por un cronograma llevan `isPM: true` y `plannedMaintenanceScheduleId`, así que puedes listar el historial de un cronograma desde el lado de la orden de trabajo:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?plannedMaintenanceScheduleId=512&sort_by=createdAt&order=desc"
+```
+
+## Omitir una ejecución
+
+`PATCH /v1/buyer/pm/planned_maintenance_schedules/skip_schedule` avanza el cronograma más allá de su próxima ejecución programada (por ejemplo, cuando un sitio está cerrado por renovación). El `id` del cronograma es el campo requerido:
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/pm/planned_maintenance_schedules/skip_schedule" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 512 }'
+```
+
+Se devuelve el cronograma actualizado. Este endpoint no tiene límite de tasa.
+
+## Controlar el PM desde un planificador externo
+
+Si tu propio sistema decide cuándo se crean las órdenes de trabajo de PM, cierra el ciclo registrando cada ejecución con `POST /v1/buyer/pm/scheduler_run_logs`:
+
+```bash
+curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scheduleId": 512,
+    "status": "success",
+    "lastRunAt": "2026-08-21T06:00:05.000-07:00",
+    "lastRunDueAt": "2026-08-21T06:00:00.000-07:00",
+    "woId": 9105,
+    "log": "Created WO 9105 for August PM."
+  }'
+```
+
+`scheduleId`, `status`, `lastRunAt` y `lastRunDueAt` son requeridos; `woId` enlaza la orden de trabajo que creó la ejecución (créala primero con el endpoint de [órdenes de trabajo](/buyer-api/work-orders#create-a-work-order), con `isPM: true` y `plannedMaintenanceScheduleId` establecidos), y `log` guarda diagnósticos de formato libre.
+
+El ciclo completo del planificador externo:
+
+1. Lee los cronogramas y su cadencia desde la API.
+2. Cuando toca una ejecución, crea la orden de trabajo de PM.
+3. Registra la ejecución con `scheduler_run_logs`, enlazando el `woId`.
+4. Si en cambio hay que omitir una ejecución, llama a `skip_schedule` para que avance la próxima fecha.

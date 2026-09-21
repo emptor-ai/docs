@@ -1,0 +1,116 @@
+# Envío de cotizaciones y facturas con la Supplier API
+
+> Crea propuestas para aprobación del comprador y factura las órdenes de trabajo completadas: borradores de facturas, secciones de líneas, subida-y-publicación del PDF y efectos secundarios de estado.
+
+El dinero fluye por dos objetos: **propuestas** (cotizaciones que el comprador aprueba antes de que proceda el trabajo) y **facturas** (la cuenta por el trabajo completado). Ambos son creados por los proveedores a través de esta API.
+
+<Note>
+Ninguno de los endpoints está disponible para claves de equipo interno de servicio; la cotización y facturación son para proveedores terceros que facturan a un comprador.
+</Note>
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## El dinero son cadenas, en secciones
+
+Las propuestas y facturas comparten una estructura de líneas. Los montos son **cadenas que deben parsearse como números** ("450.00", no 450.00 como float; los emisores deberían formatear con dos decimales y parsear como decimales). Las secciones son labor, material, viaje, flete y misc (las propuestas añaden costo incurrido), cada una con sus líneas, tasa de impuestos y `...TotalBeforeTax`, que se suman a los totales antes de impuestos, impuestos y después de impuestos. Las líneas de viaje, flete y misc son objetos simples `{ "description", "amount" }`.
+
+## Propuestas (cotizaciones)
+
+`POST /v1/supplier/quote/proposals` crea la propuesta directamente en estado **`pending`** bajo tu instalación; no hay un paso separado de envío. Requerido: `workOrderId` y `totalAfterTax`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "scope": "Replace condenser fan motor and recharge refrigerant.",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "totalBeforeTax": "850.00",
+    "taxRate": "8.5",
+    "tax": "72.25",
+    "totalAfterTax": "922.25"
+  }'
+```
+
+Comportamiento a conocer:
+
+- `locationId`, `buyerFacilityId` y `buyerCompanyId` se derivan de la orden de trabajo; no puedes establecerlos.
+- Los campos de impuestos y totales de sección no establecidos toman por defecto `"0"`.
+- `requestForProposalId` toma por defecto el RFP de la orden de trabajo cuando se omite.
+- `proposalPdfLink`, si se envía, debe ser una URL válida. `attachments` toma `FileDetails` del [endpoint de subida de archivos](/supplier-api/files-and-users).
+- Pasar un `id` actualiza una propuesta existente.
+
+Rastrea el resultado volviendo a consultar: `status` se mueve de `pending` a `awarded` o `declined` (los motivos del rechazo aparecen en `declineNotes`). Lista con `GET /v1/supplier/quote/proposals`, lee una con `GET /v1/supplier/quote/proposals/{id}`.
+
+## Facturas
+
+### El ciclo de vida
+
+Las facturas empiezan como **`draft`** (invisibles para el comprador), se **publican** a `pending`, y luego el comprador las mueve por `approved` y `processing` hasta `paid` (o las disputa). Tu integración crea el borrador y lo publica; a partir de `pending`, mayormente estás leyendo estado.
+
+### Crear el borrador
+
+`POST /v1/supplier/invoice/invoices` requiere `workOrderId`; `locationId`, `buyerFacilityId`, `buyerCompanyId`, `spendCategoryId` y `problemTypeId` se derivan de él.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "invoiceNumber": "INV-2026-0451",
+    "dateOfInvoice": "2026-08-21T00:00:00.000-07:00",
+    "laborLineItems": [ { "description": "2 techs x 3 hrs", "amount": "540.00" } ],
+    "laborTotalBeforeTax": "540.00",
+    "materialLineItems": [ { "description": "Fan motor", "amount": "310.00" } ],
+    "materialTotalBeforeTax": "310.00",
+    "invoiceTotalBeforeTax": "850.00",
+    "invoiceTaxRate": "8.5",
+    "invoiceTax": "72.25",
+    "invoiceTotalAfterTax": "922.25"
+  }'
+```
+
+Detalles que muerden:
+
+- `poNumber` toma por defecto el PO number de la orden de trabajo.
+- `serviceCallIds` toma por defecto **todas** las llamadas de servicio de la orden de trabajo cuando se omite o está vacío; establécelo explícitamente cuando factures un subconjunto de visitas.
+- `taxLineItems` se validan contra los tipos de impuestos permitidos por la moneda de la factura (actualmente solo CAD los soporta: GST/HST/PST); cualquier otro se rechaza.
+- `invoicePDFLink` (una URL válida) se convierte en la única entrada de PDF de la factura si alojas tú mismo el PDF; la mayoría de integraciones usa en su lugar el endpoint de subida más abajo.
+- `autoPublishOnApproval` inscribe esta factura en la auto-publicación cuando la orden de trabajo se completa.
+- Guardar una factura puede transicionar el estado de la orden de trabajo asociada según el mapeo de estado factura-a-orden. Un fallo de validación a nivel de guardado devuelve `406`.
+- Pasar un `id` actualiza una factura existente (solo borradores, en la práctica; los estados del lado del comprador no son tuyos para editar).
+
+### Sube el PDF y publica
+
+`POST /v1/supplier/invoice/file/upload_and_publish/{invoiceId}` hace ambos pasos a la vez: el PDF subido (parte multipart `file`, máx. 512 MB) se convierte en el único PDF de la factura, y el estado pasa a `pending`.
+
+```bash
+curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@INV-2026-0451.pdf"
+```
+
+Cada precondición que falla devuelve `400`: tu instalación debe ser dueña de la factura, la orden de trabajo asociada debe estar en display status **Completed**, y la edición de facturas por proveedor debe estar permitida por la configuración del comprador.
+
+### Leer y conciliar
+
+`GET /v1/supplier/invoice/invoices` (filtrable, por ejemplo `?status=pending`) y `GET /v1/supplier/invoice/invoices/{id}`. Los proveedores terceros ven registros enmascarados con los campos privados del comprador en blanco. Consulta el estado por sondeo para alimentar tu libro AR: `approvedAt`, `processedAt` y `markedPaidAt` marcan la progresión del comprador.
+
+## Flujo de facturación de extremo a extremo
+
+1. La orden de trabajo llega a cotización: envía una propuesta y espera `awarded`.
+2. Completa el trabajo mediante el [check-out de la llamada de servicio](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+3. Crea la factura en borrador; genera tu PDF.
+4. Una vez que la orden de trabajo aparezca como Completed, `upload_and_publish`.
+5. Consulta el estado de la factura por sondeo hasta `paid`, y concilia contra `markedPaidAt`.

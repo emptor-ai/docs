@@ -1,0 +1,203 @@
+---
+title: "Arbeta med arbetsordrar via Supplier API"
+sidebarTitle: "Arbetsordrar"
+description: "Ta emot, acceptera, avvisa och driv arbetsordrar som leverantör: statusuppdateringar, reservdelar, uppskattade slutdatum, bilagor och anteckningar."
+---
+
+För en leverantörsintegration är arbetsorderkön inkorgen. Den här guiden täcker slutpunkterna under `/v1/supplier/work_order/` för att ta emot jobb, svara på dem och hålla köpare informerade medan arbetet pågår. Att schemalägga besök och slutföra arbete sker via [servicebesök](/sv/supplier-api/service-calls).
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Läsa din kö
+
+<Warning>
+  **Bygg inte din integration på list-slutpunkten.** `GET /v1/supplier/work_order/work_orders` är den dyraste läsningen i Supplier API, och att polla den för att upptäcka nya eller ändrade arbetsordrar är fel mönster. Den är långsam på stora köer, den förbrukar din [hastighetsgräns](/sv/supplier-api/introduction#hastighetsgränser) och den missar ändå ändringar mellan pollningarna. Använd [webhooks](/sv/supplier-api/webhooks) för att få veta att en arbetsorder tilldelades dig, bytte status eller fick en anteckning, och hämta sedan just den arbetsordern via id. Reservera listan för en engångsvis initial laddning och tillfällig avstämning, med ett smalt filter och en liten sida.
+</Warning>
+
+Mönstret som skalar är push, sedan hämtning via id:
+
+```bash
+# 1. A webhook delivery tells you which work order changed:
+#    { "event_type": "workorder.create", "data": { "workOrderId": 9001, ... } }
+
+# 2. Fetch that work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+List- och räkningsslutpunkterna är till för de två tillfällen en webhook inte kan täcka. Använd dem för den första laddningen av arbete som redan fanns innan din slutpunkt registrerades. Använd dem också för en periodisk kontroll av att inget har missats:
+
+```bash
+# Initial load or reconciliation: filter narrowly, page small, walk with offset
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+
+# Count by filter, without fetching rows
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+```
+
+Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter fungerar som ett fältfilter. Allt är tenant-avgränsat till din anläggning.
+
+Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Räkningsslutpunkten kör samma fråga som listan, så de två stämmer alltid överens. Beteende att känna till:
+
+- **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar och problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom dubbla citattecken för att kräva den exakta frasen.
+- **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
+- **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
+- **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på ett `statusChangedAt`-fönster eller andra indexerade kolumner.
+- **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick. En ändring du just skrivit, eller en arbetsorder som tilldelades för några sekunder sedan, kan tillfälligt saknas i listresultat och räkningar.
+- **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
+- **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/sv/supplier-api/reference-data#datamaskering) för detaljer.
+
+## Acceptera eller avvisa
+
+**Acceptera** med `POST /v1/supplier/work_order/work_orders/status_update/confirm`, som sätter statusen till `ConfirmedByServiceProvider`. En arbetsorder som redan är i en avslutad eller stängd visningsstatus kan inte accepteras (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Avvisa** med `POST .../status_update/decline`. Endast kontakter tillhörande arbetsorderns tilldelade leverantörsanläggning får avvisa. Arbetsordern lämnar din kö via leverantörsbytesflödet: dess status återgår till `PendingApproval`, eller så plockas en privat nätverksleverantör automatiskt, beroende på köparens konfiguration. Anteckningens `text` registreras som avslagsskäl och återspeglas i vad köparen ser, så var specifik.
+
+Båda anropen tar `{ "id": ..., "note": { ... } }` och returnerar den uppdaterade arbetsordern.
+
+## Håll köparen informerad
+
+Tre lätta signaler medan jobbet pågår:
+
+**Reservdelsspårning.** Tre statusslutpunkter, med samma `{ id, note }`-kroppsform som ovan:
+
+| Slutpunkt | Resulterande status |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Uppskattat slutdatum.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` läser endast `estimatedCompletionDate` (ISO 8601) från kroppen:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Bilagor.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` lägger till filreferenser till `supplierAttachments` och bevarar det som redan finns. Ladda upp filen först (se [Filer och användare](/sv/supplier-api/files-and-users)), sedan:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Anteckningar
+
+Lägg till i den delade köpar–leverantör-tråden med `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), och läs en arbetsorders tråd med `GET /v1/supplier/work_order/work_order_notes/{woId}`. Läsning uppdaterar läskvitton för din kontakt, och en nekad läsning returnerar en tom lista istället för ett fel.
+
+För att @omnämna personer i anteckningen, lägg till `taggedUsers` bredvid `note`: en lista med kontakters e-postadresser. OpenWrench viker in varje e-postadress i `note.elements` som ett `user`-element, samma form som apparna skriver för ett @omnämnande, så du behöver inte bygga `elements`-strukturen själv. Taggade kontakter läggs till i arbetsorderns prenumerantlista om de inte redan prenumererar.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Regler för `taggedUsers`:
+
+- E-postadresser trimmas och görs om till gemener innan matchning. En anteckning kan omnämna högst 25 användare.
+- Dubbletter i listan, och användare som redan är taggade i `note.elements`, hoppas över istället för att omnämnas två gånger.
+- En post som inte är en giltig e-postadress, eller en lista med fler än 25 e-postadresser, avvisas med `400` av typen `invalidInputDataException`. Ingenting sparas.
+- En tom lista ignoreras. Att skicka `taggedUsers` utan ett `note`-objekt avvisas med `400`.
+
+För att publicera en uppsättning foton (en teknikers före/efter-bilder, till exempel), använd `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` med `{ "id": ..., "notes": [ ... ] }`. Varje anteckning måste bära en `photo`-URL och inget annat innehåll: `text` måste vara tomt och `video`, `audio`, `otherFile` och `elements` måste utelämnas. En begäran tar 1–25 anteckningar, dubblerade foto-URL:er avvisas med `400`, och batchen behåller sin ordning under ett enda serversatt `noteAddedAt`. Prenumeranter får en enda grupperad avisering istället för en avisering per foto.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
+## Etiketter
+
+Arbetsorderetiketter är lätta taggar (ett namn plus en valfri färg) som används för att dela upp kön. Via API:et kan du läsa etikettkatalogen och ersätta etiketterna som är applicerade på en arbetsorder. Att skapa eller redigera själva etiketterna sker fortfarande i OpenWrench-appen.
+
+Vilken katalog du ser beror på din nyckel: en nyckel som tillhör en köpares interna serviceteam ser det köparföretagets katalog, och en tredjepartsleverantörs nyckel ser sin egen anläggnings katalog.
+
+**Bläddra i katalogen** med `GET /v1/supplier/work_order/work_order_labels`, eller hämta en med `GET /v1/supplier/work_order/work_order_labels/{id}`. Listan pagineras med 10 per sida som standard och accepterar `search`- och `label`-filter på etikettexten. Skicka `no_pagination=true` för att hämta hela katalogen i ett anrop.
+
+**Ersätt en arbetsorders etiketter** med `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. Kroppen är `{ "ids": [...] }` och det är en fullständig ersättning: etiketter som inte listas tas bort, och en tom array rensar dem alla. Svaret listar de etikettmappningar som nu är aktiva på arbetsordern.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Beteende att känna till:
+
+- Varje id måste vara en levande etikett från din egen katalog; ett saknat `ids` eller ett `ids` som inte är en array, ett id som inte är ett heltal, och okända eller tenantöverskridande id:n avvisas alla med `400`.
+- Skrivningen kräver skrivbehörighet för arbetsordrar: en nyckel som endast kan se arbetsordern (en budgivare, eller en anläggning med skrivskyddad synlighet) får `400`. På en otilldelad arbetsorder får endast en anläggning med läs- och skrivsynlighet sätta etiketter på den.
+- Ett okänt, raderat eller främmande arbetsorder-id svarar med samma `400` som en nekad skrivning, inte en `404`.
+
+## Skapa en leverantörsinitierad arbetsorder
+
+Leverantörer kan öppna arbetsordrar själva (en tekniker upptäcker en trasig dörr medan han är på plats för något annat). `POST /v1/supplier/work_order/work_orders` kräver `title` och `locationId`; platsen avgör köparanläggningen och företaget.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den första löv-problemtypen för platsens köparföretag, och `woPriorityId` till en standardprioritet för det företaget. Ett `assetId`, om det anges, måste existera, och dess område ärvs när `areaId` inte är satt. Fältet heter `needApproval` (utan "s") i den här skapa-kroppen. Ett `id` i kroppen ignoreras: det här anropet skapar alltid en ny arbetsorder.
+
+**Servern sätter den initiala statusen.** För en tredjepartsleverantörs nyckel ignoreras `status` och `isSupplierInitiated` i kroppen. Servern skapar arbetsordern som `SupplierInitiatedPendingApproval` med `isSupplierInitiated: true`. Köparens godkännandekonfiguration avgör sedan var den hamnar: den stannar i `SupplierInitiatedPendingApproval` tills en köpare godkänner den, eller, när köparen automatiskt godkänner leverantörsinitierade arbetsordrar, bekräftas den direkt till din anläggning som `ConfirmedByServiceProvider`. Nycklar som tillhör en köpares interna serviceteam, och betalande leverantörer som skapar en arbetsorder på en plats hos en kund de förvaltar, behåller den `status` de skickar. Om dessa nycklar utelämnar `status` härleds den initiala statusen från köparföretagets konfiguration; ett internt team hamnar i `AssignedToInternalTech`.
+
+## Problemtyper
+
+`GET /v1/supplier/work_order/problem_types` listar problemtyper över dina relaterade köparföretag (inte hastighetsbegränsad). Använd den för att klassificera leverantörsinitierade arbetsordrar korrekt per köpare.
+
+## Typisk integrationsloop
+
+1. Registrera en [webhook](/sv/supplier-api/webhooks)-slutpunkt för `workorder.create` och `workorder.status_update`. Vid varje leverans, hämta arbetsordern via id. Gör den engångsvisa initiala laddningen från list-slutpunkten, och håll den utanför den löpande loopen förutom som en gles, snävt filtrerad säkerhetspollning.
+2. `confirm` eller `decline` inom din SLA.
+3. Schemalägg besöket via [servicebesök](/sv/supplier-api/service-calls); posta reservdelsstatusar och ett ECD när saker utvecklas.
+4. Slutför via utcheckning och fakturera sedan via [offerter och fakturering](/sv/supplier-api/quotes-and-invoicing).

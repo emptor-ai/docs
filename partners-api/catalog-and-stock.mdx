@@ -1,0 +1,78 @@
+---
+title: "Catalog, stock levels, and work order consumption"
+sidebarTitle: "Catalog & stock"
+description: "Read parts, equipment types, vendors, stock locations, per-location inventory, and the parts consumed on work orders with the Internal Teams API."
+---
+
+Around the [purchasing flow](/partners-api/purchasing-flow) sits the reference and stock data: what you can order (parts, equipment types), who you order from (vendors), where it lives (stock locations and per-location inventory), and where it went (work order consumption). All of it is read-only through the Internal Teams API.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"
+export SECRET="<shared-secret>"
+```
+
+Every list below supports the paging parameters plus equality filters on entity columns (any other query parameter, e.g. `stockLocationId=42`), always scoped to your company.
+
+## Catalog
+
+| Endpoint | Contents |
+| --- | --- |
+| `GET /v1/partners/inventory/parts` (+`/{id}`) | The parts catalog: consumables and spares. |
+| `GET /v1/partners/inventory/equipment_types` (+`/{id}`) | Equipment models (serialized items). |
+| `GET /v1/partners/inventory/part_equipment_vendors` (+`/{id}`) | Vendors, used as `partEquipmentVendorId` on purchase orders. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/parts?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/part_equipment_vendors"
+```
+
+Sync these into your purchasing system first; every other call references their ids.
+
+## Stock locations and inventory
+
+**Stock locations** are the warehouses, trucks, and storerooms that hold inventory:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations/7"
+```
+
+Two record types express what is held where:
+
+**Parts per stock location** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) is one record per part per location: on-hand, reserved, and available quantities, bin location, and costs.
+
+```bash
+# Where is part 210 stocked?
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?partId=210"
+
+# Everything in stock location 7
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
+```
+
+**Equipment per stock location** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) is one record per physical serialized unit: serial number, condition, and provenance. These are the units that [receipts with serial numbers](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) create.
+
+Receipts are the write path into stock through this API; the read side here is how you reconcile OpenWrench stock against your ERP.
+
+## Parts and equipment used on work orders
+
+`GET /v1/partners/work_order/work_order_parts_equipments/{workOrderId}` lists the part and equipment records consumed on a work order: the consumption side of the inventory ledger.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/work_order/work_order_parts_equipments/9001"
+```
+
+Results are paginated and accept the same equality filters. For partner keys whose supplier company is **not** an internal-technician company, the embedded `workOrder` and `location` objects come back masked, with sensitive fields removed.
+
+## Reconciliation pattern
+
+A nightly inventory reconciliation:
+
+1. Pull `parts_per_stock_locations` per stock location and diff quantities against your ERP.
+2. Explain the deltas: receipts recorded that day (purchasing inflow) minus `work_order_parts_equipments` for work orders completed that day (consumption outflow).
+3. Investigate what remains: usually a missed receipt, an unrecorded return (negative receipt), or consumption logged against the wrong work order.

@@ -1,0 +1,55 @@
+---
+title: "Service calls and visit evidence in the Buyer API"
+sidebarTitle: "Service calls"
+description: "Read service calls with work logs and technician details from the OpenWrench Buyer API to verify visits, audit labor time, and reconcile invoices."
+---
+
+A **service call** is one supplier visit against a work order: who was scheduled, when they checked in and out, what they documented. Work orders embed their calls in `associatedServiceCalls` (with `lastServiceCall` as a shortcut), and the Buyer API adds three read endpoints that expand a single call with richer evidence.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## What a service call contains
+
+From the embedded objects on a work order you get, per call: `leadTechnicianEmail` and `additionalTechnicianEmails`, `numberOfTechs`, `serviceScheduledAt`, and the check-in/check-out pairs (`checkInTime`, `checkInNotes`, `checkInImages`, `checkInGeoLocation`, and the `checkOut*` equivalents). Geo coordinates and photos let you verify the technician was actually on site.
+
+## The expansion endpoints
+
+Each `/with_*` path segment hoists one extra section into the response. Combine them by chaining segments:
+
+| Endpoint | Adds |
+| --- | --- |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs` | The call's WrenchMode events plus `trueWorkTimeMillis`. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_tech_details` | The call's technicians as full contact records. |
+| `GET /v1/buyer/work_order/service_calls/{id}/with_work_logs/with_tech_details` | Both. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+The `{id}` is the service call id, which you read off the work order's `associatedServiceCalls`.
+
+## Work logs and true work time
+
+`with_work_logs` returns the WrenchMode event trail recorded during the visit (work started, paused, resumed, ended) together with **`trueWorkTimeMillis`**: the on-site work duration with pauses excluded. This is the number to use for labor verification, since raw check-in to check-out spans include breaks and interruptions.
+
+## Technician details and rate visibility
+
+`with_tech_details` returns the technicians on the call as contact records. **`hourlyRate` is populated only when the call was performed by your own internal service team.** Third-party supplier rates are never exposed to buyers, so expect `hourlyRate` to be absent on contractor visits.
+
+## Verification pattern
+
+Before approving a completed work order or its invoice:
+
+1. Fetch the work order and read `associatedServiceCalls`.
+2. For each call, request `/with_work_logs/with_tech_details`.
+3. Check `checkInGeoLocation` against the location, compare `trueWorkTimeMillis` against invoiced labor hours, and review check-out notes and images.
+4. Approve via the [work order status actions](/buyer-api/work-orders#buyer-status-actions) or dispute via `work_unsatisfactory`, citing what you found in the note.
+
+Errors follow the standard envelope: `404` for an unknown call, `400` for a call outside your scope.

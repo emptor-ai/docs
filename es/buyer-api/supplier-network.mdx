@@ -1,0 +1,62 @@
+# Red de proveedores y despacho jerarquizado en la Buyer API
+
+> Consulta tu red de proveedores y prioriza a los proveedores de red privada para una ubicación y tipo de problema y así automatizar el despacho con la Buyer API de OpenWrench.
+
+Dos familias de endpoints responden a "¿quién puede hacer este trabajo?": el listado de **facilities de proveedor** (toda tu red) y el endpoint **de red privada jerarquizado** (la lista corta ordenada para una ubicación y tipo de problema). Junto con el [parch de reasignación](/buyer-api/work-orders#reassign-a-supplier) de la orden de trabajo, te permiten automatizar el despacho.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Tu red de proveedores
+
+`GET /v1/buyer/supplier_facilities` devuelve cada relación de proveedor no eliminada de tu empresa. A diferencia de la mayoría de los endpoints de listado, soporta un conjunto documentado de filtros:
+
+| Filtro | Coincide con |
+| --- | --- |
+| `search` | Nombre de la facility, nombre para mostrar o tu alias para la facility. |
+| `name` | Nombre de la facility. |
+| `status` | Estado de la relación. |
+| `problemTypeId` | Proveedores que cubren un tipo de problema. |
+| `spendCategoryId` | Proveedores que cubren una categoría de gasto. |
+| `locationId` | Proveedores que atienden una ubicación. |
+
+```bash
+# Proveedores con capacidades de refrigeración que atienden la ubicación 1204
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?problemTypeId=17&locationId=1204"
+
+# Búsqueda por texto libre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?search=arctic"
+```
+
+Obtén una facility con `GET /v1/buyer/supplier_facilities/{id}`.
+
+## Proveedores de red privada jerarquizados
+
+Para el despacho automatizado, pide la lista jerarquizada para un par `(ubicación, tipo de problema)`:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/private_network/buyer_supplier_relationships/ranked/1204/17"
+```
+
+`GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` devuelve relaciones comprador-proveedor, cada una hidratada con los detalles de tu relación (contactos y correos de enrutamiento).
+
+<Warning>
+**El rango se expresa por el orden del array.** Cualquier `sort_by` que pases se descarta deliberadamente para que el orden del array siempre equivalga al rango. El endpoint es paginado (por defecto 10, máx. 25 por página), así que el rango continúa entre páginas: el primer elemento de la página dos es el rango 11.
+</Warning>
+
+## Patrón de despacho automatizado
+
+1. Llega una orden de trabajo (o se crea sin asignar).
+2. Llama al endpoint jerarquizado con el `locationId` y `problemTypeId` de la orden de trabajo.
+3. Toma la facility de proveedor de la primera relación y asígnala, ya sea al crear (`supplierFacilityId` en el cuerpo de creación) o después con `PATCH /v1/buyer/work_order/work_orders/{id}`.
+4. Si el proveedor rechaza, la orden de trabajo vuelve a `PendingApproval` (o un proveedor de red privada puede ser seleccionado automáticamente, según tu configuración). Al rechazar, vuelve a ejecutar la jerarquización y asigna el siguiente candidato.
+
+Las escaleras de escalamiento, los SLA de tiempo de respuesta y los conteos de rechazos pueden apilarse sobre este ciclo; el endpoint de jerarquización te da los candidatos ordenados, y `statusChanges` de la orden de trabajo te dice cómo fue cada intento.

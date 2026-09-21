@@ -1,0 +1,62 @@
+# Stockage de fichiers et approvisionnement d'utilisateurs dans l'API Fournisseur
+
+> Téléversez et téléchargez des fichiers pour les pièces jointes et approvisionnez des utilisateurs fournisseurs et des techniciens, incluant l'accès aux emplacements de stock et les certifications EPA.
+
+Deux surfaces de soutien dont la plupart des intégrations fournisseur ont besoin : le magasin de fichiers derrière chaque champ de pièce jointe, et l'approvisionnement programmatique d'utilisateurs pour l'intégration de techniciens.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Fichiers
+
+**Téléverser** avec `POST /v1/supplier/file/upload` : formulaire multipart, une seule partie nommée `file`, maximum **512 Mo**.
+
+```bash
+curl -X POST "$BASE/v1/supplier/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@before.jpg"
+```
+
+La réponse (enveloppe de type `FileManager`) est un enregistrement `FileDetails` : `{ "fileName": "before.jpg", "fileId": "a1b2c3d4e5" }`. Les caractères non-ASCII sont supprimés du nom de fichier; un échec de stockage renvoie `500`.
+
+Utilisez l'objet retourné tel quel dans les champs de pièce jointe : [pièces jointes fournisseur du bon de travail](/supplier-api/work-orders#keep-the-buyer-informed), `attachments` de proposition et de facture, ainsi que les images d'arrivée/départ. Les PDF de factures ont leur propre [endpoint de téléversement-et-publication](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
+
+**Télécharger** avec `GET /v1/supplier/file/download/{id}/{name}`, qui diffuse les octets stockés en pièce jointe. `{id}` est le `fileId`; `{name}` est le nom de fichier sous lequel le servir. Utilisez-le pour récupérer les documents fournis par l'acheteur depuis `buyerAttachments`. Les échecs de téléchargement reçoivent `400`.
+
+## Approvisionner des utilisateurs fournisseurs
+
+`POST /v1/supplier/user/provision` crée un contact fournisseur sous votre entreprise, optionnellement avec une connexion active. Utilisation typique : intégrer des techniciens depuis votre système RH.
+
+```bash
+curl -X POST "$BASE/v1/supplier/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "sam.tech@supplier.com",
+    "nameGiven": "Sam",
+    "nameFamily": "Ortiz",
+    "roles": ["SUPPLIER_TECH"],
+    "title": "Refrigeration Technician",
+    "epaCertificationType": "Type II",
+    "epaCertificationNumber": "EPA-882913",
+    "stockLocationIds": [7]
+  }'
+```
+
+Règles appliquées par l'endpoint :
+
+- `email` (en minuscules et sans espaces), `nameGiven`, `nameFamily` et un tableau `roles` non vide sont requis. Les noms de rôle sont appariés sans tenir compte de la casse, et **les rôles admin ou super-admin sont rejetés avec `403`**.
+- Les rôles `SUPPLIER_TECH` obtiennent en plus une fiche de technicien de terrain, ce qui rend l'utilisateur planifiable sur des appels de service et visible dans WrenchMode.
+- Le `facilityId` cible est par défaut celui associé à votre clé et doit appartenir à la même entreprise fournisseur (sinon `403`).
+- Un compte ou contact existant pour le courriel donne un conflit `400`.
+- **Création de connexion.** Sans `password`, l'utilisateur reçoit un courriel d'invitation à s'inscrire. Avec un mot de passe, le compte est créé actif immédiatement; ajoutez `passwordResetRequired` pour forcer un changement à la première connexion.
+- **Accès aux emplacements** : `hasAccessToAllLocations`, ou `locationIds`/`brandIds` explicites (ignorés lorsque le drapeau tous-emplacements est vrai).
+- **Accès aux emplacements de stock** : `hasAccessToAllStockLocations` et `canManageAllStockLocations` sont par défaut faux et sont **forcés à faux dès que `stockLocationIds` est non vide**; les ids explicites l'emportent.
+- Identifiants EPA 608 : `epaCertificationType` est validé contre les classes reconnues; `epaCertificationNumber` est en format libre.
+
+Le contact créé est retourné dans l'enveloppe standard.

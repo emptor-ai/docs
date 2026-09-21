@@ -1,0 +1,88 @@
+---
+title: "Sub-contractor private network in the Supplier API"
+sidebarTitle: "Private network"
+description: "Add sub-contractor supplier facilities to your private network and invite them to OpenWrench from the Supplier API."
+---
+
+The Supplier API's private-network endpoints let a supplier facility keep its own network of sub-contractor supplier facilities and invite the ones it wants to work with onto OpenWrench. The relationships live on the `SupplierSupplierRelationship` resource; the invite endpoint sends the referral email.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Manage sub-contractor relationships
+
+The caller's supplier facility (derived from the API key's contact) is the source side of every relationship it creates or lists.
+
+```bash
+# Create a relationship to sub-contractor supplier facility 5511
+curl -X POST "$BASE/v1/supplier/private_network/supplier_supplier_relationships" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 5511 }'
+
+# List your sub-contractor relationships
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/private_network/supplier_supplier_relationships"
+
+# Remove a sub-contractor by their supplier facility id
+curl -X DELETE "$BASE/v1/supplier/private_network/supplier_supplier_relationships/delete_by_supplier/5511" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET"
+```
+
+The relationship record carries the routing details used later by the invite email: `workOrdersRoutedTo` (emails the sub-contractor receives dispatched work at) and `supplierAccountEmails` (account-level contacts for that sub-contractor).
+
+## Invite a sub-contractor
+
+`POST /v1/supplier/private_network/supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` sends a referral email inviting the sub-contractor onto OpenWrench.
+
+| Path parameter | Meaning |
+| --- | --- |
+| `sfId` | Sub-contractor's supplier facility id — must be the `supplierFacilityId` of an existing relationship whose source is the caller's facility. |
+| `fromEmail` | Email of the referring contact at your facility. Used to look up the referrer's name and to CC the referrer on the outbound email. |
+| `toEmail` | Email of the person to invite at the sub-contractor facility. |
+| `fN`, `lN` | First and last name to use when the invitee is not yet a known contact. |
+
+You must create the `SupplierSupplierRelationship` first (see above). If no relationship exists for `(your facility, sfId)` the endpoint returns `404` with `could not find supplier supplier relationship...`. This mirrors the buyer-side private-network invite flow. The endpoint returns `400` when the caller's contact has no facility.
+
+The optional JSON body may include a `note`; when present, its text appears in the email body under the greeting.
+
+```bash
+curl -X POST \
+  "$BASE/v1/supplier/private_network/supplier_supplier_relationships/5511/invite/dispatch@acme.example/owner@subco.example/name/Jane/Doe" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "note": "Looking forward to routing you our overflow HVAC calls." }'
+```
+
+A successful call returns:
+
+```json
+{ "code": "subContractorInviteSent", "message": "Emails sent!" }
+```
+
+### Recipient handling
+
+If `toEmail` does not match an existing supplier contact, the endpoint auto-creates a `supplier` contact at facility `sfId` using `fN` and `lN` before sending the email. That contact is flagged as new, which controls the CTA link (see below). If the email already resolves to a contact, no new contact is created.
+
+### Email that gets sent
+
+The recipient at `toEmail` receives an email with:
+
+- **Subject:** `<referrer first name> from <your facility name> has added <sub-contractor facility name> as a sub-contractor on OpenWrench`. `Your client` and `you` are substituted when the referrer or sub-contractor facility cannot be resolved.
+- **From alias:** the referrer's full name, so the message appears to come from a person on your team.
+- **CC:** the referring contact at `fromEmail`.
+- **Body:** a greeting to the invited contact, the `note` (if any), and a "you'll get notified at ..." line listing the emails OpenWrench will send dispatched work to.
+- **CTA link:** for a brand-new supplier contact, `https://partners.useopenwrench.com/supplier/signup?email=<toEmail>` so they can finish signup; otherwise the plain portal link `https://partners.useopenwrench.com`.
+
+The notified-at list in the copy follows a precedence chain on the relationship: `workOrdersRoutedTo` if it is non-empty, otherwise `supplierAccountEmails` if it is non-empty, otherwise the invited `toEmail` itself. Set the routing fields on the relationship before inviting if you want the invite to preview the real dispatch destinations.
+
+## End-to-end flow
+
+1. Create the relationship: `POST /v1/supplier/private_network/supplier_supplier_relationships` with the sub-contractor's `supplierFacilityId`.
+2. Optionally set `workOrdersRoutedTo` and `supplierAccountEmails` on the relationship (`PUT` on the same collection) so the invite email accurately previews where work will land.
+3. Send the invite: `POST .../supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` with an optional `{ "note": "..." }` body.

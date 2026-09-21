@@ -1,0 +1,62 @@
+# Almacenamiento de archivos y aprovisionamiento de usuarios en la Supplier API
+
+> Sube y descarga archivos para adjuntos y aprovisiona usuarios de proveedor y técnicos, incluyendo el acceso a ubicaciones de stock y certificaciones EPA.
+
+Dos superficies de apoyo que la mayoría de las integraciones de proveedor necesita: el almacén de archivos detrás de cada campo de adjuntos, y el aprovisionamiento programático de usuarios para dar de alta a técnicos.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Archivos
+
+**Sube** con `POST /v1/supplier/file/upload`: formulario multipart, una sola parte llamada `file`, máx. **512 MB**.
+
+```bash
+curl -X POST "$BASE/v1/supplier/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@before.jpg"
+```
+
+La respuesta (envoltura tipo `FileManager`) es un registro `FileDetails`: `{ "fileName": "before.jpg", "fileId": "a1b2c3d4e5" }`. Los caracteres no ASCII se eliminan del nombre de archivo; un fallo de almacenamiento devuelve `500`.
+
+Usa el objeto devuelto tal cual en los campos de adjuntos: [adjuntos del proveedor](/supplier-api/work-orders#keep-the-buyer-informed) en órdenes de trabajo, `attachments` de propuestas y facturas, e imágenes de check-in/check-out. Los PDFs de factura tienen su propio [endpoint de subir-y-publicar](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
+
+**Descarga** con `GET /v1/supplier/file/download/{id}/{name}`, que transmite los bytes almacenados como adjunto. `{id}` es el `fileId`; `{name}` es el nombre de archivo con el que se sirve. Úsalo para extraer documentos proporcionados por el comprador desde `buyerAttachments`. Los fallos de descarga se responden con `400`.
+
+## Aprovisionamiento de usuarios de proveedor
+
+`POST /v1/supplier/user/provision` crea un contacto de proveedor bajo tu empresa, opcionalmente con un login activo. Uso típico: dar de alta técnicos desde tu sistema de RRHH.
+
+```bash
+curl -X POST "$BASE/v1/supplier/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "sam.tech@supplier.com",
+    "nameGiven": "Sam",
+    "nameFamily": "Ortiz",
+    "roles": ["SUPPLIER_TECH"],
+    "title": "Refrigeration Technician",
+    "epaCertificationType": "Type II",
+    "epaCertificationNumber": "EPA-882913",
+    "stockLocationIds": [7]
+  }'
+```
+
+Reglas aplicadas por el endpoint:
+
+- `email` (en minúsculas y sin espacios), `nameGiven`, `nameFamily` y un array `roles` no vacío son requeridos. Los nombres de rol se comparan sin distinguir mayúsculas y **los roles admin o super-admin se rechazan con `403`**.
+- Los roles `SUPPLIER_TECH` obtienen además un registro de field-tech, que es lo que hace al usuario programable en llamadas de servicio y visible en WrenchMode.
+- El `facilityId` de destino toma por defecto la instalación de tu clave y debe pertenecer a la misma empresa proveedora (`403` en caso contrario).
+- Una cuenta o contacto existente para ese correo es un conflicto `400`.
+- **Creación del login.** Sin `password`, el usuario recibe un correo de invitación de registro. Con uno, la cuenta se crea activa de inmediato; añade `passwordResetRequired` para forzar un cambio en el primer inicio de sesión.
+- **Acceso por ubicación**: `hasAccessToAllLocations`, o `locationIds`/`brandIds` explícitos (ignorados cuando el flag de todas las ubicaciones es true).
+- **Acceso a ubicaciones de stock**: `hasAccessToAllStockLocations` y `canManageAllStockLocations` toman por defecto false y **se fuerzan a false cuando `stockLocationIds` no está vacío**; los ids explícitos ganan.
+- Credenciales EPA 608: `epaCertificationType` se valida contra las clases reconocidas; `epaCertificationNumber` es formato libre.
+
+El contacto creado se devuelve en la envoltura estándar.

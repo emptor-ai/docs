@@ -1,0 +1,67 @@
+# Filer och bilagor i Buyer API
+
+> Ladda upp filer till OpenWrenchs privata lagring och referera till dem som bilagor på arbetsordrar, tillgångar och fakturor med Buyer API.
+
+Bilagor över hela Buyer API (arbetsordrar, tillgångar, tillgångstyper, fakturor, förslag) är referenser till OpenWrenchs privata fillagring. Flödet är alltid detsamma: ladda upp byten först, använd sedan den returnerade filreferensen i entitetens bilagefält.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Uppladdning
+
+`POST /v1/buyer/file/upload` är en multipart-förfrågan med en enda del som heter `file`, upp till **512 MB**:
+
+```bash
+curl -X POST "$BASE/v1/buyer/file/upload" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -F "file=@site-photo.jpg"
+```
+
+Svaret (höljetyp `FileManager`) är en `FileDetails`-post:
+
+```json
+{
+  "type": "FileManager",
+  "data": {
+    "fileName": "site-photo.jpg",
+    "fileId": "a1b2c3d4e5"
+  },
+  "status": "ok"
+}
+```
+
+Icke-ASCII-tecken tas bort från `fileName` vid uppladdning. Ett fel på lagringsnivån returnerar `500`; försök igen med backoff.
+
+## Referera till filen från en entitet
+
+Bilagefält (till exempel `buyerAttachments` vid skapande av en arbetsorder, eller `attachments` på en tillgångstyp) tar arrayer av `FileDetails`-objekt, precis som de returneras av uppladdningen:
+
+```json
+{
+  "buyerAttachments": [
+    { "fileName": "site-photo.jpg", "fileId": "a1b2c3d4e5" }
+  ]
+}
+```
+
+## Nedladdning
+
+`GET /v1/buyer/file/download/{id}/{name}` strömmar de lagrade byten med `Content-Disposition: attachment`. `{id}` är `fileId` från uppladdningen (eller från valfria `FileDetails` du läser av från en entitet); `{name}` är filnamnet att servera nedladdningen som:
+
+```bash
+curl -OJ -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/file/download/a1b2c3d4e5/site-photo.jpg"
+```
+
+Svarets innehållstyp är den lagrade filens egen typ. Det här är också hur du hämtar bevis som leverantören lämnat in: läs `supplierAttachments` från en arbetsorder, eller `invoicePDFs`/`attachments` från en faktura, och ladda ner varje `fileId`.
+
+## Praktiska anmärkningar
+
+- Uppladdningar räknas mot hastighetsgränsen (10 förfrågningar per 20-sekundersfönster), så tunga batchmigreringar bör strypas till ungefär en uppladdning varannan sekund.
+- Lagra `fileId` tillsammans med dina egna poster; det finns ingen listnings-slutpunkt för att återupptäcka filer i efterhand.
+- Samma tvåstegsmönster gäller på leverantörssidan, och faktura-PDF:er har en dedikerad leverantörsslutpunkt som laddar upp och publicerar i ett anrop.

@@ -1,0 +1,66 @@
+# Identidad, aprovisionamiento de usuarios y utilidades en la Buyer API
+
+> Verifica credenciales, inspecciona la identidad detrás de una clave de la Buyer API, aprovisiona usuarios de comprador con roles limitados y consulta tipos de cambio de divisas.
+
+Esta página cubre los endpoints menores que toda integración termina necesitando: el health check, la identidad de la clave, el aprovisionamiento de usuarios y los tipos de cambio de divisas.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Ping e identidad
+
+`GET /v1/buyer/ping` verifica ambas cabeceras y devuelve `{"type":"pingpong","data":"pong","status":"ok"}`. No tiene límite de tasa, por lo que es seguro para sondas de monitoreo.
+
+`GET /v1/buyer/me` devuelve la identidad detrás de tu clave como una proyección deliberadamente pequeña: `email` del contacto, nombre, `contactType`, `buyerFacilityName`, `buyerCompanyId` y `buyerCompanyName`.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/me"
+```
+
+Llámalo una vez al arrancar: la creación de órdenes de trabajo necesita tu `buyerCompanyId` y el id de la instalación [en el cuerpo de la solicitud](/buyer-api/work-orders#create-a-work-order), y registrar la identidad hace obvias las mezclas de claves.
+
+## Aprovisionamiento de usuarios de comprador
+
+`POST /v1/buyer/user/provision` crea un contacto de comprador, opcionalmente con un login, y envía un correo de invitación. Úsalo para sincronizar usuarios desde tu sistema de RRHH o de identidad.
+
+```bash
+curl -X POST "$BASE/v1/buyer/user/provision" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "jordan@example.com",
+    "nameGiven": "Jordan",
+    "nameFamily": "Rivera",
+    "roles": ["BUYER_FM"],
+    "title": "Facilities Manager",
+    "hasAccessToAllLocations": false,
+    "locationIds": [1204, 1205]
+  }'
+```
+
+Reglas aplicadas por el endpoint:
+
+- `email`, `nameGiven`, `nameFamily` y `roles` son obligatorios. **Los roles admin y super-admin se rechazan con `403`**; el aprovisionamiento por API es solo para roles regulares.
+- La instalación de destino toma por defecto la instalación de tu clave de API. Un `facilityId` suministrado debe pertenecer a la misma empresa compradora (`403` en caso contrario).
+- Si ya existe una cuenta o contacto para ese correo, devuelve `400` con un mensaje de conflicto.
+- Con un `password`, el login se crea de inmediato y el correo de invitación dice "invited you to OpenWrench"; sin él, la invitación pide al usuario registrarse. `passwordResetRequired` fuerza un cambio en el primer inicio de sesión.
+- Alcance por ubicación: `hasAccessToAllLocations`, o `locationIds`/`brandIds` explícitos.
+- Las credenciales EPA 608 de técnicos pueden adjuntarse con `epaCertificationType` (validado contra las clases reconocidas; valores no reconocidos son `400`) y `epaCertificationNumber` (formato libre, máx. 64 caracteres).
+
+El contacto creado se devuelve en la envoltura estándar.
+
+## Tipos de cambio de divisas
+
+Los portafolios multidivisa pueden obtener la última tasa almacenada entre dos códigos de moneda:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/currency_exchange/latest/CAD/USD"
+```
+
+`GET /v1/buyer/currency_exchange/latest/{targetCurrencyId}/{baseCurrencyId}` toma códigos de moneda (por ejemplo `USD`, `CAD`) y devuelve la última tasa de base a destino. Las órdenes de trabajo llevan los campos relacionados `currencyId`, `locationCurrencyId` y los dos valores `currencyExchangeRate...` cuando hay precios entre monedas involucrados.

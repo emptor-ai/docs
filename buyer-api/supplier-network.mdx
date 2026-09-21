@@ -1,0 +1,64 @@
+---
+title: "Supplier network and ranked dispatch in the Buyer API"
+sidebarTitle: "Supplier network"
+description: "Query your supplier network and rank private-network suppliers for a location and problem type to automate dispatch with the OpenWrench Buyer API."
+---
+
+Two endpoint families answer "who can do this work": the **supplier facilities** listing (your whole network) and the **ranked private-network** endpoint (the ordered shortlist for one location and problem type). Together with the work order [reassignment patch](/buyer-api/work-orders#reassign-a-supplier), they let you automate dispatch.
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Your supplier network
+
+`GET /v1/buyer/supplier_facilities` returns every non-deleted supplier relationship for your company. Unlike most list endpoints, it supports a documented filter set:
+
+| Filter | Matches |
+| --- | --- |
+| `search` | Facility name, display name, or your alias for the facility. |
+| `name` | Facility name. |
+| `status` | Relationship status. |
+| `problemTypeId` | Suppliers covering a problem type. |
+| `spendCategoryId` | Suppliers covering a spend category. |
+| `locationId` | Suppliers serving a location. |
+
+```bash
+# Refrigeration-capable suppliers serving location 1204
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?problemTypeId=17&locationId=1204"
+
+# Free-text lookup
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/supplier_facilities?search=arctic"
+```
+
+Fetch one facility with `GET /v1/buyer/supplier_facilities/{id}`.
+
+## Ranked private-network suppliers
+
+For automated dispatch, ask for the ranked list for a `(location, problemType)` pair:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/private_network/buyer_supplier_relationships/ranked/1204/17"
+```
+
+`GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` returns buyer–supplier relationships, each hydrated with your relationship details (contacts and routing emails).
+
+<Warning>
+**Rank is conveyed by array order.** Any `sort_by` you pass is deliberately dropped so that array order always equals rank. The endpoint is paginated (default 10, max 25 per page), so rank continues across pages: the first item of page two is rank 11.
+</Warning>
+
+## Automated dispatch pattern
+
+1. A work order comes in (or is created unassigned).
+2. Call the ranked endpoint for the work order's `locationId` and `problemTypeId`.
+3. Take the first relationship's supplier facility and assign it, either at creation time (`supplierFacilityId` on the create body) or afterwards with `PATCH /v1/buyer/work_order/work_orders/{id}`.
+4. If the supplier declines, the work order returns to `PendingApproval` (or a private-network supplier may be auto-picked, per your configuration). On decline, re-run the ranking and assign the next candidate.
+
+Escalation ladders, response-time SLAs, and decline counts can all be layered on top of this loop; the ranking endpoint gives you the ordered candidates, and the work order's `statusChanges` tell you how each attempt went.

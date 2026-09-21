@@ -1,0 +1,59 @@
+# Cotizaciones y propuestas en la Buyer API
+
+> Lee las propuestas de cotización del proveedor con la Buyer API de OpenWrench: estados, secciones de líneas, reglas de alcance y cómo encajan las propuestas en el flujo de aprobación.
+
+Cuando el trabajo requiere un precio antes de continuar, los proveedores envían **propuestas** (cotizaciones) contra la orden de trabajo. A través de la Buyer API, las propuestas son de **solo lectura**: las listas, inspeccionas las líneas y las concilias con las facturas. La aprobación o rechazo de una propuesta ocurre en la app de OpenWrench.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Estados de propuesta
+
+| Estado | Significado |
+| --- | --- |
+| `draft` | El proveedor aún está editando. Nunca visible para los compradores. |
+| `pending` | Enviada, en espera de tu decisión. |
+| `awarded` | Aprobada; el trabajo avanza al precio cotizado. |
+| `declined` | Rechazada (los motivos del rechazo están en `declineNotes`). |
+
+Los estados se guardan en minúsculas.
+
+## Leer propuestas
+
+```bash
+# Propuestas pendientes en toda la empresa
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+
+# Propuestas de una orden de trabajo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?workOrderId=9001"
+
+# Una propuesta
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/quote/proposals/3320"
+```
+
+Reglas de alcance que conviene conocer:
+
+- Los borradores no enviados de los proveedores siempre se excluyen de los listados.
+- Si el contacto de tu clave de API tiene restricción por ubicación, solo ves propuestas de las ubicaciones accesibles. Un contacto con un conjunto accesible vacío obtiene una página vacía, no un error.
+- La lectura individual devuelve `404` para propuestas eliminadas de forma lógica, borradores y propuestas fuera de tu alcance de ubicación. Trata `404` como "no visible para ti", no necesariamente como "no existe".
+
+## Dentro de una propuesta
+
+El dinero se descompone en las mismas secciones que las facturas: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` y `miscLineItems`, cada sección con su propia tasa de impuestos y `...TotalBeforeTax`, que se suman a `totalBeforeTax`, `tax` y `totalAfterTax`. **Los valores monetarios se serializan como cadenas**; parséalos como decimales, no como floats, si vas a hacer aritmética.
+
+Otros campos útiles: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (el not-to-exceed de la orden de trabajo al momento del envío), `proposalPdfLink`, `attachments`, `submittedAt` y `approvedAt`.
+
+## Dónde encajan las propuestas en el flujo
+
+1. El proveedor envía una propuesta; la orden de trabajo suele pausarse a la espera de aprobación.
+2. Tus aprobadores la otorgan o la rechazan en la app. Otorgarla eleva el techo de gasto efectivo para el trabajo.
+3. Cuando llega la [factura](/buyer-api/invoices) final, compara `invoiceTotalAfterTax` con el `totalAfterTax` de la propuesta otorgada antes de aprobar el pago. Marca las variaciones por encima de tu tolerancia para revisión humana.
+
+Un ciclo práctico de sondeo para un tablero de compras: filtra `status=pending`, ordena por `submittedAt` y pagina con `limit=25`, respetando el límite de tasa de 10 solicitudes por ventana de 20 segundos.

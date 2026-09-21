@@ -1,0 +1,161 @@
+# Servicebesök: schemaläggning, incheckning och slutförande
+
+> Driv besökets livscykel med Supplier API: schemalägg och omschemalägg tekniker, checka in och ut, sätt slutstatus och läs arbetsloggar.
+
+Ett **servicebesök** är ett teknikerbesök mot en arbetsorder. Supplier API driver hela besökets livscykel via fem statusuppdateringsslutpunkter plus läsutökningar. Det här är den mest nyansrika delen av API:et; detaljerna nedan är värda att läsa innan du skriver kod.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Hur statusuppdateringsslutpunkterna fungerar
+
+Alla fem delar samma förfrågan-form (en servicebesök-payload) och ett avgörande beteende:
+
+<Warning>
+**Svaret är den associerade arbetsordern, inte servicebesöket.** Varje anrop skapar eller uppdaterar ett servicebesök, flyttar arbetsorderns status och returnerar den uppdaterade arbetsordern i höljet. Läs det nya servicebesökets tillstånd från arbetsorderns `associatedServiceCalls` / `lastServiceCall`.
+</Warning>
+
+Delade förfrågningsfält: `workOrderId` och `numberOfTechs` krävs alltid. `id` riktar in sig på ett befintligt servicebesök (utelämna det vid första skapandet, återanvänd sedan id:t för varje senare uppdatering av samma besök). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, `checkIn*`/`checkOut*`-grupperna, `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` fylls i allteftersom besöket fortskrider.
+
+`supplierFacilityId` krävs för nycklar tillhörande interna serviceteam; för tredjeparts leverantörsnycklar skrivs det över med ditt eget anläggnings-id oavsett vad du skickar.
+
+| Slutpunkt | Arbetsorderstatus blir |
+| --- | --- |
+| `POST .../service_calls/status_update/tech_scheduled` | `TechScheduled` när `serviceScheduledAt` finns, annars `TechAssigned` |
+| `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` när `serviceScheduledAt` finns, annars `TechAssigned` |
+| `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
+| `POST .../service_calls/status_update/check_out` | `checkOutStatus` du skickar (obligatoriskt) — [fullständig lista](#värdena-för-checkoutstatus-du-ska-skicka) |
+| `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Samma som deras motsvarigheter på plats, för fjärrarbete |
+
+Alla sökvägar ligger under `/v1/supplier/work_order/`. Det finns inga motsvarigheter på köparsidan: check-in och check-out kan inte styras från Buyer API.
+
+<Warning>
+**`check_in`, `check_out` och deras `remote_`-varianter kräver ett befintligt service call-`id`.** De uppdaterar ett besök; de skapar inte ett. Att skicka dem utan `id` returnerar `400 InvalidInputException` med `"required param: id"`. Starta besöket med `tech_scheduled` (som skapar det första service call:et och returnerar arbetsordern med det nya call:et i `associatedServiceCalls` / `lastServiceCall`), och återanvänd sedan det `id`:et vid varje senare uppdatering av samma besök.
+
+Arbetsordern måste också ha passerat acceptansen innan `tech_scheduled` är giltigt. Om den fortfarande är `PendingConfirmationByServiceProvider` (köparstatusen "Open - Pending Contractor Confirmation"), [acceptera den först](/sv/supplier-api/work-orders#acceptera-eller-avvisa) med `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
+</Warning>
+
+## 1. Schemalägg besöket
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_scheduled" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "leadTechnicianEmail": "tech@supplier.com",
+    "serviceScheduledAt": "2026-08-22T09:00:00.000-07:00"
+  }'
+```
+
+`serviceScheduledAt` måste vara en ISO 8601 datum-tid med en `T`-separator och en explicit offset (t.ex. `2026-08-22T09:00:00.000-07:00`, eller `...Z` för UTC). Ett mellanslagsseparerat värde som `2026-08-22 09:00:00+00:00` avvisas som ogiltig indata. Se [Datumformat](/sv/supplier-api/introduction#datumformat).
+
+`leadTechnicianEmail` är teknikerns e-post för besöket och är typad som en vanlig sträng i schemat. Om en `tech_scheduled`-förfrågan misslyckas med ett generiskt ohanterat undantag, bekräfta först att arbetsordern har [passerat acceptans](/sv/supplier-api/work-orders#acceptera-eller-avvisa) och att `serviceScheduledAt` följer ISO 8601-formatet ovan; båda är vanliga orsaker till ett föga beskrivande `tech_scheduled`-fel.
+
+För att flytta bokningen senare, anropa `tech_rescheduled` med servicebesökets `id` och det nya `serviceScheduledAt`.
+
+## 2. Checka in
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkInByEmail": "tech@supplier.com",
+    "checkInStatus": "TechWorkingOnSite",
+    "checkInNotes": "On site, starting diagnosis.",
+    "checkInGeoLocation": { "lat": "37.7749", "long": "-122.4194" }
+  }'
+```
+
+`checkInTime` sätts som standard till serverns aktuella tid när du sätter en `checkInStatus` utan tid, så liveintegrationer kan utelämna det; backfills bör skicka det explicit. `checkInImages` tar fotoreferenser och geokoordinater ger köparen bevis på plats.
+
+## 3. Checka ut och sätt utfallet
+
+Utcheckning är där arbetsorderns nästa status bestäms. **`checkOutStatus` krävs och måste vara ett giltigt namn på arbetsorderstatus**; det blir arbetsorderns nya status.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 4402,
+    "workOrderId": 9001,
+    "numberOfTechs": 1,
+    "checkOutByEmail": "tech@supplier.com",
+    "checkOutStatus": "WaitingForReview",
+    "checkOutNotes": "Replaced condenser fan motor. Unit holding 36F.",
+    "checkOutImages": ["<uploaded-file-id>"]
+  }'
+```
+
+### Värdena för `checkOutStatus` du ska skicka
+
+Det här är de utfall en utcheckning är avsedd att ge — samma uppsättning som OpenWrench-apparna erbjuder teknikern i utcheckningsformuläret. **Vilket "arbetet klart"-värde som gäller beror på din nyckel**: tredjepartsleverantörer lämnar över arbetsordern till köparen för granskning, medan ett internt serviceteam stänger sitt eget arbete.
+
+| Utfall (etikett i apparna) | Nyckel för tredjepartsleverantör | Nyckel för internt serviceteam | Resulterande `displayStatus` |
+| --- | --- | --- | --- |
+| Arbetet klart | `WaitingForReview` | `InternalTechWorkComplete` | `InProgress` / `Completed` |
+| Offert krävs | `WaitingForQuote` | — erbjuds inte | `InProgress` |
+| Fördröjd av tredje part | `DelayedByThirdParty` | `DelayedByThirdParty` | `OnHold` |
+| Arbetet ofullständigt med orsak | `WorkIncompleteWithReason` | `WorkIncompleteWithReason` | `InProgress` |
+| Delar (se nedan) | `PartsRequested` eller `PartsOnOrder` | `PartsRequested` eller `PartsOnOrder` | `OnHold` |
+
+**Delar-utfallet är ett värde, inte två.** Vilket som gäller avgörs av köparföretagets delarkonfiguration: när `partsOrderingConfig.needPartsRequisitionBeforeOrdering` är aktiverat slutar besöket i `PartsRequested` (en rekvisition måste skapas innan något beställs), annars slutar det i `PartsOnOrder`. Skicka det som matchar köparen du arbetar för; om du inte vet, läs tillbaka det från arbetsordern efter en utcheckning gjord i apparna.
+
+`WaitingForReview` och `InternalTechWorkComplete` är de två *avslutande* utfallen — de är de enda värden som sätter arbetsorderns `completedAt` (utifrån utcheckningstiden) och de enda som utlöser automationen nedan. Övriga utfall lämnar arbetsordern öppen och `completedAt` orört.
+
+<Warning>
+**Endpointen tvingar inte igenom den här listan.** `checkOutStatus` matchas oberoende av versaler mot OpenWrenchs fullständiga interna enum för arbetsorderstatus, utan någon övergångskontroll, så ett namn utanför tabellen ovan godtas och blir arbetsorderns status — vilket sätter arbetsordern i ett läge som apparna, notifieringarna och rapporterna inte förväntar sig från en utcheckning. Behandla tabellen som kontraktet. Ett okänt namn avvisas innan något skrivs:
+
+```json
+{
+  "message": "Finished is not a valid status",
+  "type": "unexpectedException",
+  "status": "error"
+}
+```
+</Warning>
+
+<Note>
+**Att skicka om den status arbetsordern redan har gör ingenting med arbetsordern.** Utcheckningen registreras fortfarande på servicebesöket, men arbetsordern kommer tillbaka oförändrad och `completedAt` sätts inte om.
+</Note>
+
+Delar och lager som förbrukas vid besöket registreras via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload; id:na kommer från din [lagerkatalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+
+Två automationsbeteenden utlöses vid denna punkt:
+
+- **Auto-godkännande.** För tredjepartsleverantörer vars köparföretag har `autoApproveWorkOrdersCompletedByThirdParty` aktiverat uppgraderas ett `WaitingForReview`-utfall automatiskt till `WorkReviewedAndCompleted`.
+- **Auto-publicering av fakturor.** När den resulterande statusen är `WorkReviewedAndCompleted` kan regler för auto-publicering av fakturor köras och publicera ditt fakturautkast. Se [Offerter och fakturering](/supplier-api/quotes-and-invoicing).
+
+`remote_check_in` och `remote_check_out` beter sig identiskt för arbete som utförs off-site.
+
+## Läsa tillbaka ett servicebesök
+
+Tre utökningar på `GET /v1/supplier/work_order/service_calls/{id}`:
+
+| Slutpunkt | Lägger till |
+| --- | --- |
+| `.../{id}/with_work_logs` | WrenchMode-händelser i in-/utcheckningsfönstret plus `trueWorkTimeMillis` (arbetsvaraktighet exklusive pauser). |
+| `.../{id}/with_tech_details` | Teknikerkontaktposter. `hourlyRate` visas endast för tekniker från din egen anläggning. |
+| `.../{id}/with_work_logs/with_tech_details` | Båda. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
+```
+
+För tidsrapportering på flottnivå över alla tekniker, använd [WrenchMode](/supplier-api/wrenchmode) istället för att iterera besök.
+
+## Jobb med flera besök
+
+En arbetsorder kan bära många servicebesök (diagnos, reparation, uppföljning). Skapa varje besök med sitt eget `tech_scheduled`-anrop (utan `id`), och håll varje besöks efterföljande uppdateringar nycklade till dess servicebesöks-`id`. Checka ut mellanliggande besök med en fortsättningsstatus såsom `PartsRequested` eller `TechScheduled`, och bara det slutliga besöket med `WaitingForReview`.

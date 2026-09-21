@@ -1,0 +1,74 @@
+# Calendriers d'entretien préventif dans l'API Acheteur
+
+> Lisez les calendriers d'entretien préventif, sautez des exécutions à venir et intégrez un planificateur externe avec des journaux d'exécution en utilisant l'API Acheteur OpenWrench.
+
+Les calendriers d'entretien préventif (EP) génèrent des bons de travail récurrents sur des actifs à une cadence définie. L'API Acheteur vous permet de lire les calendriers, de sauter une exécution et d'enregistrer des journaux d'exécution lorsqu'un système externe pilote la planification.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Lire les calendriers
+
+```bash
+# Tous les calendriers et un décompte filtré
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules/count_by?locationId=1204"
+
+# Un calendrier
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/pm/planned_maintenance_schedules/512"
+```
+
+La pagination et le filtrage par champ standards s'appliquent. Les bons de travail générés par un calendrier portent `isPM: true` et `plannedMaintenanceScheduleId`, de sorte que vous pouvez lister l'historique d'un calendrier depuis le côté bons de travail :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?plannedMaintenanceScheduleId=512&sort_by=createdAt&order=desc"
+```
+
+## Sauter une exécution
+
+`PATCH /v1/buyer/pm/planned_maintenance_schedules/skip_schedule` fait avancer un calendrier au-delà de sa prochaine exécution prévue (par exemple, lorsqu'un site est fermé pour rénovation). L'`id` du calendrier est le champ requis :
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/pm/planned_maintenance_schedules/skip_schedule" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "id": 512 }'
+```
+
+Le calendrier mis à jour est retourné. Cet endpoint n'est pas limité en débit.
+
+## Piloter l'entretien préventif depuis un planificateur externe
+
+Si votre propre système décide quand les bons de travail d'entretien préventif sont émis, bouclez la boucle en enregistrant chaque exécution avec `POST /v1/buyer/pm/scheduler_run_logs` :
+
+```bash
+curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scheduleId": 512,
+    "status": "success",
+    "lastRunAt": "2026-08-21T06:00:05.000-07:00",
+    "lastRunDueAt": "2026-08-21T06:00:00.000-07:00",
+    "woId": 9105,
+    "log": "Created WO 9105 for August PM."
+  }'
+```
+
+`scheduleId`, `status`, `lastRunAt` et `lastRunDueAt` sont requis; `woId` relie le bon de travail que l'exécution a créé (créez-le d'abord via l'endpoint [bons de travail](/buyer-api/work-orders#create-a-work-order), avec `isPM: true` et `plannedMaintenanceScheduleId` définis), et `log` contient des diagnostics en format libre.
+
+La boucle complète du planificateur externe :
+
+1. Lire les calendriers et leur cadence depuis l'API.
+2. Lorsqu'une exécution arrive à échéance, créer le bon de travail d'entretien préventif.
+3. Enregistrer l'exécution avec `scheduler_run_logs`, en reliant le `woId`.
+4. Si une exécution doit plutôt être sautée, appeler `skip_schedule` pour que la prochaine date d'échéance avance.

@@ -1,0 +1,88 @@
+---
+title: "Réseau privé de sous-traitants dans l'API Fournisseur"
+sidebarTitle: "Réseau privé"
+description: "Ajoutez des établissements de fournisseurs sous-traitants à votre réseau privé et invitez-les sur OpenWrench depuis l'API Fournisseur."
+---
+
+Les endpoints de réseau privé de l'API Fournisseur permettent à un établissement fournisseur de tenir son propre réseau d'établissements sous-traitants et d'inviter ceux avec lesquels il souhaite travailler sur OpenWrench. Les relations vivent sur la ressource `SupplierSupplierRelationship` ; l'endpoint d'invitation envoie le courriel de référence.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Gérer les relations de sous-traitants
+
+L'établissement fournisseur de l'appelant (dérivé du contact de la clé API) est le côté source de chaque relation qu'il crée ou liste.
+
+```bash
+# Créer une relation avec l'établissement fournisseur sous-traitant 5511
+curl -X POST "$BASE/v1/supplier/private_network/supplier_supplier_relationships" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 5511 }'
+
+# Lister vos relations de sous-traitants
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/private_network/supplier_supplier_relationships"
+
+# Retirer un sous-traitant par l'id de son établissement fournisseur
+curl -X DELETE "$BASE/v1/supplier/private_network/supplier_supplier_relationships/delete_by_supplier/5511" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET"
+```
+
+L'enregistrement de la relation porte les détails d'acheminement utilisés plus tard par le courriel d'invitation : `workOrdersRoutedTo` (courriels auxquels le sous-traitant reçoit le travail dispatché) et `supplierAccountEmails` (contacts au niveau du compte pour ce sous-traitant).
+
+## Inviter un sous-traitant
+
+`POST /v1/supplier/private_network/supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` envoie un courriel de référence invitant le sous-traitant sur OpenWrench.
+
+| Paramètre de chemin | Signification |
+| --- | --- |
+| `sfId` | Id de l'établissement fournisseur du sous-traitant — doit être le `supplierFacilityId` d'une relation existante dont la source est l'établissement de l'appelant. |
+| `fromEmail` | Courriel du contact référent dans votre établissement. Utilisé pour récupérer le nom du référent et le mettre en copie du courriel sortant. |
+| `toEmail` | Courriel de la personne à inviter dans l'établissement du sous-traitant. |
+| `fN`, `lN` | Prénom et nom à utiliser lorsque l'invité n'est pas encore un contact connu. |
+
+Vous devez d'abord créer le `SupplierSupplierRelationship` (voir ci-dessus). Si aucune relation n'existe pour `(votre établissement, sfId)`, l'endpoint renvoie `404` avec `could not find supplier supplier relationship...`. Cela reflète le flux d'invitation de réseau privé côté acheteur. L'endpoint renvoie `400` lorsque le contact de l'appelant n'a pas d'établissement.
+
+Le corps JSON facultatif peut inclure un `note` ; lorsqu'il est présent, son texte apparaît dans le corps du courriel sous la salutation.
+
+```bash
+curl -X POST \
+  "$BASE/v1/supplier/private_network/supplier_supplier_relationships/5511/invite/dispatch@acme.example/owner@subco.example/name/Jane/Doe" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "note": "Looking forward to routing you our overflow HVAC calls." }'
+```
+
+Un appel réussi renvoie :
+
+```json
+{ "code": "subContractorInviteSent", "message": "Emails sent!" }
+```
+
+### Traitement du destinataire
+
+Si `toEmail` ne correspond à aucun contact fournisseur existant, l'endpoint crée automatiquement un contact `supplier` à l'établissement `sfId` en utilisant `fN` et `lN` avant d'envoyer le courriel. Ce contact est marqué comme nouveau, ce qui contrôle le lien CTA (voir ci-dessous). Si le courriel correspond déjà à un contact, aucun nouveau contact n'est créé.
+
+### Le courriel envoyé
+
+Le destinataire à `toEmail` reçoit un courriel avec :
+
+- **Sujet :** `<prénom du référent> from <nom de votre établissement> has added <nom de l'établissement sous-traitant> as a sub-contractor on OpenWrench`. `Your client` et `you` sont substitués lorsque le référent ou l'établissement sous-traitant ne peuvent pas être résolus.
+- **Alias d'expéditeur :** le nom complet du référent, afin que le message paraisse provenir d'une personne de votre équipe.
+- **CC :** le contact référent à `fromEmail`.
+- **Corps :** une salutation au contact invité, la `note` (le cas échéant) et une ligne « you'll get notified at ... » listant les courriels auxquels OpenWrench enverra le travail dispatché.
+- **Lien CTA :** pour un tout nouveau contact fournisseur, `https://partners.useopenwrench.com/supplier/signup?email=<toEmail>` afin qu'il puisse terminer l'inscription ; sinon, le lien du portail simple `https://partners.useopenwrench.com`.
+
+La liste notified-at dans le texte suit une chaîne de priorité sur la relation : `workOrdersRoutedTo` s'il n'est pas vide, sinon `supplierAccountEmails` s'il n'est pas vide, sinon le `toEmail` invité lui-même. Configurez les champs d'acheminement sur la relation avant d'inviter si vous voulez que l'invitation prévisualise les vraies destinations de dispatch.
+
+## Flux de bout en bout
+
+1. Créez la relation : `POST /v1/supplier/private_network/supplier_supplier_relationships` avec le `supplierFacilityId` du sous-traitant.
+2. Optionnellement, définissez `workOrdersRoutedTo` et `supplierAccountEmails` sur la relation (`PUT` sur la même collection) pour que le courriel d'invitation prévisualise correctement où le travail arrivera.
+3. Envoyez l'invitation : `POST .../supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` avec un corps facultatif `{ "note": "..." }`.

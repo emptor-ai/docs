@@ -1,0 +1,117 @@
+---
+title: "Buyer API"
+sidebarTitle: "Introduction"
+description: "Programmatic access to your OpenWrench buyer account: manage work orders, assets, locations, invoices, planned maintenance, and your supplier network."
+icon: "building"
+---
+
+The OpenWrench Buyer API gives facility operators programmatic access to everything on the buyer side of the platform: creating and tracking work orders, managing assets and locations, reviewing quotes and invoices, monitoring preventive maintenance, and querying your supplier network.
+
+## Base URL
+
+```text
+https://api.useopenwrench.com/api/external
+```
+
+All buyer endpoints are under `/v1/buyer/`.
+
+## Authentication
+
+Every request must carry **two headers**: `X-API-KEY` (your API key, issued per buyer contact) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your company — you only ever see your own data. Requests missing either header return `401`.
+
+```bash
+curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
+  "https://api.useopenwrench.com/api/external/v1/buyer/ping"
+```
+
+To get an API key and shared secret, contact [support@useopenwrench.com](mailto:support@useopenwrench.com). Use `GET /v1/buyer/me` to inspect the identity (contact, facility, company) behind your key.
+
+Keys do not expire on their own. To rotate one, request a new key/shared-secret pair from support, deploy the new pair, then ask support to revoke the old one.
+
+<Note>
+The **Internal Teams API** section further down this tab uses a **separate partner API key** — your buyer key will not authenticate against those `/v1/partners/` endpoints. See the [Internal Teams API introduction](/partners-api/introduction) for details.
+</Note>
+
+## Rate limits
+
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
+
+## Keeping work orders in sync
+
+If your integration mirrors work orders into another system (a ticketing tool, an ERP, a data warehouse), build it on push, not polling:
+
+1. Register a [webhook](/buyer-api/webhooks) endpoint. OpenWrench sends `workorder.create`, `workorder.status_update`, and `workorder.new_note` events as they happen.
+2. On each event, fetch that one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
+3. Use `GET /v1/buyer/work_order/work_orders` for ad-hoc queries, the one-time initial load, and occasional reconciliation, with a narrow filter and a small page.
+
+Do not poll the list endpoint on a schedule to find new or changed work orders. It is the most expensive read in the API, it is slow on large accounts, and it competes with your real work for the rate limit. See [Work orders](/buyer-api/work-orders#list-filter-and-count) for the details.
+
+## Response envelope
+
+Single-entity responses:
+
+```json
+{ "type": "WorkOrder", "data": { "...": "..." }, "status": "ok" }
+```
+
+List responses add a total `count`:
+
+```json
+{ "type": "WorkOrder", "data": [ "..." ], "count": 42, "status": "ok" }
+```
+
+Errors:
+
+```json
+{ "message": "Human-readable message", "type": "NotFoundException", "status": "error", "traceId": "abc123def45" }
+```
+
+`401` means a missing or invalid key; `400` covers bad input, bad filters, and permission denials; `429` is the rate limit.
+
+## Pagination and filtering
+
+List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters — pass a field name with a value (comma-separate multiple values) to filter the result set. Each endpoint's reference page lists its notable filters.
+
+## Date formats
+
+Most timestamps are ISO 8601 strings with offset (e.g. `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`. When sending date-times, use ISO 8601.
+
+## Detailed guides
+
+The guides in this tab walk each part of the API in depth, with payloads, status models, and integration patterns:
+
+<CardGroup cols={2}>
+  <Card title="Work orders" href="/buyer-api/work-orders" icon="clipboard-list">
+    Create, filter, reassign, close out. Status model, notes, and problem types.
+  </Card>
+  <Card title="Webhooks" href="/buyer-api/webhooks" icon="bolt">
+    Work order created, status changed, and new note events pushed to your endpoint.
+  </Card>
+  <Card title="Service calls" href="/buyer-api/service-calls" icon="user-check">
+    Visit evidence: work logs, true work time, and technician details.
+  </Card>
+  <Card title="Assets & locations" href="/buyer-api/assets-and-locations" icon="warehouse">
+    Locations, regions, asset types, models, meters, and refrigerant tracking.
+  </Card>
+  <Card title="Invoices" href="/buyer-api/invoices" icon="file-invoice-dollar">
+    The approval pipeline, AP sync, flattened exports, and bulk updates.
+  </Card>
+  <Card title="Quotes & proposals" href="/buyer-api/quotes-and-proposals" icon="file-signature">
+    Read supplier quotes and reconcile them against invoices.
+  </Card>
+  <Card title="Planned maintenance" href="/buyer-api/planned-maintenance" icon="calendar-check">
+    Read schedules, skip runs, and drive PM from an external scheduler.
+  </Card>
+  <Card title="Supplier network" href="/buyer-api/supplier-network" icon="network-wired">
+    Query your network and rank private-network suppliers for dispatch.
+  </Card>
+  <Card title="Site surveys" href="/buyer-api/site-survey-walkthroughs" icon="clipboard-check">
+    Walkthroughs and the work orders cut from their findings.
+  </Card>
+  <Card title="Files & attachments" href="/buyer-api/files-and-attachments" icon="paperclip">
+    Upload once, reference everywhere, download evidence.
+  </Card>
+  <Card title="Account & utilities" href="/buyer-api/account-and-utilities" icon="id-badge">
+    Ping, key identity, user provisioning, and exchange rates.
+  </Card>
+</CardGroup>

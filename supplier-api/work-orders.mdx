@@ -1,0 +1,203 @@
+---
+title: "Working work orders with the Supplier API"
+sidebarTitle: "Work orders"
+description: "Receive, accept, decline, and progress work orders as a supplier: status updates, parts tracking, estimated completion dates, attachments, notes, and labels."
+---
+
+For a supplier integration, the work order queue is the inbox. This guide covers the endpoints under `/v1/supplier/work_order/` for receiving jobs, responding to them, and keeping buyers informed while the work progresses. Scheduling visits and completing work happen through [service calls](/supplier-api/service-calls).
+
+All examples assume:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Reading your queue
+
+<Warning>
+  **Do not build your integration on the list endpoint.** `GET /v1/supplier/work_order/work_orders` is the most expensive read in the Supplier API, and polling it to discover new or changed work orders is the wrong pattern. It is slow on large queues, it burns your [rate limit](/supplier-api/introduction#rate-limits), and it still misses changes between polls. Use [webhooks](/supplier-api/webhooks) to learn that a work order was assigned to you, changed status, or received a note, then fetch that one work order by id. Reserve the list for a one-time initial load and occasional reconciliation, with a narrow filter and a small page.
+</Warning>
+
+The pattern that scales is push, then fetch by id:
+
+```bash
+# 1. A webhook delivery tells you which work order changed:
+#    { "event_type": "workorder.create", "data": { "workOrderId": 9001, ... } }
+
+# 2. Fetch that work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+The list and count endpoints are for the two moments a webhook cannot cover. Use them for the first load of work that already existed before your endpoint was registered. Also use them for a periodic check that nothing was missed:
+
+```bash
+# Initial load or reconciliation: filter narrowly, page small, walk with offset
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+
+# Count by filter, without fetching rows
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+```
+
+Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter acts as a field filter. Everything is tenant-scoped to your facility.
+
+The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. The count endpoint runs the same query as the list, so the two always agree. Behavior to know:
+
+- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, and problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Wrap the value in double quotes to require the exact phrase.
+- **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
+- **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
+- **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on a `statusChangedAt` window or other indexed columns instead.
+- **Freshness.** Search index and replica updates lag writes by a moment. Your own just-written change, or a work order assigned seconds ago, can be briefly absent from list results and counts.
+- **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
+- **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
+
+## Accept or decline
+
+**Accept** with `POST /v1/supplier/work_order/work_orders/status_update/confirm`, which sets the status to `ConfirmedByServiceProvider`. A work order already in a completed or closed display status cannot be accepted (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Decline** with `POST .../status_update/decline`. Only contacts of the work order's assigned supplier facility may decline. The work order leaves your queue through the supplier-change flow: its status returns to `PendingApproval`, or a private-network supplier is auto-picked, depending on the buyer's configuration. The note's `text` is recorded as the decline reason and reflected in what the buyer sees, so make it specific.
+
+Both calls take `{ "id": ..., "note": { ... } }` and return the updated work order.
+
+## Keep the buyer informed
+
+Three lightweight signals while the job is in flight:
+
+**Parts tracking.** Three status endpoints, same `{ id, note }` body shape as above:
+
+| Endpoint | Resulting status |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Estimated completion date.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` reads only `estimatedCompletionDate` (ISO 8601) from the body:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Attachments.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` appends file references to `supplierAttachments`, preserving what is already there. Upload the file first (see [Files and users](/supplier-api/files-and-users)), then:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Notes
+
+Append to the shared buyer–supplier thread with `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), and read a work order's thread with `GET /v1/supplier/work_order/work_order_notes/{woId}`. Reading updates read receipts for your contact, and a denied read returns an empty list rather than an error.
+
+To @mention people on the note, add `taggedUsers` beside the `note`: a list of contact email addresses. OpenWrench folds each email into `note.elements` as a `user` element, the same shape the apps write for an @mention, so you don't need to build the `elements` structure yourself. Tagged contacts are added to the work order's subscriber list if they aren't subscribed already.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Rules for `taggedUsers`:
+
+- Emails are trimmed and lowercased before matching. A note can mention at most 25 users.
+- Duplicate emails in the list, and users already tagged in `note.elements`, are skipped rather than mentioned twice.
+- An entry that is not a valid email address, or a list of more than 25 emails, is rejected with a `400` of type `invalidInputDataException`. Nothing is persisted.
+- An empty list is ignored. Sending `taggedUsers` without a `note` object is rejected with `400`.
+
+To post a batch of photos (a technician's before/after set, for example), use `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` with `{ "id": ..., "notes": [ ... ] }`. Each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. A request takes 1–25 notes, duplicate photo URLs are rejected with `400`, and the batch keeps its order under one server-set `noteAddedAt`. Subscribers receive a single grouped notification instead of one notification per photo.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
+## Labels
+
+Work order labels are lightweight tags (a name plus an optional color) used to slice the queue. Through the API you can read the label catalog and replace the labels applied to a work order. Creating or editing the labels themselves stays in the OpenWrench app.
+
+Which catalog you see depends on your key: a key belonging to a buyer's internal service team sees that buyer company's catalog, and a third-party supplier's key sees its own facility's catalog.
+
+**Browse the catalog** with `GET /v1/supplier/work_order/work_order_labels`, or fetch one with `GET /v1/supplier/work_order/work_order_labels/{id}`. The list is paginated 10 per page by default and accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call.
+
+**Replace a work order's labels** with `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. The body is `{ "ids": [...] }` and it is a full replacement: labels not listed are removed, and an empty array clears them all. The response lists the label mappings now active on the work order.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Behavior to know:
+
+- Every id must be a live label from your own catalog; a missing or non-array `ids`, a non-integer id, and unknown or cross-tenant ids are all rejected with `400`.
+- The write requires work order write permission: a key that can only see the work order (a bidder, or a facility with read-only visibility) gets `400`. On an unassigned work order, only a facility with read-write visibility may label it.
+- An unknown, deleted, or foreign work order id answers the same `400` as a denied write, not a `404`.
+
+## Create a supplier-initiated work order
+
+Suppliers can open work orders themselves (a tech spots a broken door while on site for something else). `POST /v1/supplier/work_order/work_orders` requires `title` and `locationId`; the location determines the buyer facility and company.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Defaults when omitted: `problemTypeId` falls back to the first leaf problem type of the location's buyer company, and `woPriorityId` to a default priority for that company. An `assetId`, if given, must exist, and its area is inherited when `areaId` is not set. The field is `needApproval` (no "s") on this create body. An `id` in the body is ignored: this call always creates a new work order.
+
+**The server sets the initial status.** For a third-party supplier key, any `status` or `isSupplierInitiated` in the body is ignored. The server creates the work order as `SupplierInitiatedPendingApproval` with `isSupplierInitiated: true`. The buyer's approval configuration then decides where it lands: it stays in `SupplierInitiatedPendingApproval` until a buyer approves it, or, when the buyer auto-approves supplier-initiated work orders, it is confirmed to your facility straight away as `ConfirmedByServiceProvider`. Keys that belong to a buyer's internal service team, and paying suppliers creating a work order at a location of a client they manage, keep the `status` they send. When these keys omit `status`, the initial status is derived from the buyer company's configuration; an internal team lands in `AssignedToInternalTech`.
+
+## Problem types
+
+`GET /v1/supplier/work_order/problem_types` lists problem types across your related buyer companies (not rate limited). Use it to classify supplier-initiated work orders correctly per buyer.
+
+## Typical integration loop
+
+1. Register a [webhook](/supplier-api/webhooks) endpoint for `workorder.create` and `workorder.status_update`. On each delivery, fetch the work order by id. Do the one-time initial load from the list endpoint, and keep it out of the steady-state loop except as an infrequent, narrowly filtered safety-net poll.
+2. `confirm` or `decline` within your SLA.
+3. Schedule the visit via [service calls](/supplier-api/service-calls); post parts statuses and an ECD as things develop.
+4. Complete via check-out, then bill via [quotes and invoicing](/supplier-api/quotes-and-invoicing).

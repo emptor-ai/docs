@@ -1,0 +1,88 @@
+---
+title: "Privat nätverk för underleverantörer i Supplier API"
+sidebarTitle: "Privat nätverk"
+description: "Lägg till underleverantörsanläggningar i ditt privata nätverk och bjud in dem till OpenWrench från Supplier API."
+---
+
+Supplier API:s endpoints för privat nätverk låter en leverantörsanläggning underhålla sitt eget nätverk av underleverantörsanläggningar och bjuda in de som den vill samarbeta med till OpenWrench. Relationerna finns på resursen `SupplierSupplierRelationship`; invite-endpointen skickar hänvisningsmejlet.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Hantera underleverantörsrelationer
+
+Anroparens leverantörsanläggning (härledd från API-nyckelns kontakt) är källsidan för varje relation som den skapar eller listar.
+
+```bash
+# Skapa en relation till underleverantörsanläggning 5511
+curl -X POST "$BASE/v1/supplier/private_network/supplier_supplier_relationships" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 5511 }'
+
+# Lista dina underleverantörsrelationer
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/private_network/supplier_supplier_relationships"
+
+# Ta bort en underleverantör via dess leverantörsanläggnings-id
+curl -X DELETE "$BASE/v1/supplier/private_network/supplier_supplier_relationships/delete_by_supplier/5511" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET"
+```
+
+Relationens post bär de dirigeringsdetaljer som invite-mejlet senare använder: `workOrdersRoutedTo` (mejladresser dit underleverantören får utsänt arbete) och `supplierAccountEmails` (kontaktadresser på kontonivå för underleverantören).
+
+## Bjud in en underleverantör
+
+`POST /v1/supplier/private_network/supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` skickar ett hänvisningsmejl som bjuder in underleverantören till OpenWrench.
+
+| Sökvägsparameter | Betydelse |
+| --- | --- |
+| `sfId` | Underleverantörens leverantörsanläggnings-id — måste vara `supplierFacilityId` för en befintlig relation vars källa är anroparens anläggning. |
+| `fromEmail` | Mejl för den hänvisande kontakten på din anläggning. Används för att slå upp hänvisarens namn och för att sätta hänvisaren som CC på det utgående mejlet. |
+| `toEmail` | Mejl till personen som ska bjudas in på underleverantörens anläggning. |
+| `fN`, `lN` | Förnamn och efternamn att använda när den inbjudna ännu inte är en känd kontakt. |
+
+Du måste skapa `SupplierSupplierRelationship` först (se ovan). Om ingen relation finns för `(din anläggning, sfId)` svarar endpointen med `404` och `could not find supplier supplier relationship...`. Detta speglar invite-flödet i köparsidans privata nätverk. Endpointen svarar med `400` när anroparens kontakt saknar anläggning.
+
+Den valfria JSON-kroppen kan innehålla ett `note`; när det anges visas texten i mejlets brödtext under hälsningen.
+
+```bash
+curl -X POST \
+  "$BASE/v1/supplier/private_network/supplier_supplier_relationships/5511/invite/dispatch@acme.example/owner@subco.example/name/Jane/Doe" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "note": "Looking forward to routing you our overflow HVAC calls." }'
+```
+
+Ett lyckat anrop returnerar:
+
+```json
+{ "code": "subContractorInviteSent", "message": "Emails sent!" }
+```
+
+### Hantering av mottagaren
+
+Om `toEmail` inte matchar en befintlig leverantörskontakt skapar endpointen automatiskt en `supplier`-kontakt på anläggning `sfId` med `fN` och `lN` innan mejlet skickas. Den kontakten flaggas som ny, vilket styr CTA-länken (se nedan). Om mejlet redan mappar till en kontakt skapas ingen ny kontakt.
+
+### Mejlet som skickas
+
+Mottagaren på `toEmail` får ett mejl med:
+
+- **Ämne:** `<hänvisarens förnamn> from <din anläggnings namn> has added <underleverantörsanläggningens namn> as a sub-contractor on OpenWrench`. `Your client` och `you` sätts in när hänvisaren eller underleverantörsanläggningen inte kan resolvas.
+- **From-alias:** hänvisarens fullständiga namn, så meddelandet ser ut att komma från en person i ditt team.
+- **CC:** den hänvisande kontakten på `fromEmail`.
+- **Brödtext:** en hälsning till den inbjudna kontakten, `note` (om det finns) och en rad "you'll get notified at ..." som listar de mejladresser dit OpenWrench skickar utsänt arbete.
+- **CTA-länk:** för en helt ny leverantörskontakt, `https://partners.useopenwrench.com/supplier/signup?email=<toEmail>` så att de kan slutföra registreringen; annars den vanliga portallänken `https://partners.useopenwrench.com`.
+
+Listan notified-at i mejltexten följer en prioritetskedja på relationen: `workOrdersRoutedTo` om den inte är tom, annars `supplierAccountEmails` om det inte är tomt, annars den inbjudna `toEmail` själv. Sätt dirigeringsfälten på relationen innan du bjuder in om du vill att invite-mejlet ska förhandsvisa de riktiga dispatch-destinationerna.
+
+## End-to-end-flöde
+
+1. Skapa relationen: `POST /v1/supplier/private_network/supplier_supplier_relationships` med underleverantörens `supplierFacilityId`.
+2. Sätt eventuellt `workOrdersRoutedTo` och `supplierAccountEmails` på relationen (`PUT` på samma kollektion) så att invite-mejlet korrekt förhandsvisar var arbetet kommer att landa.
+3. Skicka inbjudan: `POST .../supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` med en valfri `{ "note": "..." }`-kropp.

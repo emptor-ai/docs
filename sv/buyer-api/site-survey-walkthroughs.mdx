@@ -1,0 +1,70 @@
+# Genomgångar av platsbesiktningar i Buyer API
+
+> Läs genomgångar av platsbesiktningar och generera uppföljningsarbetsordrar från besiktningsfynd med OpenWrench Buyer API.
+
+En **genomgång** är en avslutad platsbesiktning: en inspektör går igenom en plats mot en uppgiftslista och registrerar svar, foton och problem. Buyer API exponerar genomgångar skrivskyddat och låter dig skapa uppföljningsarbetsordrar som förblir kopplade till besiktningsfyndet de kom från.
+
+Alla exempel förutsätter:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Läsa genomgångar
+
+```bash
+# Senaste genomgångar för en plats
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+
+# Räkning per filter
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/count_by?locationId=1204"
+
+# En genomgång, med uppgiftssvar
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/230"
+```
+
+Standardpaginering och fältfilter gäller, plus din rolls plats- och varumärkesavgränsning. Arbetsordrar som refereras från en genomgångs uppgiftssvar filtreras av din läsbehörighet, så olika nycklar kan se olika länkade arbetsordrar på samma genomgång.
+
+## Rendera poäng med värmekarteintervall
+
+Varje genomgångssvar bäddar in den hydrerade platsundersökning som genomgången kördes mot, under `siteSurvey`. Platsundersökningen bär ett valfritt fält `walkthroughHeatMapRanges`: en array av färgband som används för att rendera genomgångspoäng som en värmekarta.
+
+```json
+{
+  "siteSurvey": {
+    "id": 88,
+    "title": "Kvartalsvis butiksrevision",
+    "walkthroughHeatMapRanges": [
+      { "color": "#FF0000", "lowerRange": 0 },
+      { "color": "#FFFF00", "lowerRange": 60 },
+      { "color": "#00FF00", "lowerRange": 80 }
+    ]
+  }
+}
+```
+
+Varje post har två fält:
+
+- `color`: färgen som ska renderas för bandet, vanligtvis en hexkod.
+- `lowerRange`: den lägsta poäng som faller inom bandet. Ett band sträcker sig från sitt `lowerRange` upp till nästa bands `lowerRange`.
+
+För att färglägga en poäng från genomgångens `scores`-array, välj bandet med det högsta `lowerRange` som är mindre än eller lika med poängen.
+
+Du konfigurerar intervallen på platsundersökningen eller på dess mall. Om en undersökning saknar egna intervall fyller OpenWrench i mallens intervall vid läsning, så det inbäddade `siteSurvey.walkthroughHeatMapRanges` är redan upplöst. Du behöver aldrig hämta mallen för att hitta banden. Fältet är `null` när varken undersökningen eller dess mall definierar intervall; hoppa över värmekarterendering i det fallet.
+
+## Skapa uppföljningsarbetsordrar
+
+När ett besiktningsfynd behöver åtgärdas, skapa arbetsordern med länkfälten satta:
+
+- `walkThroughId` — genomgången fyndet kom från.
+- `siteSurveyTaskTitleId` — den specifika uppgiften inom den.
+- `includeWalkthroughTaskList` — valfritt: kopiera genomgångens uppgiftslista till arbetsordern.
+
+`walkThroughId` och `siteSurveyTaskTitleId` **måste anges tillsammans eller inte alls**; annars avvisas skapandet. Se [Skapa en arbetsorder](/buyer-api/work-orders#create-a-work-order) för resten av payloaden.
+
+Länken är synlig åt båda hållen: arbetsordern bär `walkThroughId`, och genomgångens uppgiftssvar refererar till de arbetsordrar som skapats från dem. Det gör "alla öppna fynd från förra kvartalets besiktningar, med åtgärdsstatus" till en tvåfrågerapport.

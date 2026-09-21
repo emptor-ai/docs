@@ -1,0 +1,203 @@
+---
+title: "Traiter des bons de travail avec l'API Fournisseur"
+sidebarTitle: "Bons de travail"
+description: "Recevez, acceptez, refusez et faites progresser les bons de travail comme fournisseur : statuts, pièces, dates estimées, pièces jointes et notes."
+---
+
+Pour une intégration fournisseur, la file de bons de travail est la boîte de réception. Ce guide couvre les endpoints sous `/v1/supplier/work_order/` pour recevoir des travaux, y répondre et tenir les acheteurs informés pendant la progression du travail. La planification des visites et l'achèvement du travail se font via les [appels de service](/fr-CA/supplier-api/service-calls).
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Lire votre file
+
+<Warning>
+  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle. C'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été assigné, a changé de statut ou a reçu une note, puis récupérez ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
+</Warning>
+
+Le modèle qui passe à l'échelle est la poussée, puis la récupération par id :
+
+```bash
+# 1. A webhook delivery tells you which work order changed:
+#    { "event_type": "workorder.create", "data": { "workOrderId": 9001, ... } }
+
+# 2. Fetch that work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Les endpoints de liste et de comptage servent aux deux moments qu'un webhook ne peut pas couvrir. Utilisez-les pour le premier chargement du travail qui existait déjà avant l'enregistrement de votre endpoint. Utilisez-les aussi pour une vérification périodique que rien n'a été manqué :
+
+```bash
+# Initial load or reconciliation: filter narrowly, page small, walk with offset
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+
+# Count by filter, without fetching rows
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+```
+
+La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête agit comme un filtre de champ. Tout est restreint à votre établissement.
+
+La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. L'endpoint de comptage exécute la même requête que la liste, alors les deux concordent toujours. Comportement à connaître :
+
+- **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, et le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Encadrez la valeur de guillemets doubles pour exiger la phrase exacte.
+- **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'id donné.
+- **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
+- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur une fenêtre `statusChangedAt` ou d'autres colonnes indexées.
+- **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures. Votre propre changement fraîchement écrit, ou un bon de travail assigné il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
+- **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
+- **Masquage de données.** Si vous êtes un fournisseur tiers (pas l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, les emplacements et les factures avant que la réponse soit retournée. Les champs manquants sont généralement du masquage, pas des bogues. Voir [Données de référence](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les détails.
+
+## Accepter ou refuser
+
+**Accepter** avec `POST /v1/supplier/work_order/work_orders/status_update/confirm`, qui définit le statut à `ConfirmedByServiceProvider`. Un bon de travail déjà à un statut d'affichage terminé ou clôturé ne peut pas être accepté (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Refuser** avec `POST .../status_update/decline`. Seuls les contacts de l'établissement fournisseur affecté au bon de travail peuvent refuser. Le bon de travail quitte votre file via le flux de changement de fournisseur : son statut revient à `PendingApproval`, ou un fournisseur du réseau privé est choisi automatiquement, selon la configuration de l'acheteur. Le `text` de la note est enregistré comme raison du refus et se reflète dans ce que voit l'acheteur, alors soyez précis.
+
+Les deux appels prennent `{ "id": ..., "note": { ... } }` et retournent le bon de travail mis à jour.
+
+## Tenir l'acheteur informé
+
+Trois signaux légers pendant que le travail est en cours :
+
+**Suivi des pièces.** Trois endpoints de statut, avec la même forme de corps `{ id, note }` que ci-dessus :
+
+| Endpoint | Statut résultant |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Date d'achèvement estimée.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` ne lit que `estimatedCompletionDate` (ISO 8601) dans le corps :
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Pièces jointes.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` ajoute des références de fichiers à `supplierAttachments`, en préservant ce qui s'y trouve déjà. Téléversez d'abord le fichier (voir [Fichiers et utilisateurs](/fr-CA/supplier-api/files-and-users)), puis :
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Notes
+
+Ajoutez au fil partagé acheteur-fournisseur avec `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), et lisez le fil d'un bon de travail avec `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lecture met à jour les accusés de lecture pour votre contact, et une lecture refusée retourne une liste vide plutôt qu'une erreur.
+
+Pour @mentionner des personnes sur la note, ajoutez `taggedUsers` à côté de `note` : une liste de courriels de contacts. OpenWrench intègre chaque courriel dans `note.elements` comme un élément `user`, la même forme que les applications écrivent pour une @mention, vous n'avez donc pas à construire la structure `elements` vous-même. Les contacts étiquetés sont ajoutés à la liste des abonnés du bon de travail s'ils ne sont pas déjà abonnés.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Règles de `taggedUsers` :
+
+- Les courriels sont épurés et mis en minuscules avant la correspondance. Une note peut mentionner au plus 25 utilisateurs.
+- Les courriels en double dans la liste, et les utilisateurs déjà étiquetés dans `note.elements`, sont ignorés plutôt que mentionnés deux fois.
+- Une entrée qui n'est pas un courriel valide, ou une liste de plus de 25 courriels, est rejetée avec un `400` de type `invalidInputDataException`. Rien n'est persisté.
+- Une liste vide est ignorée. Envoyer `taggedUsers` sans objet `note` est rejeté avec `400`.
+
+Pour publier un lot de photos (le jeu avant/après d'un technicien, par exemple), utilisez `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` avec `{ "id": ..., "notes": [ ... ] }`. Chaque note doit porter une URL `photo` et aucun autre contenu : `text` doit être vide et `video`, `audio`, `otherFile` et `elements` doivent être absents. Une requête accepte 1 à 25 notes, les URL de photo en double sont rejetées avec `400`, et le lot conserve son ordre sous un seul `noteAddedAt` défini par le serveur. Les abonnés reçoivent une seule notification groupée au lieu d'une notification par photo.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
+## Étiquettes
+
+Les étiquettes de bons de travail sont des marqueurs légers (un nom et une couleur optionnelle) servant à découper la file. Via l'API, vous pouvez lire le catalogue d'étiquettes et remplacer les étiquettes appliquées à un bon de travail. La création et la modification des étiquettes elles-mêmes restent dans l'application OpenWrench.
+
+Le catalogue que vous voyez dépend de votre clé : une clé appartenant à l'équipe de service interne d'un acheteur voit le catalogue de cette entreprise acheteuse, et la clé d'un fournisseur tiers voit le catalogue de son propre établissement.
+
+**Parcourir le catalogue** avec `GET /v1/supplier/work_order/work_order_labels`, ou en récupérer une avec `GET /v1/supplier/work_order/work_order_labels/{id}`. La liste est paginée à 10 par page par défaut et accepte les filtres `search` et `label` sur le texte de l'étiquette. Passez `no_pagination=true` pour récupérer tout le catalogue en un seul appel.
+
+**Remplacer les étiquettes d'un bon de travail** avec `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. Le corps est `{ "ids": [...] }` et il s'agit d'un remplacement complet : les étiquettes non listées sont retirées, et un tableau vide les efface toutes. La réponse liste les associations d'étiquettes désormais actives sur le bon de travail.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Comportement à connaître :
+
+- Chaque id doit être une étiquette active de votre propre catalogue; un `ids` manquant ou qui n'est pas un tableau, un id non entier, et les ids inconnus ou d'un autre locataire sont tous rejetés avec `400`.
+- L'écriture requiert la permission d'écriture sur les bons de travail : une clé qui peut seulement voir le bon de travail (un soumissionnaire, ou un établissement avec visibilité en lecture seule) obtient `400`. Sur un bon de travail non assigné, seul un établissement avec visibilité en lecture-écriture peut l'étiqueter.
+- Un id de bon de travail inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
+
+## Créer un bon de travail à l'initiative du fournisseur
+
+Les fournisseurs peuvent ouvrir eux-mêmes des bons de travail (un technicien remarque une porte brisée pendant qu'il est sur place pour autre chose). `POST /v1/supplier/work_order/work_orders` requiert `title` et `locationId`; l'emplacement détermine l'établissement et l'entreprise acheteuse.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Valeurs par défaut lorsqu'omises : `problemTypeId` retombe sur le premier type de problème feuille de l'entreprise acheteuse de l'emplacement, et `woPriorityId` sur une priorité par défaut pour cette entreprise. Un `assetId`, s'il est fourni, doit exister, et son secteur est hérité lorsque `areaId` n'est pas défini. Le champ est `needApproval` (sans « s ») sur ce corps de création. Un `id` dans le corps est ignoré : cet appel crée toujours un nouveau bon de travail.
+
+**Le serveur fixe le statut initial.** Pour une clé de fournisseur tiers, tout `status` ou `isSupplierInitiated` dans le corps est ignoré. Le serveur crée le bon de travail en `SupplierInitiatedPendingApproval` avec `isSupplierInitiated: true`. La configuration d'approbation de l'acheteur décide ensuite de sa destination : il reste en `SupplierInitiatedPendingApproval` jusqu'à ce qu'un acheteur l'approuve ou, lorsque l'acheteur approuve automatiquement les bons de travail à l'initiative du fournisseur, il est immédiatement confirmé à votre établissement en `ConfirmedByServiceProvider`. Les clés appartenant à l'équipe de service interne d'un acheteur, ainsi que les fournisseurs payants qui créent un bon de travail à l'emplacement d'un client qu'ils gèrent, conservent le `status` qu'ils envoient. Si ces clés omettent `status`, le statut initial est dérivé de la configuration de l'entreprise acheteuse; une équipe interne arrive en `AssignedToInternalTech`.
+
+## Types de problèmes
+
+`GET /v1/supplier/work_order/problem_types` liste les types de problèmes à travers vos entreprises acheteuses liées (non limité en débit). Utilisez-le pour classer correctement les bons de travail à l'initiative du fournisseur, par acheteur.
+
+## Boucle d'intégration typique
+
+1. Enregistrez un endpoint [webhook](/fr-CA/supplier-api/webhooks) pour `workorder.create` et `workorder.status_update`. À chaque livraison, récupérez le bon de travail par id. Faites le chargement initial unique depuis l'endpoint de liste, et gardez celui-ci hors de la boucle en régime permanent, sauf comme sondage filet de sécurité peu fréquent et étroitement filtré.
+2. `confirm` ou `decline` dans votre entente de service.
+3. Planifiez la visite via les [appels de service](/fr-CA/supplier-api/service-calls); publiez des statuts de pièces et une ECD au fil des développements.
+4. Complétez via le départ, puis facturez via [soumissions et facturation](/fr-CA/supplier-api/quotes-and-invoicing).

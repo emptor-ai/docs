@@ -1,0 +1,132 @@
+---
+title: "Webhooks in the Buyer API"
+sidebarTitle: "Webhooks"
+description: "Get work order created, status changed, and new note events pushed to your own endpoint instead of polling the OpenWrench Buyer API."
+---
+
+Webhooks push three work order events to an HTTPS endpoint you own: a work order was created, its status changed, or a note was added to it. Each delivery tells you which work order changed and what happened. Your integration then fetches the work order through the API. That makes webhooks the natural trigger for a dispatch integration: react to `workorder.create` and `workorder.status_update` as they happen, and keep [polling](/buyer-api/work-orders#putting-it-together) only as a reconciliation fallback.
+
+{/* Reviewer: delivery is done by the self-hosted Convoy gateway (convoy.useopenwrench.com). Everything below about event selection and payloads is verified against openwrench-app (WorkOrderServiceImpl) and openwrench-service (webhook-service-impl/WebhookPusherImpl). Registration, signature header, and retry schedule are Convoy project settings: please confirm them before merging, see the comments in those sections. */}
+
+## Set up an endpoint
+
+Endpoints are registered per buyer company and cover every location and facility in it. There is no self-serve API for this yet: email [support@useopenwrench.com](mailto:support@useopenwrench.com) with
+
+- the HTTPS URL that should receive deliveries,
+- which of the three events you want (`workorder.create`, `workorder.status_update`, `workorder.new_note`), and
+- whether the endpoint is for testing or production.
+
+Support registers the endpoint on OpenWrench's webhook gateway and sends back the signing secret you use to [verify deliveries](#verify-deliveries). You can register several endpoints, for example one URL per event type, or the same URL for all three.
+
+{/* Reviewer: confirm the registration process (who creates the Convoy endpoint, how the endpoint secret is shared with the integrator). */}
+
+## Events
+
+| `event_type` | Fires when |
+| --- | --- |
+| `workorder.create` | A work order is created in your company. |
+| `workorder.status_update` | A work order's `status` changes value. |
+| `workorder.new_note` | A note is appended to a work order's buyer–supplier thread. |
+
+Some detail on each:
+
+- **`workorder.create`** fires for every creation, whoever made it: your own `POST /v1/buyer/work_order/work_orders`, a user in the OpenWrench web or mobile apps, a planned-maintenance schedule, a site survey walkthrough, or a supplier opening a work order at one of your locations (`SupplierInitiatedPendingApproval`). The payload carries the initial status, so you can tell a service request awaiting approval from a work order that was dispatched on creation.
+- **`workorder.status_update`** fires on every transition in [the status model](/buyer-api/work-orders#the-status-model), for statuses owned by either side. Edits that leave `status` untouched (a priority change, a new estimated completion date, a reassignment while the work order is still pending confirmation) do not emit one. When a work order moves from one supplier to another you may receive an intermediate update whose `newStatus` is `Rejected`, which closes out the previous assignment, followed by the update for the new status.
+- **`workorder.new_note`** fires for notes on the root buyer–supplier thread from either side, including notes posted by your own integration, bulk photo posts, and the note attached to a status action. Suppliers' internal notes and sub-contractor threads never emit events.
+
+You receive events for changes your own integration makes. If you mirror work orders into another system, keep a record of the writes you made and skip the matching events, or treat every event as a signal to re-fetch and compare.
+
+## Delivery payload
+
+Every delivery is an HTTP `POST` with a JSON body. The body has two fields: `event_type` and `data`.
+
+{/* Reviewer: confirm against a real delivery that the endpoint receives exactly this body (the inner {event_type, data} object we hand to Convoy), and not the Convoy event envelope. */}
+
+### Create and status events
+
+```json
+{
+  "event_type": "workorder.status_update",
+  "data": {
+    "workOrderId": 9001,
+    "location": "Store 1204 - Denver",
+    "oldStatus": "TechScheduled",
+    "newStatus": "WaitingForReview",
+    "changedBy": "Sam Rivera",
+    "changedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `workOrderId` | The work order's numeric `id`. Use it with `GET /v1/buyer/work_order/work_orders/{id}`. |
+| `location` | The location's display name. |
+| `oldStatus` | The previous status. Absent on `workorder.create`. |
+| `newStatus` | The current status, or the initial status on `workorder.create`. |
+| `changedBy` | Display name of the person or system that made the change. |
+| `changedAt` | ISO 8601 timestamp with offset. |
+
+`workorder.create` uses the same `data` shape with `oldStatus` omitted.
+
+### Note events
+
+```json
+{
+  "event_type": "workorder.new_note",
+  "data": {
+    "workOrderId": 9001,
+    "newNote": "Access code for the back door is 4417.",
+    "addedBy": "Sam Rivera",
+    "addedAt": "2026-08-21T09:05:22.000-07:00"
+  }
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `workOrderId` | The work order's numeric `id`. |
+| `newNote` | The note text. Empty for photo-only notes. |
+| `photo`, `video` | Media URL on the note, when present. |
+| `photos` | Present on bulk photo posts: every photo URL in the batch, in order. |
+| `addedBy` | Display name of the author. |
+| `addedAt` | ISO 8601 timestamp with offset. |
+
+The payload does not include the rest of the thread. Read it with `GET /v1/buyer/work_order/work_order_notes/{woId}` if you need context.
+
+## Verify deliveries
+
+Every delivery is signed. The gateway computes an HMAC over the raw request body with your endpoint's signing secret and sends it in a signature header. When support registers your endpoint they give you the secret, the header name, and the hash algorithm. Verify the signature against the raw bytes of the body before you parse it, and reject anything that does not match. Because the secret is per endpoint, rotating it is a support request: ask for a new secret, deploy it, then ask support to switch the endpoint over.
+
+{/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
+
+## Respond, retries, and duplicates
+
+- **Acknowledge fast.** Return a `2xx` as soon as you have stored the event, and do the follow-up work (fetching the work order, updating your system) asynchronously. A non-`2xx` response or a timeout counts as a failed delivery.
+- **Failed deliveries are retried** by the gateway with a backoff schedule. Make your handler idempotent so a retry after a partial success does no harm.
+- **Deliveries are at-least-once.** The same event can arrive more than once even without a failure on your side. Deduplicate on `event_type` plus `workOrderId` plus `changedAt` (or `addedAt` for notes).
+- **Order is not guaranteed.** Two events for the same work order can arrive out of order. Do not derive state from the sequence of events; fetch the work order and trust its `status`.
+- **Stale events are dropped, not delivered late.** An event that has not been handed to the gateway within three hours of the change is discarded. After an outage on OpenWrench's side, or if your endpoint was down for longer than the retry window, reconcile by polling `GET /v1/buyer/work_order/work_orders?statusChangedAt=...` for the period you missed.
+
+{/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
+
+## React to an event
+
+The recommended handler is small: verify, store, acknowledge, then fetch.
+
+```bash
+# Fetch the work order named in the event
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders/9001"
+```
+
+External API reads are served from a read replica, so a work order created a moment ago can briefly come back empty. Retry the fetch after a second before treating it as missing. The fetch counts against the [rate limit](/buyer-api/introduction#rate-limits), so batch bursts of events for the same work order into one fetch.
+
+## Putting it together
+
+A dispatch integration driven by webhooks:
+
+1. Register an endpoint for `workorder.create` and `workorder.status_update` (add `workorder.new_note` if you mirror the conversation).
+2. On `workorder.create`, fetch the work order, and create the matching record in your system. If you dispatch from your side, `PATCH` the `supplierFacilityId` as described in [Work orders](/buyer-api/work-orders#reassign-a-supplier).
+3. On `workorder.status_update`, fetch the work order. When `newStatus` is `WaitingForReview`, run your review flow and post `work_reviewed_and_completed` or `work_unsatisfactory`.
+4. Run a periodic poll on `statusChangedAt` as a safety net for anything the webhook path missed.

@@ -1,0 +1,293 @@
+---
+title: "Work orders in the Buyer API"
+sidebarTitle: "Work orders"
+description: "Create, list, filter, reassign, and close out work orders with the OpenWrench Buyer API, including status actions, notes, labels, and problem types."
+---
+
+Work orders are the center of the Buyer API. This guide covers the full surface under `/v1/buyer/work_order/`: creating work orders, querying them, the buyer-side status actions, the note thread, labels, and problem types.
+
+All examples assume these shell variables:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## The work order object
+
+A work order returned by the API carries, among other fields:
+
+| Field | Notes |
+| --- | --- |
+| `id` | Numeric id used by every other endpoint. |
+| `title`, `description` | What needs to be done. `descriptionNonFormatted` is the plain-text variant. |
+| `status`, `displayStatus` | `status` is the fine-grained machine status (see [the status model](#the-status-model)); `displayStatus` is the coarser label shown in the UI. |
+| `locationId`, `assetId`, `subAssetIds`, `areaId` | Where the work happens and what it is on. |
+| `problemTypeId`, `workCategoryId`, `spendCategoryId`, `woPriorityId` | Classification. |
+| `supplierFacilityId`, `supplierPrimaryContactEmail` | The assigned supplier, once dispatched. |
+| `nte`, `price`, `currencyId` | Not-to-exceed amount and pricing. |
+| `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Key dates. |
+| `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | The buyer–supplier note thread. `lastNoteAddedAt` is epoch milliseconds. |
+| `associatedServiceCalls`, `lastServiceCall` | Visits logged by the supplier. See [Service calls](/buyer-api/service-calls). |
+| `statusChanges` | Full status history. |
+| `buyerAttachments`, `supplierAttachments` | File references. See [Files and attachments](/buyer-api/files-and-attachments). |
+| `isPM`, `plannedMaintenanceScheduleId` | Set when the work order was generated from a PM schedule. |
+| `walkThroughId` | Set when the work order came out of a site survey walkthrough. |
+
+## Create a work order
+
+`POST /v1/buyer/work_order/work_orders` requires more than the obvious fields. Unlike most buyer endpoints, **`buyerFacilityId`, `buyerCompanyId`, and `createdBy` must be supplied in the body**; they are not derived from your API key on this endpoint. Use [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) to look up your company and facility ids once and cache them.
+
+Required fields: `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId`, and `createdBy` (the email of the creating contact).
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Walk-in cooler not holding temperature",
+    "description": "Temp reading 48F, product at risk.",
+    "locationId": 1204,
+    "assetId": 5511,
+    "problemTypeId": 17,
+    "woPriorityId": 3,
+    "nte": 500,
+    "buyerFacilityId": 88,
+    "buyerCompanyId": 12,
+    "createdBy": "ops@example.com",
+    "supplierFacilityId": 3021
+  }'
+```
+
+Behavior to know:
+
+- **Initial status.** If `status` is omitted, the initial status is computed from your company's configuration. Service requests typically start in `PendingApproval`; work orders default to `Unassigned`. If you pass a `status`, it is still resolved against company configuration, so the effective status may differ from what you sent.
+- **Dispatching on create.** Passing `supplierFacilityId` assigns the supplier immediately. An unknown `supplierFacilityId`, `assetId`, or `problemTypeId` is rejected with `400`.
+- **Sub-assets.** `subAssetIds` is an optional array of sub-asset ids attached alongside the main `assetId`. Sub-assets are assets created with a `parentId`; see [Assets](/buyer-api/assets-and-locations#assets).
+- **Approval flag.** The field is `needApproval`, not `needsApproval`. The response object uses `needsApproval`; the create request does not.
+- **Walkthrough linkage.** `walkThroughId` and `siteSurveyTaskTitleId` must be provided together or not at all. See [Site survey walkthroughs](/buyer-api/site-survey-walkthroughs).
+- **Upserts.** Passing an `id` updates that existing work order instead of creating a new one.
+
+## List, filter, and count
+
+```bash
+# Most recent work orders for one location
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?locationId=1204&limit=25&sort_by=createdAt&order=desc"
+
+# How many match, without fetching them
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
+```
+
+List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `order`. Every other query parameter is treated as a field filter; comma-separate a value to match any of several (`status=Unassigned,PendingApproval`). Filters always combine with the tenant scoping derived from your key, so you only ever see your company's work orders.
+
+The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. That changes a few behaviors:
+
+- **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, and problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Quote the value (`search="walk-in cooler"`) to require the exact phrase.
+- **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
+- **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
+- **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on `statusChangedAt` windows or other indexed columns instead.
+- **Freshness.** Search index and replica updates lag writes by a moment, so a work order created milliseconds ago may be briefly absent from list results and counts.
+- **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
+
+The count endpoint runs the same search-index query as the list, so a count always agrees with the list it describes.
+
+Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
+
+<Warning>
+  **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks). Fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (`statusChangedAt` window, small `limit`).
+</Warning>
+
+## Reassign a supplier
+
+`PATCH /v1/buyer/work_order/work_orders/{id}` is deliberately narrow: **only `supplierFacilityId` and `supplierPrimaryContactEmail` are read from the body**. Every other field you send is silently ignored rather than rejected.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierFacilityId": 3055, "supplierPrimaryContactEmail": "dispatch@newsupplier.com" }'
+```
+
+Two gotchas:
+
+- `supplierPrimaryContactEmail` only applies as part of a reassignment. Sending it without a supplier facility change makes the whole patch a no-op: nothing persists and the current work order is returned.
+- A nonexistent id and a permission denial both return the same `400` unauthorized response, so do not use this endpoint to probe whether a work order exists.
+
+To pick the right supplier programmatically, see [Supplier network](/buyer-api/supplier-network), which covers the ranked private-network endpoint.
+
+## Buyer status actions
+
+Four dedicated endpoints move a work order through the buyer-owned parts of the lifecycle. Each takes the same body: the work order `id` and an optional `note` that is appended to the thread along with the status change.
+
+| Endpoint | Resulting status | Side effects |
+| --- | --- | --- |
+| `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | May publish the supplier's draft invoice (per supplier settings) and fulfill linked purchase requests. |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejected with `409` while a technician is checked in, if your company enables the [cancellation lock](#cancellation-lock-while-a-technician-is-checked-in). |
+| `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Sends the attached note to the supplier. |
+| `POST .../status_update/reopen` | Reopened | Sends the attached note. |
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_and_completed" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Verified on site, closing out.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+Every status action returns the updated work order in the standard envelope.
+
+### Cancellation lock while a technician is checked in
+
+Companies can opt in to a cancellation lock that keeps work orders open while a technician is on site. With the lock enabled, OpenWrench rejects any cancellation with `409 Conflict` if a technician is actively checked in on any of the work order's service calls. This covers visits on the work order itself and visits on its sub-contracted work orders. OpenWrench blocks canceling a sub-contract whose status propagates to the root work order in the same way, and commits nothing on either work order.
+
+The lock is configured per buyer company with two settings:
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `enabled` | `false` | Turns the lock on. When off (the default), cancellations are never blocked by check-ins. |
+| `checkInConsideredStaleAfterHours` | `24` | An open check-in older than this many hours is treated as a forgotten checkout, not live work, and stops blocking cancellation on its own. |
+
+The `409` error message identifies the checked-in technician by email when the visit recorded one:
+
+```json
+{
+  "message": "You can’t cancel this work order: technician tech@supplier.com is currently checked in."
+}
+```
+
+When your integration receives this `409`, wait for the technician to check out (or for the check-in to go stale) and retry, or have the supplier end the visit first. The lock is part of your buyer company's work order configuration in OpenWrench.
+
+## The status model
+
+`status` values you will see and set through the API:
+
+| Status | Owned by | Meaning |
+| --- | --- | --- |
+| `Unassigned` | System | Created, no supplier assigned yet. |
+| `PendingApproval` | Buyer | Awaiting internal approval, or returned here after a supplier decline. |
+| `SupplierInitiatedPendingApproval` | Buyer | A supplier opened this work order themselves; it awaits your approval before the supplier is confirmed on it (skipped when your company auto-approves supplier-initiated work). |
+| `ConfirmedByServiceProvider` | Supplier | Supplier accepted the job. |
+| `TechAssigned`, `TechScheduled`, `TechRescheduled` | Supplier | Service call created or (re)scheduled. |
+| `TechWorkingOnSite` | Supplier | Technician checked in. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Supplier | Parts procurement in progress. |
+| `WaitingForReview` | Supplier | Work finished, awaiting your review. |
+| `WorkReviewedAndCompleted` | Buyer | You reviewed and closed the job. |
+| `WorkUnsatisfactory` | Buyer | You rejected the completed work. |
+| `CancelledWithReason` | Buyer | Cancelled. |
+
+The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps; your side observes them through [webhooks](/buyer-api/webhooks) or by polling (`statusChangedAt`, `statusChanges`) and acts on the buyer-owned ones.
+
+## Notes
+
+Work orders carry a shared buyer–supplier note thread.
+
+**Append** with `PATCH /v1/buyer/work_order/work_orders/append_notes`. The body is `{ "id": <woId>, "note": { ... } }` where the note needs `text` and `noteAddedBy`. The server overwrites `noteAddedAt` with its own clock, and the author's email is added to the work order's buyer subscriber list so they receive subsequent notifications.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+**Tag people on a note** by adding `taggedUsers` beside the `note`: a list of contact email addresses to @mention. OpenWrench folds each email into `note.elements` as a `user` element, the same shape the apps write for an @mention, so you don't need to build the `elements` structure yourself. Tagged contacts are added to the work order's subscriber list if they aren't subscribed already.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Access code for the back door is 4417.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    },
+    "taggedUsers": ["tech@supplier.com", "manager@example.com"]
+  }'
+```
+
+Rules for `taggedUsers`:
+
+- Emails are trimmed and lowercased before matching. A note can mention at most 25 users.
+- Duplicate emails in the list, and users already tagged in `note.elements`, are skipped rather than mentioned twice.
+- An entry that is not a valid email address, or a list of more than 25 emails, is rejected with a `400` of type `invalidInputDataException`. Nothing is persisted.
+- An empty list is ignored. Sending `taggedUsers` without a `note` object is rejected with `400`.
+
+**Bulk-append photos** with `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Use it when you have a batch of photos to post (a technician's before/after set, for example): subscribers receive a single grouped notification instead of one notification per photo. The body is `{ "id": <woId>, "notes": [ ... ] }` with 1–25 notes, and each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. Repeating the same photo URL within a request is rejected with `400`. The server stamps every note in the batch with the same `noteAddedAt` and preserves the order you sent them in.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
+**Read** with `GET /v1/buyer/work_order/work_order_notes/{woId}`. This returns the root buyer–supplier thread only (contractor and internal threads are separate), and reading marks the notes as read for your contact. A denied read returns an empty list rather than an error.
+
+## Labels
+
+Labels are lightweight tags your team defines in the OpenWrench app (a name plus an optional color). Through the API you can read the catalog and replace the labels applied to a work order. Creating or editing the labels themselves stays in the app.
+
+**Browse the catalog** with `GET /v1/buyer/work_order/work_order_labels`, or fetch one with `GET /v1/buyer/work_order/work_order_labels/{id}`. The list is scoped to your company's labels and paginated 10 per page by default. It accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call (sorting still applies).
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_order_labels?no_pagination=true"
+```
+
+**Replace a work order's labels** with `PUT /v1/buyer/work_order/work_orders/{woId}/labels`. The body is `{ "ids": [...] }` and it is a full replacement: labels not listed are removed, and an empty array clears them all. The response lists the label mappings now active on the work order.
+
+```bash
+curl -X PUT "$BASE/v1/buyer/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Behavior to know:
+
+- A missing or non-array `ids`, or an id that is not a whole number, is rejected with `400`.
+- Every id must be a live label from your own catalog. Unknown or cross-tenant ids answer `400` with the offending ids listed.
+- The write requires work order write permission. An unknown, deleted, or foreign work order id answers the same `400` as a denied write, not a `404`.
+
+## Problem types
+
+`GET /v1/buyer/work_order/problem_types` lists the problem types configured for your company. Cache this: you need a valid `problemTypeId` for every work order you create, and the ranked supplier endpoint takes one too.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/problem_types"
+```
+
+## Putting it together
+
+A typical dispatch integration:
+
+1. Cache `me`, problem types, and locations at startup.
+2. Create the work order with `supplierFacilityId` set (or create unassigned, then rank suppliers and `PATCH` the assignment).
+3. Track supplier progress through [webhooks](/buyer-api/webhooks) (`workorder.status_update`), fetching each work order by id when an event arrives. Keep `GET /work_orders?statusChangedAt=...` as an infrequent reconciliation pass, not the primary signal.
+4. When the supplier reaches `WaitingForReview`, verify the work (see [Service calls](/buyer-api/service-calls) for visit evidence) and post `work_reviewed_and_completed`, or `work_unsatisfactory` with a note.
+5. Reconcile the money side through [Quotes and proposals](/buyer-api/quotes-and-proposals) and [Invoices](/buyer-api/invoices).

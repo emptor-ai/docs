@@ -1,0 +1,70 @@
+# Visites de site dans l'API Acheteur
+
+> Lisez les visites de site et générez des bons de travail de suivi à partir des constats de visites avec l'API Acheteur OpenWrench.
+
+Une **visite de site** est une inspection de site terminée : un inspecteur parcourt un emplacement selon une liste de tâches et enregistre les réponses, les photos et les problèmes. L'API Acheteur expose les visites en lecture seule et vous permet de générer des bons de travail de suivi qui restent liés au constat de visite dont ils proviennent.
+
+Tous les exemples supposent :
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"
+export SECRET="<shared-secret>"
+```
+
+## Lire les visites
+
+```bash
+# Visites récentes pour un emplacement
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+
+# Nombre par filtre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/count_by?locationId=1204"
+
+# Une visite, avec les réponses aux tâches
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/site_survey/walkthroughs/230"
+```
+
+La pagination standard et les filtres par champ s'appliquent, ainsi que la restriction par emplacement et par marque de votre rôle. Les bons de travail référencés depuis les réponses aux tâches d'une visite sont filtrés selon votre permission de lecture ; différentes clés peuvent donc voir différents bons de travail liés à la même visite.
+
+## Afficher les scores avec les plages de carte thermique
+
+Chaque réponse de visite incorpore l'enquête de site hydratée sur laquelle elle a été exécutée, sous `siteSurvey`. L'enquête de site porte un champ optionnel `walkthroughHeatMapRanges` : un tableau de bandes de couleur utilisées pour afficher les scores de visite sous forme de carte thermique.
+
+```json
+{
+  "siteSurvey": {
+    "id": 88,
+    "title": "Audit trimestriel de magasin",
+    "walkthroughHeatMapRanges": [
+      { "color": "#FF0000", "lowerRange": 0 },
+      { "color": "#FFFF00", "lowerRange": 60 },
+      { "color": "#00FF00", "lowerRange": 80 }
+    ]
+  }
+}
+```
+
+Chaque entrée comporte deux champs :
+
+- `color` : la couleur à afficher pour la bande, généralement un code hexadécimal.
+- `lowerRange` : le score le plus bas qui entre dans la bande. Une bande s'étend de son `lowerRange` jusqu'au `lowerRange` de la bande suivante.
+
+Pour colorer un score du tableau `scores` de la visite, choisissez la bande dont le `lowerRange` est le plus élevé tout en restant inférieur ou égal au score.
+
+Vous configurez les plages sur l'enquête de site ou sur son modèle. Si une enquête n'a pas de plages propres, OpenWrench renseigne les plages du modèle au moment de la lecture, de sorte que le `siteSurvey.walkthroughHeatMapRanges` incorporé est déjà résolu. Vous n'avez jamais besoin de récupérer le modèle pour trouver les bandes. Le champ vaut `null` quand ni l'enquête ni son modèle ne définissent de plages ; dans ce cas, n'affichez pas de carte thermique.
+
+## Créer des bons de travail de suivi
+
+Lorsqu'un constat de visite nécessite un correctif, créez le bon de travail avec les champs de liaison définis :
+
+- `walkThroughId` — la visite dont provient le constat.
+- `siteSurveyTaskTitleId` — la tâche spécifique en son sein.
+- `includeWalkthroughTaskList` — copie éventuellement la liste des tâches de la visite sur le bon de travail.
+
+`walkThroughId` et `siteSurveyTaskTitleId` **doivent être fournis ensemble ou pas du tout** ; la création est rejetée sinon. Voir [Créer un bon de travail](/buyer-api/work-orders#create-a-work-order) pour le reste du payload.
+
+Le lien est visible dans les deux sens : le bon de travail porte `walkThroughId`, et les réponses aux tâches de la visite référencent les bons de travail issus de celles-ci. Cela fait de « chaque constat ouvert des visites du trimestre dernier, avec l'état du correctif » un rapport en deux requêtes.

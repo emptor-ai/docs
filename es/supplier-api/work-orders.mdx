@@ -1,0 +1,203 @@
+---
+title: "Trabajar órdenes de trabajo con la Supplier API"
+sidebarTitle: "Órdenes de trabajo"
+description: "Recibe, acepta, rechaza y avanza órdenes de trabajo como proveedor: estados, seguimiento de partes, fechas estimadas, adjuntos, notas y etiquetas."
+---
+
+Para una integración de proveedor, la cola de órdenes de trabajo es el inbox. Esta guía cubre los endpoints bajo `/v1/supplier/work_order/` para recibir trabajos, responder a ellos y mantener informados a los compradores mientras avanza el trabajo. Programar visitas y completar el trabajo se hace a través de las [llamadas de servicio](/es/supplier-api/service-calls).
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<your-api-key>"        # X-API-KEY header
+export SECRET="<shared-secret>"    # OW-KEY header
+```
+
+## Leer tu cola
+
+<Warning>
+  **No construyas tu integración sobre el endpoint de listado.** `GET /v1/supplier/work_order/work_orders` es la lectura más costosa de la Supplier API, y sondearlo para descubrir órdenes de trabajo nuevas o cambiadas es el patrón equivocado. Es lento en colas grandes, quema tu [límite de tasa](/es/supplier-api/introduction#límites-de-tasa) y aun así pierde los cambios entre sondeos. Usa [webhooks](/es/supplier-api/webhooks) para enterarte de que una orden de trabajo te fue asignada, cambió de estado o recibió una nota, y luego obtén esa única orden de trabajo por id. Reserva el listado para una carga inicial única y una conciliación ocasional, con un filtro estrecho y una página pequeña.
+</Warning>
+
+El patrón que escala es push, y luego obtener por id:
+
+```bash
+# 1. Una entrega de webhook te dice qué orden de trabajo cambió:
+#    { "event_type": "workorder.create", "data": { "workOrderId": 9001, ... } }
+
+# 2. Obtén esa orden de trabajo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/9001"
+```
+
+Los endpoints de listado y conteo son para los dos momentos que un webhook no puede cubrir. Úsalos para la primera carga del trabajo que ya existía antes de registrar tu endpoint. Úsalos también para una comprobación periódica de que nada se perdió:
+
+```bash
+# Carga inicial o conciliación: filtra estrecho, pagina pequeño, recorre con offset
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+
+# Conteo por filtro, sin traer filas
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
+```
+
+Aplica la paginación estándar (`offset`, `limit` por defecto 10, máx. 25, `sort_by`, `order`), y cualquier otro parámetro de consulta actúa como un filtro de campo. Todo está limitado por inquilino a tu instalación.
+
+El listado y el conteo resuelven qué órdenes de trabajo coinciden en el índice de búsqueda de OpenWrench y luego cargan los registros completos desde la base de datos. El endpoint de conteo ejecuta la misma consulta que el listado, así que los dos siempre concuerdan. Comportamiento a conocer:
+
+- **Búsqueda de texto completo.** `search=` coincide con palabras (con coincidencia por prefijo y por raíz) en el título, la descripción, el nombre de la ubicación, las notas, las notas de check-in y check-out de las llamadas de servicio, y el nombre del tipo de problema. También coincide con números de referencia como el número de orden de trabajo, el número de PO y el número de serie del activo. Envuelve el valor en comillas dobles para exigir la frase exacta.
+- **Los filtros de activo incluyen los subactivos.** `assetId=` y `assetIds=` coinciden con órdenes de trabajo cuyo activo principal *o* cualquiera de sus subactivos es el id dado.
+- **Ordenamiento.** `sort_by` admite `createdAt`, `locationName`, `woPriority` (por el tiempo de resolución esperado de la prioridad) y `lastServiceCallServiceScheduledAt`. Cualquier otro valor, o la ausencia de `sort_by`, ordena por `createdAt` descendente.
+- **Los filtros no indexados se ignoran.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` y `walkthroughId` no están en el índice de búsqueda y ya no estrechan los resultados. Filtra en su lugar por una ventana de `statusChangedAt` u otras columnas indexadas.
+- **Frescura.** Las actualizaciones del índice de búsqueda y de la réplica van un momento por detrás de las escrituras. Tu propio cambio recién escrito, o una orden de trabajo asignada hace segundos, puede estar brevemente ausente de los resultados de listado y de los conteos.
+- **Profundidad de paginación.** `offset + limit` no puede exceder la ventana de resultados de búsqueda de 10.000. Estrecha el filtro en lugar de paginar tan profundo.
+- **Enmascaramiento de datos.** Si eres un proveedor tercero (no el equipo interno del comprador), los campos privados del comprador se ponen en blanco en órdenes de trabajo, ubicaciones y facturas antes de devolver la respuesta. Los campos faltantes son usualmente enmascaramiento, no bugs. Consulta [Datos de referencia](/es/supplier-api/reference-data#enmascaramiento-de-datos) para más detalles.
+
+## Aceptar o rechazar
+
+**Acepta** con `POST /v1/supplier/work_order/work_orders/status_update/confirm`, que establece el estado a `ConfirmedByServiceProvider`. Una orden de trabajo ya en un display status completado o cerrado no puede aceptarse (`400`).
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Accepted. Tech will be scheduled for tomorrow morning.",
+      "noteAddedBy": "dispatch@supplier.com",
+      "noteAddedAt": "2026-08-21T08:00:00.000-07:00"
+    }
+  }'
+```
+
+**Rechaza** con `POST .../status_update/decline`. Solo los contactos de la instalación de proveedor asignada a la orden de trabajo pueden rechazar. La orden de trabajo abandona tu cola a través del flujo de cambio de proveedor: su estado vuelve a `PendingApproval`, o se elige automáticamente un proveedor de red privada, según la configuración del comprador. El `text` de la nota se registra como motivo del rechazo y se refleja en lo que el comprador ve, así que hazlo específico.
+
+Ambas llamadas toman `{ "id": ..., "note": { ... } }` y devuelven la orden de trabajo actualizada.
+
+## Mantener informado al comprador
+
+Tres señales ligeras mientras el trabajo está en marcha:
+
+**Seguimiento de partes.** Tres endpoints de estado, con la misma forma de cuerpo `{ id, note }` que arriba:
+
+| Endpoint | Estado resultante |
+| --- | --- |
+| `POST .../status_update/parts_requested` | `PartsRequested` |
+| `POST .../status_update/parts_ordered` | `PartsOnOrder` |
+| `POST .../status_update/parts_received` | `PartsReceived` |
+
+**Fecha estimada de finalización.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` lee solo `estimatedCompletionDate` (ISO 8601) del cuerpo:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/estimated_completion_date" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "estimatedCompletionDate": "2026-08-25T17:00:00.000-07:00" }'
+```
+
+**Adjuntos.** `PATCH /v1/supplier/work_order/work_orders/{id}/append_supplier_attachments` añade referencias de archivo a `supplierAttachments`, preservando lo que ya está ahí. Sube el archivo primero (ver [Archivos y usuarios](/es/supplier-api/files-and-users)) y luego:
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/9001/append_supplier_attachments" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "supplierAttachments": [ { "fileName": "before.jpg", "fileId": "a1b2c3d4e5" } ] }'
+```
+
+## Notas
+
+Añade al hilo compartido comprador-proveedor con `PATCH /v1/supplier/work_order/work_orders/append_notes` (`{ "id": ..., "note": { "text", "noteAddedBy", "noteAddedAt" } }`), y lee el hilo de una orden de trabajo con `GET /v1/supplier/work_order/work_order_notes/{woId}`. La lectura actualiza los acuses de recibo para tu contacto, y una lectura denegada devuelve una lista vacía en lugar de un error.
+
+Para @mencionar a personas en la nota, añade `taggedUsers` junto a `note`: una lista de correos electrónicos de contactos. OpenWrench incorpora cada correo en `note.elements` como un elemento `user`, la misma forma que las apps escriben para una @mención, así que no necesitas construir la estructura `elements` tú mismo. Los contactos etiquetados se añaden a la lista de suscriptores de la orden de trabajo si aún no están suscritos.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "note": {
+      "text": "Replacement compressor is on site, starting the swap tomorrow.",
+      "noteAddedBy": "dispatch@supplier.com"
+    },
+    "taggedUsers": ["ops@example.com"]
+  }'
+```
+
+Reglas de `taggedUsers`:
+
+- Los correos se recortan y se pasan a minúsculas antes de compararse. Una nota puede mencionar como máximo a 25 usuarios.
+- Los correos duplicados en la lista, y los usuarios ya etiquetados en `note.elements`, se omiten en lugar de mencionarse dos veces.
+- Una entrada que no sea un correo electrónico válido, o una lista de más de 25 correos, se rechaza con un `400` de tipo `invalidInputDataException`. No se persiste nada.
+- Una lista vacía se ignora. Enviar `taggedUsers` sin un objeto `note` se rechaza con `400`.
+
+Para publicar un lote de fotos (el conjunto de antes/después de un técnico, por ejemplo), usa `PATCH /v1/supplier/work_order/work_orders/append_notes/bulk` con `{ "id": ..., "notes": [ ... ] }`. Cada nota debe llevar una URL en `photo` y ningún otro contenido: `text` debe estar vacío y `video`, `audio`, `otherFile` y `elements` deben estar ausentes. Una solicitud acepta de 1 a 25 notas, las URL de foto duplicadas se rechazan con `400`, y el lote conserva su orden bajo un único `noteAddedAt` fijado por el servidor. Los suscriptores reciben una única notificación agrupada en lugar de una notificación por foto.
+
+```bash
+curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9001,
+    "notes": [
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/before.jpg" },
+      { "text": "", "photo": "https://cdn.example.com/wo-9001/after.jpg" }
+    ]
+  }'
+```
+
+## Etiquetas
+
+Las etiquetas de órdenes de trabajo son marcadores ligeros (un nombre más un color opcional) usados para segmentar la cola. A través de la API puedes leer el catálogo de etiquetas y reemplazar las etiquetas aplicadas a una orden de trabajo. La creación y edición de las etiquetas en sí permanece en la app de OpenWrench.
+
+Qué catálogo ves depende de tu clave: una clave que pertenece al equipo de servicio interno de un comprador ve el catálogo de esa empresa compradora, y la clave de un proveedor tercero ve el catálogo de su propia instalación.
+
+**Explora el catálogo** con `GET /v1/supplier/work_order/work_order_labels`, u obtén una con `GET /v1/supplier/work_order/work_order_labels/{id}`. El listado está paginado a 10 por página por defecto y acepta filtros `search` y `label` sobre el texto de la etiqueta. Pasa `no_pagination=true` para traer el catálogo completo en una sola llamada.
+
+**Reemplaza las etiquetas de una orden de trabajo** con `PUT /v1/supplier/work_order/work_orders/{woId}/labels`. El cuerpo es `{ "ids": [...] }` y es un reemplazo completo: las etiquetas no listadas se eliminan, y un array vacío las borra todas. La respuesta lista los mapeos de etiquetas ahora activos en la orden de trabajo.
+
+```bash
+curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "ids": [4, 12] }'
+```
+
+Comportamiento a conocer:
+
+- Cada id debe ser una etiqueta viva de tu propio catálogo; un `ids` ausente o que no sea un array, un id no entero, y los ids desconocidos o de otro inquilino se rechazan todos con `400`.
+- La escritura requiere permiso de escritura de órdenes de trabajo: una clave que solo puede ver la orden de trabajo (un postor, o una instalación con visibilidad de solo lectura) recibe `400`. En una orden de trabajo sin asignar, solo una instalación con visibilidad de lectura-escritura puede etiquetarla.
+- Un id de orden de trabajo desconocido, eliminado o ajeno responde el mismo `400` que una escritura denegada, no un `404`.
+
+## Crear una orden de trabajo iniciada por el proveedor
+
+Los proveedores pueden abrir órdenes de trabajo ellos mismos (un técnico ve una puerta rota mientras está en sitio por otra cosa). `POST /v1/supplier/work_order/work_orders` requiere `title` y `locationId`; la ubicación determina la instalación y empresa compradora.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Damaged freezer door gasket, found during PM visit",
+    "locationId": 1204,
+    "description": "Gasket torn along bottom edge; recommend replacement."
+  }'
+```
+
+Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de problema hoja de la empresa compradora de la ubicación, y `woPriorityId` a una prioridad por defecto para esa empresa. Un `assetId`, si se da, debe existir, y su área se hereda cuando no se establece `areaId`. El campo es `needApproval` (sin "s") en este cuerpo de creación. Un `id` en el cuerpo se ignora: esta llamada siempre crea una orden de trabajo nueva.
+
+**El servidor fija el estado inicial.** Para una clave de proveedor externo, cualquier `status` o `isSupplierInitiated` en el cuerpo se ignora. El servidor crea la orden de trabajo como `SupplierInitiatedPendingApproval` con `isSupplierInitiated: true`. La configuración de aprobaciones del comprador decide después dónde queda: permanece en `SupplierInitiatedPendingApproval` hasta que un comprador la apruebe o, cuando el comprador aprueba automáticamente las órdenes de trabajo iniciadas por el proveedor, se confirma de inmediato a tu instalación como `ConfirmedByServiceProvider`. Las claves que pertenecen al equipo de servicio interno de un comprador, y los proveedores de pago que crean una orden de trabajo en una ubicación de un cliente que gestionan, conservan el `status` que envían. Si estas claves omiten `status`, el estado inicial se deriva de la configuración de la empresa compradora; un equipo interno queda en `AssignedToInternalTech`.
+
+## Tipos de problema
+
+`GET /v1/supplier/work_order/problem_types` lista los tipos de problema entre tus empresas compradoras relacionadas (sin límite de tasa). Úsalo para clasificar correctamente las órdenes de trabajo iniciadas por el proveedor por comprador.
+
+## Ciclo de integración típico
+
+1. Registra un endpoint de [webhook](/es/supplier-api/webhooks) para `workorder.create` y `workorder.status_update`. En cada entrega, obtén la orden de trabajo por id. Haz la carga inicial única desde el endpoint de listado y mantenlo fuera del ciclo en régimen estable, salvo como un sondeo de red de seguridad poco frecuente y con filtros estrechos.
+2. `confirm` o `decline` dentro de tu SLA.
+3. Programa la visita vía [llamadas de servicio](/es/supplier-api/service-calls); publica estados de partes y una ECD a medida que las cosas evolucionan.
+4. Completa vía check-out, luego factura mediante [cotizaciones y facturación](/es/supplier-api/quotes-and-invoicing).

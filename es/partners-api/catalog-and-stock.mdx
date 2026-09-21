@@ -1,0 +1,76 @@
+# Catálogo, niveles de stock y consumo en órdenes de trabajo
+
+> Lee partes, tipos de equipo, proveedores, ubicaciones de stock, inventario por ubicación y las partes consumidas en órdenes de trabajo con la Internal Teams API.
+
+Alrededor del [flujo de compras](/partners-api/purchasing-flow) se sitúan los datos de referencia y de stock: qué puedes pedir (partes, tipos de equipo), a quién le pides (proveedores), dónde vive (ubicaciones de stock e inventario por ubicación) y a dónde fue (consumo en órdenes de trabajo). Todo eso es de solo lectura a través de la Internal Teams API.
+
+Todos los ejemplos asumen:
+
+```bash
+export BASE="https://api.useopenwrench.com/api/external"
+export KEY="<partner-api-key>"
+export SECRET="<shared-secret>"
+```
+
+Cada listado a continuación soporta los parámetros de paginación más filtros de igualdad sobre columnas de la entidad (cualquier otro parámetro de consulta, por ejemplo `stockLocationId=42`), siempre limitados a tu empresa.
+
+## Catálogo
+
+| Endpoint | Contenido |
+| --- | --- |
+| `GET /v1/partners/inventory/parts` (+`/{id}`) | El catálogo de partes: consumibles y repuestos. |
+| `GET /v1/partners/inventory/equipment_types` (+`/{id}`) | Modelos de equipo (artículos serializados). |
+| `GET /v1/partners/inventory/part_equipment_vendors` (+`/{id}`) | Proveedores, usados como `partEquipmentVendorId` en órdenes de compra. |
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/parts?limit=25"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/part_equipment_vendors"
+```
+
+Sincroniza estos hacia tu sistema de compras primero; cualquier otra llamada referencia sus ids.
+
+## Ubicaciones de stock e inventario
+
+Las **ubicaciones de stock** son los almacenes, camiones y bodegas que guardan inventario:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations"
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stock_locations/7"
+```
+
+Dos tipos de registro expresan qué se guarda dónde:
+
+**Partes por ubicación de stock** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) es un registro por parte por ubicación: cantidades en mano, reservadas y disponibles, ubicación de bin y costos.
+
+```bash
+# ¿Dónde está la parte 210 almacenada?
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?partId=210"
+
+# Todo en la ubicación de stock 7
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
+```
+
+**Equipo por ubicación de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) es un registro por unidad física serializada: número de serie, condición y procedencia. Estas son las unidades que crean los [recibos con números de serie](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive).
+
+Los recibos son la ruta de escritura al stock por esta API; el lado de lectura aquí es cómo concilias el stock de OpenWrench contra tu ERP.
+
+## Partes y equipo usados en órdenes de trabajo
+
+`GET /v1/partners/work_order/work_order_parts_equipments/{workOrderId}` lista los registros de partes y equipo consumidos en una orden de trabajo: el lado de consumo del libro de inventario.
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/partners/work_order/work_order_parts_equipments/9001"
+```
+
+Los resultados son paginados y aceptan los mismos filtros de igualdad. Para claves de partner cuya empresa proveedora **no** es una empresa de técnicos internos, los objetos `workOrder` y `location` embebidos vuelven enmascarados, con los campos sensibles eliminados.
+
+## Patrón de conciliación
+
+Una conciliación nocturna de inventario:
+
+1. Extrae `parts_per_stock_locations` por ubicación de stock y compara las cantidades contra tu ERP.
+2. Explica los deltas: recibos registrados ese día (entrada de compras) menos `work_order_parts_equipments` de órdenes de trabajo completadas ese día (salida de consumo).
+3. Investiga lo que queda: usualmente un recibo perdido, una devolución no registrada (recibo negativo) o consumo registrado contra la orden de trabajo equivocada.
