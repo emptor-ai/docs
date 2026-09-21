@@ -54,6 +54,10 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   }'
 ```
 
+`serviceScheduledAt` måste vara en ISO 8601 datum-tid med en `T`-separator och en explicit offset (t.ex. `2026-08-22T09:00:00.000-07:00`, eller `...Z` för UTC). Ett mellanslagsseparerat värde som `2026-08-22 09:00:00+00:00` avvisas som ogiltig indata. Se [Datumformat](/sv/supplier-api/introduction#datumformat).
+
+`leadTechnicianEmail` är teknikerns e-post för besöket och är typad som en vanlig sträng i schemat. Om en `tech_scheduled`-förfrågan misslyckas med ett generiskt ohanterat undantag, bekräfta först att arbetsordern har [passerat acceptans](/sv/supplier-api/work-orders#acceptera-eller-avvisa) och att `serviceScheduledAt` följer ISO 8601-formatet ovan; båda är vanliga orsaker till ett föga beskrivande `tech_scheduled`-fel.
+
 För att flytta bokningen senare, anropa `tech_rescheduled` med servicebesökets `id` och det nya `serviceScheduledAt`.
 
 ## 2. Checka in

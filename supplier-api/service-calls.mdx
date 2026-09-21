@@ -56,6 +56,10 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   }'
 ```
 
+`serviceScheduledAt` must be an ISO 8601 date-time with a `T` separator and an explicit offset (e.g. `2026-08-22T09:00:00.000-07:00`, or `...Z` for UTC). A space-separated value like `2026-08-22 09:00:00+00:00` is rejected as invalid input. See [Date formats](/supplier-api/introduction#date-formats).
+
+`leadTechnicianEmail` is the tech's email on the visit and is typed as a plain string in the schema. If a `tech_scheduled` request fails with a generic unhandled exception, first confirm the work order is [past acceptance](/supplier-api/work-orders#accept-or-decline) and that `serviceScheduledAt` is in the ISO 8601 form above; both are common causes of a non-descriptive `tech_scheduled` failure.
+
 To move the appointment later, call `tech_rescheduled` with the service call's `id` and the new `serviceScheduledAt`.
 
 ## 2. Check in

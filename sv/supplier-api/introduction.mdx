@@ -70,7 +70,9 @@ List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` o
 
 ## Datumformat
 
-De flesta tidsstämplar är ISO 8601-strängar med offset (t.ex. `2026-08-14T13:05:22.000-07:00`); vissa databastidsstämpelfält serialiseras som `yyyy-MM-dd HH:mm:ss.S`. Rena datum är `yyyy-MM-dd`. När du skickar datum-tider, använd ISO 8601.
+De flesta tidsstämplar är ISO 8601-strängar med offset (t.ex. `2026-08-14T13:05:22.000-07:00`); vissa databastidsstämpelfält serialiseras som `yyyy-MM-dd HH:mm:ss.S`. Rena datum är `yyyy-MM-dd`.
+
+När du skickar datum-tider, använd ISO 8601 med ett `T` mellan datum och tid och en explicit offset. Ett mellanslagsseparerat värde som `2026-09-10 10:43:00+00:00` är inte ISO 8601 och avvisas; skicka `2026-09-10T10:43:00.000+00:00` i stället. UTC kan skrivas som `+00:00` eller `Z`.
 
 ## Teknikertid
 
