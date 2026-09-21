@@ -70,7 +70,9 @@ Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `
 
 ## Formatos de fecha
 
-La mayoría de las marcas de tiempo son cadenas ISO 8601 con offset (por ejemplo `2026-08-14T13:05:22.000-07:00`); algunos campos de marca de tiempo de base de datos se serializan como `yyyy-MM-dd HH:mm:ss.S`. Las fechas simples son `yyyy-MM-dd`. Cuando envíes fecha-hora, usa ISO 8601.
+La mayoría de las marcas de tiempo son cadenas ISO 8601 con offset (por ejemplo `2026-08-14T13:05:22.000-07:00`); algunos campos de marca de tiempo de base de datos se serializan como `yyyy-MM-dd HH:mm:ss.S`. Las fechas simples son `yyyy-MM-dd`.
+
+Cuando envíes fecha-hora, usa ISO 8601 con una `T` entre la fecha y la hora y un offset explícito. Un valor separado por espacio como `2026-09-10 10:43:00+00:00` no es ISO 8601 y se rechaza; envía `2026-09-10T10:43:00.000+00:00` en su lugar. UTC puede escribirse como `+00:00` o `Z`.
 
 ## Datos de tiempo del técnico
 

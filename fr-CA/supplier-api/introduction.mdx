@@ -70,7 +70,9 @@ Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, maximum 25),
 
 ## Formats de date
 
-La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601.
+La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`.
+
+Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601 avec un `T` entre la date et l'heure et un décalage explicite. Une valeur séparée par une espace comme `2026-09-10 10:43:00+00:00` n'est pas au format ISO 8601 et est rejetée; envoyez plutôt `2026-09-10T10:43:00.000+00:00`. UTC peut s'écrire `+00:00` ou `Z`.
 
 ## Données de temps des techniciens
 

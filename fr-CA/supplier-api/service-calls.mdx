@@ -54,6 +54,10 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   }'
 ```
 
+`serviceScheduledAt` doit être une date-heure ISO 8601 avec un séparateur `T` et un décalage explicite (par exemple `2026-08-22T09:00:00.000-07:00`, ou `...Z` pour UTC). Une valeur séparée par une espace comme `2026-08-22 09:00:00+00:00` est rejetée comme entrée invalide. Voir [Formats de date](/fr-CA/supplier-api/introduction#formats-de-date).
+
+`leadTechnicianEmail` est le courriel du technicien assigné à la visite et est typé comme une simple chaîne dans le schéma. Si une requête `tech_scheduled` échoue avec une exception non gérée générique, confirmez d'abord que le bon de travail a [dépassé l'acceptation](/fr-CA/supplier-api/work-orders#accepter-ou-refuser) et que `serviceScheduledAt` respecte le format ISO 8601 ci-dessus; ces deux causes sont les plus fréquentes d'un échec peu descriptif de `tech_scheduled`.
+
 Pour déplacer le rendez-vous plus tard, appelez `tech_rescheduled` avec l'`id` de l'appel de service et le nouveau `serviceScheduledAt`.
 
 ## 2. S'enregistrer
