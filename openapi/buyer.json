@@ -755,7 +755,7 @@
                       "number",
                       "null"
                     ],
-                    "description": "Must be positive when supplied."
+                    "description": "Must be positive when supplied. Accepts at most 5 decimal places and 14 total digits (up to 9 before the decimal point), so ounce conversions such as 0.0625 (1 oz) or 0.03125 (half an ounce) are stored exactly. Values with more precision are rejected with a 400 error, not rounded."
                   }
                 },
                 "required": [
@@ -1279,7 +1279,7 @@
         "tags": [
           "Assets"
         ],
-        "description": "Creates an asset. buyerFacilityId/buyerCompanyId are derived from the location (never from the body). refrigerantTypeCode, fullChargeLb, applianceCategory and refrigerantRequiresProcessShutdown are CLEARABLE per-unit overrides of the asset type's defaults: omitting the key keeps the stored value, an explicit null (or blank string) clears it back to inheriting from the type. fullChargeLb must be positive; applianceCategory and refrigerantTypeCode are validated. A parentId requires sub-assets enabled for the company and the same location as the parent.",
+        "description": "Creates an asset. buyerFacilityId/buyerCompanyId are derived from the location (never from the body). refrigerantTypeCode, fullChargeLb, applianceCategory and refrigerantRequiresProcessShutdown are CLEARABLE per-unit overrides of the asset type's defaults: omitting the key keeps the stored value, an explicit null (or blank string) clears it back to inheriting from the type. fullChargeLb must be positive with at most 5 decimal places and 14 total digits (rejected with a 400, not rounded); applianceCategory and refrigerantTypeCode are validated. A parentId requires sub-assets enabled for the company and the same location as the parent.",
         "requestBody": {
           "required": true,
           "content": {
@@ -1623,7 +1623,8 @@
                     "type": [
                       "number",
                       "null"
-                    ]
+                    ],
+                    "description": "Must be positive when supplied. Accepts at most 5 decimal places and 14 total digits (up to 9 before the decimal point), so ounce conversions such as 0.0625 (1 oz) or 0.03125 (half an ounce) are stored exactly. Values with more precision are rejected with a 400 error, not rounded."
                   },
                   "applianceCategory": {
                     "type": [

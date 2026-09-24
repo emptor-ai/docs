@@ -56,6 +56,7 @@ curl -X POST "$BASE/v1/buyer/asset/asset_types" \
 
 - `name` est le seul champ requis. `buyerCompanyId` est dérivé de votre clé et ne peut pas être défini.
 - `applianceCategory`, `refrigerantTypeCode` et `fullChargeLb` acceptent un **`null` explicite pour effacer** la valeur par défaut au niveau de la classe. `fullChargeLb` doit être positif lorsqu'il est fourni.
+- `fullChargeLb` accepte au plus 5 décimales et 14 chiffres au total, soit jusqu'à 9 chiffres avant le point décimal. Les décimales supplémentaires vous permettent de stocker exactement les conversions d'onces, par exemple `0.0625` (1 oz), `0.03125` (une demi-once) ou `0.00625` (un dixième d'once). OpenWrench refuse les valeurs plus précises avec une erreur `400`. Il ne les arrondit pas.
 - Passer un `id` met à jour un type existant.
 
 Lecture avec `GET /v1/buyer/asset/asset_types` et `GET /v1/buyer/asset/asset_types/{id}`.
@@ -85,6 +86,7 @@ Comportement à connaître :
 
 - `buyerFacilityId` et `buyerCompanyId` sont **dérivés de l'emplacement**, jamais lus depuis le corps.
 - **Les remplacements de frigorigène sont effaçables.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` et `refrigerantRequiresProcessShutdown` sont des remplacements par unité des valeurs par défaut du type d'actif. Omettre la clé conserve la valeur stockée; un `null` explicite (ou une chaîne vide) l'efface pour revenir à hériter du type. `isRefrigerantTracked` se comporte de la même façon : omis ou `null` conserve la valeur stockée, et l'inscription n'est désactivée que par un `false` explicite.
+- `fullChargeLb` sur un actif suit les mêmes règles de positivité et de précision que sur un type d'actif.
 - **Sous-actifs.** `parentId` en fait un sous-actif. Cela nécessite que les sous-actifs soient activés pour votre entreprise, et l'enfant doit être au même emplacement que le parent.
 - Passer un `id` met à jour un actif existant.
 
