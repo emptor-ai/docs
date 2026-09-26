@@ -10573,6 +10573,7 @@
             "type": "integer"
           },
           "totalWOCount": {
+            "description": "Total number of work orders at this location that you can see. The count uses the same filters as the work order search and `count_by` endpoints for the same location and caller, including your tenant, role, and supplier work order visibility. Work orders in `PendingApproval` status are excluded. This field is `null` in create and update responses and in locations embedded in other objects, because no viewer context exists.",
             "anyOf": [
               {
                 "type": "integer",
@@ -10584,6 +10585,7 @@
             ]
           },
           "totalNotClosedWOCount": {
+            "description": "Number of active work orders at this location that you can see: work orders in the `Pending`, `Deferred`, `Open`, `InProgress`, or `OnHold` display statuses that are not buyer-archived (`hasBuyerArchived` is `false`). The count agrees with the work order search and `count_by` endpoints for the same location and caller. Work orders in `PendingApproval` status are excluded. This field is `null` in create and update responses and in locations embedded in other objects, because no viewer context exists.",
             "anyOf": [
               {
                 "type": "integer",
