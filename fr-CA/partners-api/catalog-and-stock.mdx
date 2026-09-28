@@ -42,7 +42,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stoc
 
 Deux types de fiches expriment ce qui est conservé où :
 
-**Pièces par emplacement de stock** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) : une fiche par pièce par emplacement — quantités en main, réservées et disponibles, emplacement de casier et coûts.
+**Pièces par emplacement de stock** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) : une fiche par pièce par emplacement, avec quantités en main, réservées et disponibles, emplacement de casier et coûts.
 
 ```bash
 # Où la pièce 210 est-elle stockée ?

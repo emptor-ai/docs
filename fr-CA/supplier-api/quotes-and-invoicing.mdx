@@ -20,7 +20,7 @@ export SECRET="<shared-secret>"
 
 ## L'argent en chaînes, par sections
 
-Les propositions et les factures partagent une structure de postes. Les montants sont des **chaînes qui doivent s'analyser comme des nombres** (« 450.00 », pas 450.00 en flottant; les émetteurs devraient formater à deux décimales et analyser comme décimales). Les sections sont main-d'œuvre, matériel, déplacement, fret et divers (les propositions ajoutent les coûts engagés), chacune portant ses propres postes, son taux de taxe et son `...TotalBeforeTax`, se totalisant en avant taxe, taxe et après taxe. Les lignes de déplacement, de fret et divers sont de simples objets `{ "description", "amount" }`.
+Les propositions et les factures partagent une structure de postes. Les montants sont des **chaînes qui doivent s'analyser comme des nombres** (« 450.00 », pas 450.00 en flottant; vous devriez formater à deux décimales et analyser comme décimales). Les sections sont main-d'œuvre, matériel, déplacement, fret et divers (les propositions ajoutent les coûts engagés). Chaque section porte ses propres postes, son taux de taxe et son `...TotalBeforeTax`, et les sections se totalisent en avant taxe, taxe et après taxe. Les lignes de déplacement, de fret et divers sont de simples objets `{ "description", "amount" }`.
 
 ## Propositions (soumissions)
 

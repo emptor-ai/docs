@@ -56,9 +56,9 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 ## Modèle de répartition automatisée
 
-1. Un bon de travail arrive (ou est créé non assigné).
+1. Un bon de travail arrive (ou est créé non affecté).
 2. Appelez l'endpoint classé pour le `locationId` et le `problemTypeId` du bon de travail.
 3. Prenez l'établissement fournisseur de la première relation et affectez-le, soit au moment de la création (`supplierFacilityId` dans le corps de création), soit après avec `PATCH /v1/buyer/work_order/work_orders/{id}`.
-4. Si le fournisseur refuse, le bon de travail retourne à `PendingApproval` (ou un fournisseur du réseau privé peut être choisi automatiquement, selon votre configuration). Sur refus, réexécutez le classement et assignez le candidat suivant.
+4. Si le fournisseur refuse, le bon de travail retourne à `PendingApproval` (ou un fournisseur du réseau privé peut être choisi automatiquement, selon votre configuration). Sur refus, réexécutez le classement et affectez le candidat suivant.
 
-Les échelles d'escalade, les délais d'intervention par entente de service et les décomptes de refus peuvent tous être superposés à cette boucle; l'endpoint de classement vous donne les candidats ordonnés, et les `statusChanges` du bon de travail vous disent comment chaque tentative s'est déroulée.
+Les échelles d'escalade, les délais d'intervention par entente de service et les décomptes de refus peuvent tous être superposés à cette boucle. L'endpoint de classement vous donne les candidats ordonnés, et les `statusChanges` du bon de travail vous disent comment chaque tentative s'est déroulée.

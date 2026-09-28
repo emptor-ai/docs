@@ -47,7 +47,7 @@ curl -X POST "$BASE/v1/buyer/user/provision" \
 
 Reglas aplicadas por el endpoint:
 
-- `email`, `nameGiven`, `nameFamily` y `roles` son obligatorios. **Los roles admin y super-admin se rechazan con `403`**; el aprovisionamiento por API es solo para roles regulares.
+- `email`, `nameGiven`, `nameFamily` y `roles` son requeridos. **Los roles admin y super-admin se rechazan con `403`**; el aprovisionamiento por API es solo para roles regulares.
 - La instalación de destino toma por defecto la instalación de tu clave de API. Un `facilityId` suministrado debe pertenecer a la misma empresa compradora (`403` en caso contrario).
 - Si ya existe una cuenta o contacto para ese correo, devuelve `400` con un mensaje de conflicto.
 - Con un `password`, el login se crea de inmediato y el correo de invitación dice "invited you to OpenWrench"; sin él, la invitación pide al usuario registrarse. `passwordResetRequired` fuerza un cambio en el primer inicio de sesión.

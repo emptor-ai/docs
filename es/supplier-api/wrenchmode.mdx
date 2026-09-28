@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Restricciones:
 
 - Ambas fechas son `yyyy-MM-dd`, y la ventana puede abarcar **como máximo un mes**. Divide rangos más largos en llamadas del tamaño de un mes.
-- El resumen cubre la instalación de proveedor de tu clave de API. Una clave cuyo contacto no esté adjunto a una facility de proveedor obtiene `401`.
+- El resumen cubre la instalación de proveedor de tu clave de API. Una clave cuyo contacto no esté adjunto a una instalación de proveedor obtiene `401`.
 
 ## El registro bruto de eventos
 
@@ -63,11 +63,11 @@ El vocabulario de eventos se divide en eventos de viaje (`began_trip` hasta `tri
 
 - **Analítica** para tableros, nómina y reportes de utilización: un número por técnico por período, con la matemática de pausas ya hecha.
 - **Eventos brutos** para auditar un total sospechoso, reconstruir una visita minuto a minuto o alimentar tu propio warehouse analítico.
-- Las preguntas **por visita** suelen atenderse mejor con la expansión de llamada de servicio `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, que devuelve exactamente los eventos en la ventana de check-in/check-out de la visita más `trueWorkTimeMillis` sin pausas. Ver [Llamadas de servicio](/es/supplier-api/service-calls#volver-a-leer-una-llamada-de-servicio).
+- Las preguntas **por visita** suelen atenderse mejor con la expansión de llamada de servicio `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`. Devuelve exactamente los eventos en la ventana de check-in/check-out de la visita más `trueWorkTimeMillis` sin pausas. Consulta [Llamadas de servicio](/es/supplier-api/service-calls#volver-a-leer-una-llamada-de-servicio).
 
 ## Patrones aplicados
 
-**Extracción semanal de nómina.** Cada lunes, llama a analítica para la semana anterior, cruza por correo del técnico contra tu sistema de nómina y usa el tiempo de trabajo + conducción como la entrada de horas pagadas. Una llamada por semana por facility te mantiene muy por debajo del límite de tasa.
+**Extracción semanal de nómina.** Cada lunes, llama a analítica para la semana anterior, cruza por correo del técnico contra tu sistema de nómina y usa el tiempo de trabajo + conducción como la entrada de horas pagadas. Una llamada por semana por instalación te mantiene muy por debajo del límite de tasa.
 
 **Reporte mensual de utilización.** Analítica con límites de mes (`2026-08-01` a `2026-08-31` está dentro del tope de un mes); divide el tiempo de trabajo entre el tiempo programado desde tu sistema de rostering.
 
