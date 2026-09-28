@@ -37,7 +37,7 @@ Campos compartidos de la solicitud: `workOrderId` y `numberOfTechs` siempre son 
 Todas las rutas están bajo `/v1/supplier/work_order/`. No hay equivalentes del lado del comprador: el check-in y el check-out no pueden dirigirse desde la Buyer API.
 
 <Warning>
-**`check_in`, `check_out` y sus variantes `remote_` requieren un `id` de service call existente.** Actualizan una visita; no la crean. Enviarlos sin `id` devuelve `400 InvalidInputException` con `"required param: id"`. Inicia la visita con `tech_scheduled`. Crea el primer service call y devuelve la orden de trabajo con el nuevo call en `associatedServiceCalls` / `lastServiceCall`. Reutiliza ese `id` en cada actualización posterior de la misma visita.
+**`check_in`, `check_out` y sus variantes `remote_` requieren un `id` de llamada de servicio existente.** Actualizan una visita; no la crean. Enviarlos sin `id` devuelve `400 InvalidInputException` con `"required param: id"`. Inicia la visita con `tech_scheduled`. Crea la primera llamada de servicio y devuelve la orden de trabajo con la nueva llamada en `associatedServiceCalls` / `lastServiceCall`. Reutiliza ese `id` en cada actualización posterior de la misma visita.
 
 La orden de trabajo también tiene que estar más allá de la aceptación antes de que `tech_scheduled` sea válido. Si todavía está en `PendingConfirmationByServiceProvider` (el estado del comprador "Open - Pending Contractor Confirmation"), [acéptala primero](/es/supplier-api/work-orders#aceptar-o-rechazar) con `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
 </Warning>

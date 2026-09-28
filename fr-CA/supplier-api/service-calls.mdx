@@ -34,10 +34,10 @@ Champs de requête partagés : `workOrderId` et `numberOfTechs` sont toujours re
 | `POST .../service_calls/status_update/check_out` | Le `checkOutStatus` que vous envoyez (requis) |
 | `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Identique à leurs équivalents sur place, pour le travail à distance |
 
-Tous les chemins sont sous `/v1/supplier/work_order/`. Il n'existe pas d'équivalents côté acheteur : le check-in et le check-out ne peuvent pas être pilotés depuis la Buyer API.
+Tous les chemins sont sous `/v1/supplier/work_order/`. Il n'existe pas d'équivalents côté acheteur : l'arrivée et le départ ne peuvent pas être pilotés depuis l'API Acheteur.
 
 <Warning>
-**`check_in`, `check_out` et leurs variantes `remote_` exigent un `id` de service call existant.** Ils mettent à jour une visite; ils n'en créent pas. Les envoyer sans `id` retourne `400 InvalidInputException` avec `"required param: id"`. Commencez la visite par `tech_scheduled`. Cet appel crée le premier service call et retourne le bon de travail avec le nouveau call dans `associatedServiceCalls` / `lastServiceCall`. Réutilisez cet `id` à chaque mise à jour ultérieure de la même visite.
+**`check_in`, `check_out` et leurs variantes `remote_` exigent un `id` d'appel de service existant.** Ils mettent à jour une visite; ils n'en créent pas. Les envoyer sans `id` retourne `400 InvalidInputException` avec `"required param: id"`. Commencez la visite par `tech_scheduled`. Il crée le premier appel de service et retourne le bon de travail avec le nouvel appel dans `associatedServiceCalls` / `lastServiceCall`. Réutilisez cet `id` à chaque mise à jour ultérieure de la même visite.
 
 Le bon de travail doit aussi avoir dépassé l'acceptation avant que `tech_scheduled` soit valide. S'il est encore à `PendingConfirmationByServiceProvider` (le statut acheteur « Open - Pending Contractor Confirmation »), [acceptez-le d'abord](/fr-CA/supplier-api/work-orders#accepter-ou-refuser) avec `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
 </Warning>
@@ -109,7 +109,7 @@ Valeurs courantes de `checkOutStatus` :
 | `PartsRequested`, `PartsOnOrder`, `PartsReceived` | La visite s'est terminée et le travail est en attente de pièces. |
 | `TechAssigned`, `TechScheduled` | La visite s'est terminée et une autre visite est nécessaire. |
 
-**Pour compléter un bon de travail, effectuez le départ avec `WaitingForReview`.** `WorkReviewedAndCompleted` est un statut qui appartient à l'acheteur. L'acheteur le définit après avoir révisé votre travail, ou OpenWrench le définit automatiquement lorsque l'approbation automatique s'applique (voir ci-dessous). L'acheteur peut aussi rejeter le travail avec `WorkUnsatisfactory`. Vous apprenez la décision de l'acheteur par le [webhook](/fr-CA/supplier-api/webhooks) `workorder.status_update`.
+**Pour compléter un bon de travail, quittez avec `WaitingForReview`.** `WorkReviewedAndCompleted` est un statut qui appartient à l'acheteur. L'acheteur le définit après avoir révisé votre travail, ou OpenWrench le définit automatiquement lorsque l'approbation automatique s'applique (voir ci-dessous). L'acheteur peut aussi rejeter le travail avec `WorkUnsatisfactory`. Vous apprenez la décision de l'acheteur par le [webhook](/fr-CA/supplier-api/webhooks) `workorder.status_update`.
 
 Enregistrez les pièces et le stock consommés durant la visite via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile. Les ids proviennent de votre [catalogue d'inventaire](/fr-CA/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 

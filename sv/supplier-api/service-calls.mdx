@@ -37,7 +37,7 @@ Delade förfrågningsfält: `workOrderId` och `numberOfTechs` krävs alltid. `id
 Alla sökvägar ligger under `/v1/supplier/work_order/`. Det finns inga motsvarigheter på köparsidan: check-in och check-out kan inte styras från Buyer API.
 
 <Warning>
-**`check_in`, `check_out` och deras `remote_`-varianter kräver ett befintligt service call-`id`.** De uppdaterar ett besök; de skapar inte ett. Att skicka dem utan `id` returnerar `400 InvalidInputException` med `"required param: id"`. Starta besöket med `tech_scheduled`. Det skapar det första service call:et och returnerar arbetsordern med det nya call:et i `associatedServiceCalls` / `lastServiceCall`. Återanvänd det `id`:et vid varje senare uppdatering av samma besök.
+**`check_in`, `check_out` och deras `remote_`-varianter kräver ett befintligt servicebesöks-`id`.** De uppdaterar ett besök; de skapar inte ett. Att skicka dem utan `id` returnerar `400 InvalidInputException` med `"required param: id"`. Starta besöket med `tech_scheduled`. Det skapar det första servicebesöket och returnerar arbetsordern med det nya servicebesöket i `associatedServiceCalls` / `lastServiceCall`. Återanvänd det `id`:et vid varje senare uppdatering av samma besök.
 
 Arbetsordern måste också ha passerat acceptansen innan `tech_scheduled` är giltigt. Om den fortfarande är `PendingConfirmationByServiceProvider` (köparstatusen "Open - Pending Contractor Confirmation"), [acceptera den först](/sv/supplier-api/work-orders#acceptera-eller-avvisa) med `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
 </Warning>
