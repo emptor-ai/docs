@@ -28,7 +28,7 @@ The response (envelope type `FileManager`) is a `FileDetails` record: `{ "fileNa
 
 Use the returned object verbatim in attachment fields: work order [supplier attachments](/supplier-api/work-orders#keep-the-buyer-informed), proposal and invoice `attachments`, and check-in/check-out images. Invoice PDFs have their own [upload-and-publish endpoint](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
 
-**Download** with `GET /v1/supplier/file/download/{id}/{name}`, which streams the stored bytes as an attachment. `{id}` is the `fileId`; `{name}` is the file name to serve it under. Use it to pull buyer-provided documents off `buyerAttachments`. Download failures are answered with `400`.
+**Download** with `GET /v1/supplier/file/download/{id}/{name}`, which streams the stored bytes as an attachment. `{id}` is the `fileId`; `{name}` is the file name to serve it under. Use it to pull buyer-provided documents off `buyerAttachments`. Download failures return `400`.
 
 ## Provisioning supplier users
 

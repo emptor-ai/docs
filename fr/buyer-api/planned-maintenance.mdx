@@ -64,11 +64,11 @@ curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
   }'
 ```
 
-`scheduleId`, `status`, `lastRunAt` et `lastRunDueAt` sont requis ; `woId` lie le bon de travail que l'exécution a créé (créez-le d'abord via l'endpoint [bons de travail](/buyer-api/work-orders#create-a-work-order), avec `isPM: true` et `plannedMaintenanceScheduleId` défini), et `log` contient des diagnostics en texte libre.
+`scheduleId`, `status`, `lastRunAt` et `lastRunDueAt` sont requis. `woId` lie le bon de travail que l'exécution a créé (créez-le d'abord via l'endpoint [bons de travail](/buyer-api/work-orders#create-a-work-order), avec `isPM: true` et `plannedMaintenanceScheduleId` défini), et `log` contient des diagnostics en texte libre.
 
 La boucle complète d'un planificateur externe :
 
 1. Lisez les horaires et leur cadence depuis l'API.
 2. Lorsqu'une exécution arrive à échéance, créez le bon de travail d'entretien préventif.
 3. Enregistrez l'exécution avec `scheduler_run_logs`, en liant le `woId`.
-4. Si une exécution doit être sautée à la place, appelez `skip_schedule` pour que la prochaine date d'échéance avance.
+4. Si vous devez plutôt sauter une exécution, appelez `skip_schedule` pour que la prochaine date d'échéance avance.

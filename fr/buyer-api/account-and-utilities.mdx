@@ -14,7 +14,7 @@ export SECRET="<shared-secret>"
 
 ## Ping et identité
 
-`GET /v1/buyer/ping` vérifie les deux en-têtes et retourne `{"type":"pingpong","data":"pong","status":"ok"}`. Il n'est pas soumis à la limite de débit, il peut donc être utilisé en toute sécurité pour des sondes de surveillance.
+`GET /v1/buyer/ping` vérifie les deux en-têtes et retourne `{"type":"pingpong","data":"pong","status":"ok"}`. Il n'est pas soumis à la limite de débit : vous pouvez donc l'utiliser en toute sécurité pour des sondes de surveillance.
 
 `GET /v1/buyer/me` retourne l'identité associée à votre clé sous la forme d'une projection délibérément petite : `email` du contact, nom, `contactType`, `buyerFacilityName`, `buyerCompanyId` et `buyerCompanyName`.
 
@@ -22,7 +22,7 @@ export SECRET="<shared-secret>"
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/me"
 ```
 
-Appelez-le une fois au démarrage : la création d'un bon de travail requiert votre `buyerCompanyId` et votre identifiant d'établissement [dans le corps de la requête](/buyer-api/work-orders#create-a-work-order), et journaliser l'identité rend évidentes les confusions de clés.
+Appelez-le une fois au démarrage : la création d'un bon de travail requiert votre `buyerCompanyId` et votre identifiant d'établissement [dans le corps de la requête](/buyer-api/work-orders#create-a-work-order). Journaliser l'identité rend par ailleurs évidentes les confusions de clés.
 
 ## Provisionner des utilisateurs acheteurs
 

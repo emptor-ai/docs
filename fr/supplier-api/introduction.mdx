@@ -64,7 +64,7 @@ La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exempl
 
 ## Données de temps des techniciens
 
-Les endpoints WrenchMode exposent le temps de travail et de conduite par technicien : `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` retourne un cumul conduite/travail/total par technicien (fenêtre plafonnée à 1 mois), et `GET /v1/supplier/wrench_mode/events` retourne le journal d'événements brut sous-jacent. Les extensions de visite de service (`/with_work_logs`, `/with_tech_details`) offrent le récit par visite.
+Les endpoints WrenchMode exposent le temps de travail et de conduite par technicien : `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` retourne un cumul conduite/travail/total par technicien (fenêtre plafonnée à 1 mois). `GET /v1/supplier/wrench_mode/events` retourne le journal d'événements brut sous-jacent. Les extensions de visite de service (`/with_work_logs`, `/with_tech_details`) offrent le récit par visite.
 
 ## Guides détaillés
 

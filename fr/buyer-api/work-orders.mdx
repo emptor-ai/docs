@@ -35,7 +35,7 @@ Un bon de travail retourné par l'API porte, entre autres :
 
 ## Créer un bon de travail
 
-`POST /v1/buyer/work_order/work_orders` requiert plus que les champs évidents. Contrairement à la plupart des endpoints acheteur, **`buyerFacilityId`, `buyerCompanyId` et `createdBy` doivent être fournis dans le corps** ; ils ne sont pas dérivés de votre clé d'API sur cet endpoint. Utilisez [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) pour rechercher vos identifiants d'entreprise et d'établissement une fois et les mettre en cache.
+`POST /v1/buyer/work_order/work_orders` requiert plus que les champs évidents. Contrairement à la plupart des endpoints acheteur, **`buyerFacilityId`, `buyerCompanyId` et `createdBy` doivent être fournis dans le corps**. Ils ne sont pas dérivés de votre clé d'API sur cet endpoint. Utilisez [`GET /v1/buyer/me`](/buyer-api/account-and-utilities) pour rechercher vos identifiants d'entreprise et d'établissement une fois et les mettre en cache.
 
 Champs requis : `title`, `locationId`, `problemTypeId`, `buyerFacilityId`, `buyerCompanyId` et `createdBy` (l'adresse courriel du contact créateur).
 
@@ -79,7 +79,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ ; séparez une valeur par des virgules pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la restriction locataire dérivée de votre clé, vous ne voyez donc jamais que les bons de travail de votre entreprise.
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ ; séparez une valeur par des virgules pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la restriction locataire dérivée de votre clé. Vous ne voyez donc jamais que les bons de travail de votre entreprise.
 
 La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. Cela change quelques comportements :
 
@@ -87,7 +87,7 @@ La liste et le comptage déterminent quels bons de travail correspondent dans l'
 - **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'identifiant donné.
 - **Tri.** `sort_by` accepte `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
 - **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur des fenêtres de `statusChangedAt` ou d'autres colonnes indexées.
-- **Fraîcheur.** Les mises à jour de l'index de recherche et de la réplique accusent un léger retard sur les écritures, donc un bon de travail créé il y a quelques millisecondes peut être brièvement absent des résultats de liste et des comptages.
+- **Fraîcheur.** Les mises à jour de l'index de recherche et de la réplique accusent un léger retard sur les écritures. Un bon de travail créé il y a quelques millisecondes peut donc être brièvement absent des résultats de liste et des comptages.
 - **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Restreignez le filtre plutôt que de paginer aussi loin.
 
 L'endpoint de comptage exécute la même requête d'index de recherche que la liste, donc un comptage concorde toujours avec la liste qu'il décrit.
@@ -178,13 +178,13 @@ Valeurs de `status` que vous verrez et pourrez définir via l'API :
 | `WorkUnsatisfactory` | Acheteur | Vous avez refusé le travail terminé. |
 | `CancelledWithReason` | Acheteur | Annulé. |
 
-Les transitions détenues par le fournisseur arrivent via l'intégration propre du fournisseur ou les applications OpenWrench ; votre côté les observe via les [webhooks](/buyer-api/webhooks) ou par interrogation (`statusChangedAt`, `statusChanges`) et agit sur celles détenues par l'acheteur.
+Les transitions détenues par le fournisseur arrivent via l'intégration propre du fournisseur ou les applications OpenWrench. Votre côté les observe via les [webhooks](/buyer-api/webhooks) ou par interrogation (`statusChangedAt`, `statusChanges`) et agit sur celles détenues par l'acheteur.
 
 ## Notes
 
 Les bons de travail portent un fil de notes partagé entre acheteur et fournisseur.
 
-**Ajoutez** avec `PATCH /v1/buyer/work_order/work_orders/append_notes`. Le corps est `{ "id": <woId>, "note": { ... } }` où la note a besoin de `text` et `noteAddedBy`. Le serveur écrase `noteAddedAt` avec sa propre horloge, et l'adresse courriel de l'auteur est ajoutée à la liste des abonnés acheteur du bon de travail afin qu'ils reçoivent les notifications suivantes.
+**Ajoutez** avec `PATCH /v1/buyer/work_order/work_orders/append_notes`. Le corps est `{ "id": <woId>, "note": { ... } }` où la note a besoin de `text` et `noteAddedBy`. Le serveur écrase `noteAddedAt` avec sa propre horloge. Il ajoute aussi l'adresse courriel de l'auteur à la liste des abonnés acheteur du bon de travail, afin que l'auteur reçoive les notifications suivantes.
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
@@ -200,7 +200,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
-**Ajoutez des photos en lot** avec `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Utilisez-le lorsque vous avez un lot de photos à publier (le jeu avant/après d'un technicien, par exemple) : les abonnés reçoivent une seule notification groupée au lieu d'une notification par photo. Le corps est `{ "id": <woId>, "notes": [ ... ] }` avec 1 à 25 notes, et chaque note doit porter une URL `photo` et aucun autre contenu : `text` doit être vide et `video`, `audio`, `otherFile` et `elements` doivent être absents. Répéter la même URL de photo dans une requête est rejeté avec `400`. Le serveur horodate chaque note du lot avec le même `noteAddedAt` et préserve l'ordre d'envoi.
+**Ajoutez des photos en lot** avec `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Utilisez-le lorsque vous avez un lot de photos à publier (le jeu avant/après d'un technicien, par exemple) : les abonnés reçoivent une seule notification groupée au lieu d'une notification par photo. Le corps est `{ "id": <woId>, "notes": [ ... ] }` avec 1 à 25 notes. Chaque note doit porter une URL `photo` et aucun autre contenu : `text` doit être vide et `video`, `audio`, `otherFile` et `elements` doivent être absents. Si vous répétez la même URL de photo dans une requête, l'API rejette la requête avec `400`. Le serveur horodate chaque note du lot avec le même `noteAddedAt` et préserve l'ordre d'envoi.
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \

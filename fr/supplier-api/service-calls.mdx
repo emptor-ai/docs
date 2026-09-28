@@ -22,7 +22,7 @@ Les cinq partagent une forme de requête (un payload de visite de service) et un
 
 Champs de requête partagés : `workOrderId` et `numberOfTechs` sont toujours requis. `id` cible une visite de service existante (omettez-le à la première création, puis réutilisez l'identifiant pour chaque mise à jour ultérieure de la même visite). `leadTechnicianEmail`, `additionalTechnicianEmails`, `serviceScheduledAt`, les groupes `checkIn*`/`checkOut*`, `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` se remplissent au fil de la visite.
 
-`supplierFacilityId` est requis pour les clés d'équipe de service interne ; pour les clés de fournisseur tiers, il est remplacé par votre propre identifiant d'établissement quel que soit ce que vous envoyez.
+`supplierFacilityId` est requis pour les clés d'équipe de service interne. Pour les clés de fournisseur tiers, OpenWrench le remplace par votre propre identifiant d'établissement, quoi que vous envoyiez.
 
 | Endpoint | Le statut du bon de travail devient |
 | --- | --- |
@@ -67,7 +67,7 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
   }'
 ```
 
-`checkInTime` prend par défaut l'heure actuelle du serveur lorsque vous définissez un `checkInStatus` sans heure, les intégrations en direct peuvent donc l'omettre ; les rattrapages doivent le passer explicitement. `checkInImages` prend des références de photos, et les coordonnées géographiques donnent à l'acheteur la preuve de la présence sur site.
+`checkInTime` prend par défaut l'heure actuelle du serveur lorsque vous définissez un `checkInStatus` sans heure. Les intégrations en direct peuvent donc l'omettre ; les rattrapages doivent le passer explicitement. `checkInImages` prend des références de photos, et les coordonnées géographiques donnent à l'acheteur la preuve de la présence sur site.
 
 ## 3. Pointer la sortie et définir le résultat
 
@@ -90,10 +90,10 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
 
 Choix courants de `checkOutStatus` :
 
-- `WaitingForReview` — travail terminé, remettez à l'acheteur pour examen.
-- `TechScheduled` ou `PartsRequested` et similaires — la visite s'est terminée mais le travail continue (visite de suivi, en attente de pièces).
+- `WaitingForReview` : travail terminé, remettez à l'acheteur pour examen.
+- `TechScheduled` ou `PartsRequested` et similaires : la visite s'est terminée mais le travail continue (visite de suivi, en attente de pièces).
 
-Les pièces et le stock consommés lors de la visite sont enregistrés via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` sur le même payload ; les identifiants proviennent de votre [catalogue d'inventaire](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+Enregistrez les pièces et le stock consommés lors de la visite via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` sur le même payload. Les identifiants proviennent de votre [catalogue d'inventaire](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 Deux comportements d'automatisation se déclenchent à ce moment :
 

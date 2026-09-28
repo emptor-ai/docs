@@ -105,7 +105,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511
 
 ## Asset labels
 
-Asset labels are lightweight tags your team defines in the OpenWrench app (a name plus an optional color), useful for slicing the asset list in ways the built-in fields don't cover. Through the API you can read the catalog and replace the labels applied to an asset. Creating or editing the labels themselves stays in the app.
+Asset labels are lightweight tags your team defines in the OpenWrench app (a name plus an optional color). They're useful for slicing the asset list in ways the built-in fields don't cover. Through the API you can read the catalog and replace the labels applied to an asset. Creating or editing the labels themselves stays in the app.
 
 **Browse the catalog** with `GET /v1/buyer/asset/asset_labels`, or fetch one with `GET /v1/buyer/asset/asset_labels/{id}`. The list is scoped to your company's labels and paginated 10 per page by default. It accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call (sorting still applies).
 
@@ -182,10 +182,10 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readi
 
 Notes:
 
-- `valueType`, `valueUnit`, and `locationId` are **not** read from the create-meter body — they're derived server-side from the referenced asset and meter type, so sending them has no effect.
+- `valueType`, `valueUnit`, and `locationId` are **not** read from the create-meter body. The server derives them from the referenced asset and meter type, so sending them has no effect.
 - `readingMode` (renamed from `seriesType`) is one of `direct_reading`, `change_from_baseline`, or `compare_to_target`; it defaults to `direct_reading` when omitted.
-- The meter-reading list and count endpoints aren't scoped to a single meter — they span every reading across your buyer company unless you filter by `meterId`.
-- When a meter's `readingMode` is `change_from_baseline`, a retrieved reading's `lastBaselineValue` is computed from the most recent prior reading flagged `isBaseline` on that meter as of `recordedAt`; for other modes it's `null`.
+- The meter-reading list and count endpoints aren't scoped to a single meter. They span every reading across your buyer company unless you filter by `meterId`.
+- When a meter's `readingMode` is `change_from_baseline`, a retrieved reading's `lastBaselineValue` is computed from the most recent prior reading flagged `isBaseline` on that meter as of `recordedAt`. For other modes it's `null`.
 
 ## Sync strategy
 

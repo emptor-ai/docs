@@ -48,7 +48,7 @@ Scoping rules worth knowing:
 
 ## Inside a proposal
 
-The money is broken into the same sections as invoices: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems`, and `miscLineItems`, each section with its own tax rate and `...TotalBeforeTax`, rolling up to `totalBeforeTax`, `tax`, and `totalAfterTax`. **Monetary values serialize as strings**; parse them as decimals, not floats, if you are doing arithmetic.
+The money is broken into the same sections as invoices: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems`, and `miscLineItems`. Each section has its own tax rate and `...TotalBeforeTax`, and the sections roll up to `totalBeforeTax`, `tax`, and `totalAfterTax`. **Monetary values serialize as strings**; parse them as decimals, not floats, if you are doing arithmetic.
 
 Other useful fields: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (the work order's not-to-exceed at submission time), `proposalPdfLink`, `attachments`, `submittedAt`, and `approvedAt`.
 

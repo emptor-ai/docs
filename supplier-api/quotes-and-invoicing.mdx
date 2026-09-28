@@ -4,7 +4,7 @@ sidebarTitle: "Quotes & invoicing"
 description: "Create proposals for buyer approval and bill completed work orders: draft invoices, line-item sections, PDF upload-and-publish, and status side effects."
 ---
 
-Money flows through two objects: **proposals** (quotes the buyer approves before work proceeds) and **invoices** (the bill for completed work). Both are created by suppliers through this API.
+Money flows through two objects: **proposals** (quotes the buyer approves before work proceeds) and **invoices** (the bill for completed work). Suppliers create both through this API.
 
 <Note>
 Neither endpoint is available to internal-service-team keys; quoting and invoicing are for third-party suppliers billing a buyer.
@@ -20,7 +20,7 @@ export SECRET="<shared-secret>"
 
 ## Money is strings, in sections
 
-Proposals and invoices share a line-item structure. Amounts are **strings that must parse as numbers** ("450.00", not 450.00 as a float; senders should format with two decimals and parse as decimals). The sections are labor, material, travel, freight, and misc (proposals add incurred cost), each carrying its own line items, tax rate, and `...TotalBeforeTax`, rolling up to before-tax, tax, and after-tax totals. Travel, freight, and misc lines are simple `{ "description", "amount" }` objects.
+Proposals and invoices share a line-item structure. Amounts are **strings that must parse as numbers** ("450.00", not 450.00 as a float; you should format with two decimals and parse as decimals). The sections are labor, material, travel, freight, and misc (proposals add incurred cost). Each section carries its own line items, tax rate, and `...TotalBeforeTax`, and the sections roll up to before-tax, tax, and after-tax totals. Travel, freight, and misc lines are simple `{ "description", "amount" }` objects.
 
 ## Proposals (quotes)
 
@@ -58,7 +58,7 @@ Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or 
 
 ### The lifecycle
 
-Invoices start as **`draft`** (invisible to the buyer), get **published** into `pending`, then the buyer moves them through `approved` and `processing` to `paid` (or disputes them). Your integration creates the draft and publishes it; from `pending` onward you are mostly reading status.
+Invoices start as **`draft`** (invisible to the buyer) and get **published** into `pending`. The buyer then moves them through `approved` and `processing` to `paid` (or disputes them). Your integration creates the draft and publishes it; from `pending` onward you are mostly reading status.
 
 ### Create the draft
 
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-Each precondition failing returns `400`: your facility must own the invoice, the associated work order must be in **Completed** display status, and supplier invoice editing must be allowed by the buyer's configuration.
+Each precondition failing returns `400`: your facility must own the invoice, the associated work order must be in **Completed** display status, and the buyer's configuration must allow supplier invoice editing.
 
 ### Read and reconcile
 
