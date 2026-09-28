@@ -111,7 +111,7 @@ Valeurs courantes de `checkOutStatus` :
 
 **Pour compléter un bon de travail, quittez avec `WaitingForReview`.** `WorkReviewedAndCompleted` est un statut qui appartient à l'acheteur. L'acheteur le définit après avoir révisé votre travail, ou OpenWrench le définit automatiquement lorsque l'approbation automatique s'applique (voir ci-dessous). L'acheteur peut aussi rejeter le travail avec `WorkUnsatisfactory`. Vous apprenez la décision de l'acheteur par le [webhook](/fr-CA/supplier-api/webhooks) `workorder.status_update`.
 
-Enregistrez les pièces et le stock consommés durant la visite via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile. Les ids proviennent de votre [catalogue d'inventaire](/fr-CA/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+Enregistrez les pièces et le stock consommés durant la visite via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile. Les ids proviennent de votre [catalogue d'inventaire](/fr-CA/supplier-api/purchasing-and-inventory#catalogue--pièces-équipement-vendeurs-et-stock).
 
 Deux comportements d'automatisation se déclenchent à ce moment :
 
