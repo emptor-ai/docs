@@ -1,7 +1,7 @@
 ---
 title: "Genomgångar av platsbesiktningar i Buyer API"
 sidebarTitle: "Platsbesiktningar"
-description: "Läs genomgångar av platsbesiktningar, rendera poäng med värmekarteintervall och skapa uppföljningsarbetsordrar från besiktningsfynd i Buyer API."
+description: "Läs genomgångar av platsbesiktningar, rendera poäng med värmekartintervall och skapa uppföljningsarbetsordrar från besiktningsfynd i Buyer API."
 ---
 
 En **genomgång** är en avslutad platsbesiktning: en inspektör går igenom en plats mot en uppgiftslista och registrerar svar, foton och problem. Buyer API exponerar genomgångar skrivskyddat och låter dig skapa uppföljningsarbetsordrar som förblir kopplade till besiktningsfyndet de kom från.
@@ -32,7 +32,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 Standardpaginering och fältfilter gäller, plus din rolls plats- och varumärkesavgränsning. Arbetsordrar som refereras från en genomgångs uppgiftssvar filtreras av din läsbehörighet, så olika nycklar kan se olika länkade arbetsordrar på samma genomgång.
 
-## Rendera poäng med värmekarteintervall
+## Rendera poäng med värmekartintervall
 
 Varje genomgångssvar bäddar in den hydratiserade platsbesiktning som genomgången kördes mot, under `siteSurvey`. Platsbesiktningen bär ett valfritt fält `walkthroughHeatMapRanges`: en array av färgband som används för att rendera genomgångspoäng som en värmekarta.
 
@@ -57,7 +57,7 @@ Varje post har två fält:
 
 För att färglägga en poäng från genomgångens `scores`-array, välj bandet med det högsta `lowerRange` som är mindre än eller lika med poängen.
 
-Du konfigurerar intervallen på platsbesiktningen eller på dess mall. Om en besiktning saknar egna intervall fyller OpenWrench i mallens intervall vid läsning, så det inbäddade `siteSurvey.walkthroughHeatMapRanges` är redan upplöst. Du behöver aldrig hämta mallen för att hitta banden. Fältet är `null` när varken besiktningen eller dess mall definierar intervall; hoppa över värmekarterendering i det fallet.
+Du konfigurerar intervallen på platsbesiktningen eller på dess mall. Om en besiktning saknar egna intervall fyller OpenWrench i mallens intervall vid läsning, så det inbäddade `siteSurvey.walkthroughHeatMapRanges` är redan upplöst. Du behöver aldrig hämta mallen för att hitta banden. Fältet är `null` när varken besiktningen eller dess mall definierar intervall; hoppa över värmekartrendering i det fallet.
 
 ## Skapa uppföljningsarbetsordrar
 
