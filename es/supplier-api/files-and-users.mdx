@@ -28,7 +28,7 @@ La respuesta (envoltura tipo `FileManager`) es un registro `FileDetails`: `{ "fi
 
 Usa el objeto devuelto tal cual en los campos de adjuntos: [adjuntos del proveedor](/es/supplier-api/work-orders#mantener-informado-al-comprador) en órdenes de trabajo, `attachments` de propuestas y facturas, e imágenes de check-in/check-out. Los PDFs de factura tienen su propio [endpoint de subir-y-publicar](/es/supplier-api/quotes-and-invoicing#sube-el-pdf-y-publica).
 
-**Descarga** con `GET /v1/supplier/file/download/{id}/{name}`, que transmite los bytes almacenados como adjunto. `{id}` es el `fileId`; `{name}` es el nombre de archivo con el que se sirve. Úsalo para extraer documentos proporcionados por el comprador desde `buyerAttachments`. Los fallos de descarga se responden con `400`.
+**Descarga** con `GET /v1/supplier/file/download/{id}/{name}`, que transmite los bytes almacenados como adjunto. `{id}` es el `fileId`; `{name}` es el nombre de archivo con el que se sirve. Úsalo para extraer documentos proporcionados por el comprador desde `buyerAttachments`. Los fallos de descarga devuelven `400`.
 
 ## Aprovisionamiento de usuarios de proveedor
 
