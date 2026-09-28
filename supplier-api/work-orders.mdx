@@ -75,7 +75,9 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
 
 **Decline** with `POST .../status_update/decline`. Only contacts of the work order's assigned supplier facility may decline. The work order leaves your queue through the supplier-change flow: its status returns to `PendingApproval`, or a private-network supplier is auto-picked, depending on the buyer's configuration. The note's `text` is recorded as the decline reason and reflected in what the buyer sees, so make it specific.
 
-Both calls take `{ "id": ..., "note": { ... } }` and return the updated work order.
+Both calls take `{ "id": ..., "note": { ... } }` and return the updated work order. `id` is the numeric work order `id` (an int64 that must exist), not the display `woNumber` string. Send it as a JSON number, not a quoted string. To check the value before you post, fetch it with `GET /v1/supplier/work_order/work_orders/{id}`.
+
+There is no work order `status_update` endpoint for completing a job. You complete work through [service call check-out](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
 
 ## Keep the buyer informed
 
