@@ -5,7 +5,7 @@ description: "Purchasing and inventory access for your internal service teams: p
 icon: "boxes-stacked"
 ---
 
-The Internal Teams API is the integration surface for the systems behind your in-house service teams' purchasing and inventory: purchase requests and their line items, purchase orders through receipt, parts and equipment catalogs, stock locations, and the parts consumed on work orders.
+The Internal Teams API is the integration surface for the systems behind your in-house service teams' purchasing and inventory. It covers purchase requests and their line items, purchase orders through receipt, parts and equipment catalogs, stock locations, and the parts consumed on work orders.
 
 ## Base URL
 
@@ -17,7 +17,7 @@ Internal-teams endpoints are served under the `/v1/partners/` path prefix.
 
 ## Authentication
 
-These endpoints require a **partner API key** — a separate credential from buyer and supplier API keys. A buyer API key will not work against `/v1/partners/` endpoints, even though this section lives under the Buyer API docs.
+These endpoints require a **partner API key**, a separate credential from buyer and supplier API keys. A buyer API key will not work against `/v1/partners/` endpoints, even though this section lives under the Buyer API docs.
 
 Every request must carry **two headers**: `X-API-KEY` (the partner key) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your company's data. Requests missing either header return `401`.
 
@@ -30,7 +30,7 @@ To have a partner API key and shared secret issued, contact [support@useopenwren
 
 ## Rate limits
 
-10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — back off and retry.
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests`. Back off and retry.
 
 ## Response envelope
 
@@ -56,11 +56,11 @@ Errors:
 
 ## Pagination and filtering
 
-List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters — pass a field name with a value (comma-separate multiple values) to filter the result set.
+List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters. Pass a field name with a value (comma-separate multiple values) to filter the result set.
 
 ## The purchasing flow
 
-A typical integration follows the purchasing lifecycle: read approved **purchase requests** and their line items, create a **purchase order** against a vendor, associate PR line items to PO line items, mark the PO **ordered**, and record **receipts** as items arrive (negative received quantities record returns). Parts, equipment types, vendors, and stock locations round out the reference data.
+A typical integration follows the purchasing lifecycle. Read approved **purchase requests** and their line items, then create a **purchase order** against a vendor. Associate PR line items to PO line items, mark the PO **ordered**, and record **receipts** as items arrive (negative received quantities record returns). Parts, equipment types, vendors, and stock locations round out the reference data.
 
 ## Detailed guides
 

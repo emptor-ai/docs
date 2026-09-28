@@ -66,7 +66,7 @@ curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
   }'
 ```
 
-`scheduleId`, `status`, `lastRunAt`, and `lastRunDueAt` are required; `woId` links the work order the run created (create it first via the [work orders](/buyer-api/work-orders#create-a-work-order) endpoint, with `isPM: true` and `plannedMaintenanceScheduleId` set), and `log` holds free-form diagnostics.
+`scheduleId`, `status`, `lastRunAt`, and `lastRunDueAt` are required. `woId` links the work order the run created. Create that work order first via the [work orders](/buyer-api/work-orders#create-a-work-order) endpoint, with `isPM: true` and `plannedMaintenanceScheduleId` set. `log` holds free-form diagnostics.
 
 The full external-scheduler loop:
 

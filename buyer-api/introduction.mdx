@@ -17,7 +17,7 @@ All buyer endpoints are under `/v1/buyer/`.
 
 ## Authentication
 
-Every request must carry **two headers**: `X-API-KEY` (your API key, issued per buyer contact) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your company — you only ever see your own data. Requests missing either header return `401`.
+Every request must carry **two headers**: `X-API-KEY` (your API key, issued per buyer contact) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your company, so you only ever see your own data. Requests missing either header return `401`.
 
 ```bash
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
@@ -29,12 +29,12 @@ To get an API key and shared secret, contact [support@useopenwrench.com](mailto:
 Keys do not expire on their own. To rotate one, request a new key/shared-secret pair from support, deploy the new pair, then ask support to revoke the old one.
 
 <Note>
-The **Internal Teams API** section further down this tab uses a **separate partner API key** — your buyer key will not authenticate against those `/v1/partners/` endpoints. See the [Internal Teams API introduction](/partners-api/introduction) for details.
+The **Internal Teams API** section further down this tab uses a **separate partner API key**. Your buyer key will not authenticate against those `/v1/partners/` endpoints. See the [Internal Teams API introduction](/partners-api/introduction) for details.
 </Note>
 
 ## Rate limits
 
-10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests`. Wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
 
 ## Keeping work orders in sync
 
@@ -70,7 +70,7 @@ Errors:
 
 ## Pagination and filtering
 
-List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters — pass a field name with a value (comma-separate multiple values) to filter the result set. Each endpoint's reference page lists its notable filters.
+List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). The API treats additional query parameters as field filters. Pass a field name with a value (comma-separate multiple values) to filter the result set. Each endpoint's reference page lists its notable filters.
 
 ## Date formats
 

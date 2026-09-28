@@ -61,4 +61,4 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 3. Take the first relationship's supplier facility and assign it, either at creation time (`supplierFacilityId` on the create body) or afterwards with `PATCH /v1/buyer/work_order/work_orders/{id}`.
 4. If the supplier declines, the work order returns to `PendingApproval` (or a private-network supplier may be auto-picked, per your configuration). On decline, re-run the ranking and assign the next candidate.
 
-Escalation ladders, response-time SLAs, and decline counts can all be layered on top of this loop; the ranking endpoint gives you the ordered candidates, and the work order's `statusChanges` tell you how each attempt went.
+You can layer escalation ladders, response-time SLAs, and decline counts on top of this loop. The ranking endpoint gives you the ordered candidates, and the work order's `statusChanges` tell you how each attempt went.

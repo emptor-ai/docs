@@ -28,7 +28,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/site_survey/walkthroughs/230"
 ```
 
-La pagination standard et les filtres par champ s'appliquent, ainsi que la restriction par emplacement et par marque de votre rôle. Les bons de travail référencés depuis les réponses aux tâches d'une visite sont filtrés selon votre permission de lecture ; différentes clés peuvent donc voir différents bons de travail liés à la même visite.
+La pagination standard et les filtres par champ s'appliquent, ainsi que la restriction par emplacement et par marque de votre rôle. Les bons de travail référencés depuis les réponses aux tâches d'une visite sont filtrés selon votre permission de lecture. Différentes clés peuvent donc voir différents bons de travail liés à la même visite.
 
 ## Afficher les scores avec les plages de carte thermique
 
@@ -61,10 +61,10 @@ Vous configurez les plages sur l'enquête de site ou sur son modèle. Si une enq
 
 Lorsqu'un constat de visite nécessite un correctif, créez le bon de travail avec les champs de liaison définis :
 
-- `walkThroughId` — la visite dont provient le constat.
-- `siteSurveyTaskTitleId` — la tâche spécifique en son sein.
-- `includeWalkthroughTaskList` — copie éventuellement la liste des tâches de la visite sur le bon de travail.
+- `walkThroughId` : la visite dont provient le constat.
+- `siteSurveyTaskTitleId` : la tâche spécifique en son sein.
+- `includeWalkthroughTaskList` : copie éventuellement la liste des tâches de la visite sur le bon de travail.
 
-`walkThroughId` et `siteSurveyTaskTitleId` **doivent être fournis ensemble ou pas du tout** ; la création est rejetée sinon. Voir [Créer un bon de travail](/buyer-api/work-orders#create-a-work-order) pour le reste du payload.
+`walkThroughId` et `siteSurveyTaskTitleId` **doivent être fournis ensemble ou pas du tout**. Sinon, l'API rejette la création. Voir [Créer un bon de travail](/buyer-api/work-orders#create-a-work-order) pour le reste du payload.
 
 Le lien est visible dans les deux sens : le bon de travail porte `walkThroughId`, et les réponses aux tâches de la visite référencent les bons de travail issus de celles-ci. Cela fait de « chaque constat ouvert des visites du trimestre dernier, avec l'état du correctif » un rapport en deux requêtes.

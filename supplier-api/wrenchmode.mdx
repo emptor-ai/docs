@@ -63,7 +63,7 @@ The event vocabulary splits into trip events (`began_trip` through `trip_cancell
 
 - **Analytics** for dashboards, payroll, and utilization reports: one number per technician per period, pause math already done.
 - **Raw events** for auditing a suspicious total, reconstructing a visit minute-by-minute, or feeding your own analytics warehouse.
-- **Per-visit** questions are usually better served by the service-call expansion `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, which returns exactly the events in the visit's check-in/check-out window plus the pause-excluded `trueWorkTimeMillis`. See [Service calls](/supplier-api/service-calls#reading-a-service-call-back).
+- **Per-visit** questions are usually better served by the service-call expansion `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`. It returns exactly the events in the visit's check-in/check-out window plus the pause-excluded `trueWorkTimeMillis`. See [Service calls](/supplier-api/service-calls#reading-a-service-call-back).
 
 ## Worked patterns
 

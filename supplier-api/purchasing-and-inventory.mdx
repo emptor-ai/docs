@@ -48,7 +48,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 These two endpoints are not rate limited and use internal pagination defaults rather than the external 10/25 cap.
 
-The bridge between PRs and POs is `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}`: it takes comma-separated PR line item ids, sets each to `orderInProgress` with its `associatedPurchaseOrderLineItemId`, and recomputes each parent PR's status. Ids you lack permission for are silently dropped, so compare the returned list against what you sent.
+The bridge between PRs and POs is `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}`. It takes comma-separated PR line item ids, sets each to `orderInProgress` with its `associatedPurchaseOrderLineItemId`, and recomputes each parent PR's status. Ids you lack permission for are silently dropped, so compare the returned list against what you sent.
 
 ## Purchase orders
 
@@ -153,7 +153,7 @@ Read-only reference data, all with standard pagination and field filters:
 
 ## Order.co webhook
 
-`POST /v1/supplier/inventory/webhook/purchase_order` is an **inbound** webhook for third-party purchasing systems, currently Order.co, and only for supplier companies registered for it (others receive `400`). The payload carries `order_id` (the third-party id), `purchase_order_number` (the OpenWrench PO id as a string), a `status`, and a status-specific `message` object. Effects by status:
+`POST /v1/supplier/inventory/webhook/purchase_order` is an **inbound** webhook for third-party purchasing systems, currently Order.co. It is only available to supplier companies registered for it (others receive `400`). The payload carries `order_id` (the third-party id), `purchase_order_number` (the OpenWrench PO id as a string), a `status`, and a status-specific `message` object. Effects by status:
 
 - `approved` / `error` — append a note to the PO.
 - `rejected` — cancel the PO.

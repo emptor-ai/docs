@@ -2,7 +2,7 @@
 
 > Parcourez de bout en bout le cycle de vie des achats de l'API Internal Teams : lisez les demandes d'achat approuvées, créez des bons de commande, associez les postes et enregistrez les réceptions.
 
-Ce guide parcourt le cycle de vie des achats de bout en bout avec l'API Internal Teams : les techniciens créent des **demandes d'achat** (PR), votre système d'achats les transforme en **bons de commande** (PO) auprès d'un fournisseur, et les marchandises arrivent sous forme de **réceptions** qui mettent à jour le stock. Il suppose que vous disposez d'une clé d'API partenaire (voir l'[introduction](/partners-api/introduction)).
+Ce guide parcourt le cycle de vie des achats de bout en bout avec l'API Internal Teams. Les techniciens créent des **demandes d'achat** (PR), votre système d'achats les transforme en **bons de commande** (PO) auprès d'un fournisseur, et les marchandises arrivent sous forme de **réceptions** qui mettent à jour le stock. Il suppose que vous disposez d'une clé d'API partenaire (voir l'[introduction](/partners-api/introduction)).
 
 Tous les exemples supposent :
 
@@ -14,7 +14,7 @@ export SECRET="<shared-secret>"     # en-tête OW-KEY
 
 ## Vocabulaire des statuts
 
-**Demandes d'achat** : `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`. Le statut d'une PR est recalculé à partir de ses postes au fur et à mesure qu'ils sont associés à des PO, donc la majeure partie du mouvement se fait automatiquement.
+**Demandes d'achat** : `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`. Le statut d'une PR est recalculé à partir de ses postes au fur et à mesure qu'ils sont associés à des PO. La majeure partie du mouvement se fait donc automatiquement.
 
 **Bons de commande** : `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
 
@@ -41,7 +41,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/purchase_request_line_items/count_by?status=approved"
 ```
 
-Les statuts de PR peuvent également être définis directement lorsque votre flux d'approbation vit en dehors d'OpenWrench : `PATCH .../purchase_requests/{id}/{status}` pour tout statut du vocabulaire, et `PATCH .../purchase_requests/{id}/cancelled` pour annuler (uniquement depuis `requested` ou `approved` ; sinon `400`).
+Vous pouvez également définir directement les statuts de PR lorsque votre flux d'approbation vit en dehors d'OpenWrench : `PATCH .../purchase_requests/{id}/{status}` pour tout statut du vocabulaire, et `PATCH .../purchase_requests/{id}/cancelled` pour annuler (uniquement depuis `requested` ou `approved` ; sinon `400`).
 
 ## 2. Créer le bon de commande
 
@@ -85,7 +85,7 @@ curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/purchase_request_line_items/associate_po_line_item/8801,8802/9902"
 ```
 
-Chaque poste de PR listé passe à `orderInProgress` avec son `associatedPurchaseOrderLineItemId` défini, et le statut de chaque PR parente est recalculé. Les identifiants que votre clé ne peut pas lire sont **silencieusement ignorés** (l'appel peut retourner une liste vide), vérifiez donc les articles retournés par rapport à ce que vous avez envoyé.
+Chaque poste de PR listé passe à `orderInProgress` avec son `associatedPurchaseOrderLineItemId` défini, et le statut de chaque PR parente est recalculé. Les identifiants que votre clé ne peut pas lire sont **silencieusement ignorés** (l'appel peut retourner une liste vide). Vérifiez donc les articles retournés par rapport à ce que vous avez envoyé.
 
 ### Réviser les postes
 
@@ -104,11 +104,11 @@ curl -X PATCH -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/purchase_orders/350/ordered"
 ```
 
-Cela définit le PO à `ordered` et envoie la commande par courriel au fournisseur. La réponse de succès est l'enveloppe de chaîne de confirmation (`"type": "Email"`, `"data": "Email has been sent"`), **pas** le PO ; récupérez à nouveau le PO pour son nouvel état. Pour abandonner à la place, `PATCH .../purchase_orders/{id}/cancel` (qui retourne le PO mis à jour).
+Cela définit le PO à `ordered` et envoie la commande par courriel au fournisseur. La réponse de succès est l'enveloppe de chaîne de confirmation (`"type": "Email"`, `"data": "Email has been sent"`), **pas** le PO. Récupérez à nouveau le PO pour son nouvel état. Pour abandonner à la place, `PATCH .../purchase_orders/{id}/cancel` (qui retourne le PO mis à jour).
 
 ## 4. Enregistrer les réceptions à l'arrivée des marchandises
 
-`PUT /v1/partners/inventory/purchase_order_receipts` enregistre la réception par rapport à un poste du PO. Sur cet endpoint, `updatedBy` et `supplierFacilityId` **doivent être fournis dans le corps** ; ils ne sont pas dérivés de la clé.
+`PUT /v1/partners/inventory/purchase_order_receipts` enregistre la réception par rapport à un poste du PO. Sur cet endpoint, `updatedBy` et `supplierFacilityId` **doivent être fournis dans le corps**. Ils ne sont pas dérivés de la clé.
 
 ```bash
 curl -X PUT "$BASE/v1/partners/inventory/purchase_order_receipts" \
@@ -138,6 +138,6 @@ Relisez une réception avec `GET /v1/partners/inventory/purchase_order_receipts/
 ## Idempotence et gestion des erreurs
 
 - Les créations ne sont pas idempotentes : réessayer une création de PO qui a expiré peut dupliquer la commande. Utilisez l'endpoint de liste avec un filtre (par exemple sur vos références externes de type `receiptNumber`) pour vérifier avant de réessayer.
-- Les problèmes de permission apparaissent sous forme de `400` (avec l'enveloppe d'erreur standard), et les identifiants silencieusement ignorés sur les endpoints en masse et d'association signifient qu'un appel « réussi » peut avoir fait moins que ce que vous avez demandé. Rapprochez toujours le payload de la réponse de votre requête.
+- Les problèmes de permission apparaissent sous forme de `400` (avec l'enveloppe d'erreur standard). Les identifiants silencieusement ignorés sur les endpoints en masse et d'association signifient qu'un appel « réussi » peut avoir fait moins que ce que vous avez demandé. Rapprochez toujours le payload de la réponse de votre requête.
 - Les [endpoints du catalogue](/partners-api/catalog-and-stock) fournissent les valeurs `partId`, `equipmentTypeId`, `partEquipmentVendorId` et `stockLocationId` dont ce flux a besoin.
 - Chaque modification de bon de commande, de ligne ou de réception effectuée via ces endpoints est consignée dans le journal d'audit du bon de commande dans OpenWrench, attribuée au contact associé à votre clé d'API.

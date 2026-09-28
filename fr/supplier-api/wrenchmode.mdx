@@ -61,11 +61,11 @@ Le vocabulaire des événements se divise en événements de trajet (`began_trip
 
 - **Analyses** pour les tableaux de bord, la paie et les rapports d'utilisation : un chiffre par technicien par période, calcul des pauses déjà effectué.
 - **Événements bruts** pour auditer un total suspect, reconstruire une visite minute par minute, ou alimenter votre propre entrepôt analytique.
-- **Les questions par visite** sont généralement mieux servies par l'extension de visite de service `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, qui retourne exactement les événements dans la fenêtre pointage d'entrée/sortie de la visite plus le `trueWorkTimeMillis` hors pauses. Voir [Visites de service](/supplier-api/service-calls#reading-a-service-call-back).
+- **Pour les questions par visite**, l'extension de visite de service `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs` est généralement plus adaptée. Elle retourne exactement les événements dans la fenêtre pointage d'entrée/sortie de la visite plus le `trueWorkTimeMillis` hors pauses. Voir [Visites de service](/supplier-api/service-calls#reading-a-service-call-back).
 
 ## Schémas éprouvés
 
-**Extraction hebdomadaire de la paie.** Chaque lundi, appelez l'analyse pour la semaine précédente, joignez sur l'adresse courriel du technicien avec votre système de paie, et utilisez temps de travail + temps de conduite comme entrée des heures payées. Un appel par semaine par établissement vous maintient largement sous la limite de débit.
+**Extraction hebdomadaire de la paie.** Chaque lundi, appelez l'analyse pour la semaine précédente et joignez sur l'adresse courriel du technicien avec votre système de paie. Utilisez temps de travail + temps de conduite comme entrée des heures payées. Un appel par semaine par établissement vous maintient largement sous la limite de débit.
 
 **Rapport mensuel d'utilisation.** Analyse avec des limites de mois (`2026-08-01` à `2026-08-31` est dans le plafond d'un mois) ; divisez le temps de travail par le temps planifié depuis votre système de planification.
 

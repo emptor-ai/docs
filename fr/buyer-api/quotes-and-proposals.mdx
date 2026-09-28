@@ -46,7 +46,7 @@ Règles de portée à connaître :
 
 ## À l'intérieur d'une proposition
 
-Le montant est ventilé dans les mêmes sections que les factures : `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` et `miscLineItems`, chaque section avec son propre taux de taxe et son `...TotalBeforeTax`, cumulés dans `totalBeforeTax`, `tax` et `totalAfterTax`. **Les valeurs monétaires sont sérialisées sous forme de chaînes** ; analysez-les comme des décimales, pas des flottants, si vous effectuez des calculs.
+Le montant est ventilé dans les mêmes sections que les factures : `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` et `miscLineItems`, chaque section avec son propre taux de taxe et son `...TotalBeforeTax`. Ces sections se cumulent dans `totalBeforeTax`, `tax` et `totalAfterTax`. **Les valeurs monétaires sont sérialisées sous forme de chaînes** ; analysez-les comme des décimales, pas des flottants, si vous effectuez des calculs.
 
 Autres champs utiles : `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (le montant à ne pas dépasser du bon de travail au moment de la soumission), `proposalPdfLink`, `attachments`, `submittedAt` et `approvedAt`.
 

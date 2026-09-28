@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/location
 À noter :
 
 - L'endpoint de liste plafonne `limit` à **10** (la plupart des endpoints de liste autorisent 25). Prévoyez vos boucles de pagination en conséquence.
-- `multiple/{ids}` prend des identifiants séparés par des virgules et **omet silencieusement** tout identifiant pour lequel vous n'avez pas la permission de lecture ; vérifiez quels identifiants sont revenus plutôt que de supposer qu'ils le sont tous.
+- `multiple/{ids}` prend des identifiants séparés par des virgules et **omet silencieusement** tout identifiant pour lequel vous n'avez pas la permission de lecture. Vérifiez quels identifiants sont revenus plutôt que de supposer qu'ils le sont tous.
 - La seule écriture est `PATCH /v1/buyer/location/locations/{id}`, et elle ne lit **que `locationTypeDetails`** dans le corps (valeurs des champs personnalisés pour le type de l'emplacement). Tous les autres champs sont ignorés.
 
 Les régions regroupent les emplacements : `GET /v1/buyer/location/regions` et `GET /v1/buyer/location/regions/{id}`.
@@ -180,10 +180,10 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readi
 
 Remarques :
 
-- `valueType`, `valueUnit` et `locationId` ne sont **pas** lus depuis le corps de la requête de création du compteur : ils sont dérivés côté serveur à partir de l'actif et du type de compteur référencés, donc les envoyer n'a aucun effet.
+- `valueType`, `valueUnit` et `locationId` ne sont **pas** lus depuis le corps de la requête de création du compteur. Le serveur les dérive de l'actif et du type de compteur référencés : les envoyer n'a donc aucun effet.
 - `readingMode` (renommé depuis `seriesType`) vaut `direct_reading`, `change_from_baseline` ou `compare_to_target` ; la valeur par défaut est `direct_reading` si omis.
 - Les endpoints de liste et de comptage des relevés ne sont pas limités à un seul compteur : ils couvrent tous les relevés de votre entreprise acheteuse, sauf si vous filtrez par `meterId`.
-- Lorsque le `readingMode` d'un compteur est `change_from_baseline`, le `lastBaselineValue` d'un relevé récupéré est calculé à partir du relevé antérieur le plus récent marqué `isBaseline` sur ce compteur, à la date `recordedAt` ; pour les autres modes, il vaut `null`.
+- Lorsque le `readingMode` d'un compteur est `change_from_baseline`, le `lastBaselineValue` d'un relevé récupéré est calculé à partir du relevé antérieur le plus récent marqué `isBaseline` sur ce compteur, à la date `recordedAt`. Pour les autres modes, il vaut `null`.
 
 ## Stratégie de synchronisation
 

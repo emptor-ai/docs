@@ -5,7 +5,7 @@ description: "Programmatic access for service providers: receive work orders, sc
 icon: "screwdriver-wrench"
 ---
 
-The OpenWrench Supplier API gives service providers programmatic access to their side of the platform: receiving and updating work orders, scheduling and documenting service calls, submitting quotes and invoices, pulling WrenchMode technician time data, and managing purchasing and inventory.
+The OpenWrench Supplier API gives service providers programmatic access to their side of the platform. Use it to receive and update work orders, schedule and document service calls, submit quotes and invoices, pull WrenchMode technician time data, and manage purchasing and inventory.
 
 ## Base URL
 
@@ -17,7 +17,7 @@ All supplier endpoints are under `/v1/supplier/`.
 
 ## Authentication
 
-Every request must carry **two headers**: `X-API-KEY` (your API key, issued per supplier contact) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your facility — you only ever see work orders, invoices, and data that belong to you. Requests missing either header return `401`.
+Every request must carry **two headers**: `X-API-KEY` (your API key, issued per supplier contact) and `OW-KEY` (the OpenWrench shared secret issued alongside it). The key automatically scopes every request to your facility. You only ever see work orders, invoices, and data that belong to you. Requests missing either header return `401`.
 
 ```bash
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
@@ -30,7 +30,7 @@ Keys do not expire on their own. To rotate one, request a new key/shared-secret 
 
 ## Rate limits
 
-10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests` — wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
+10 requests per 20-second window per key. Beyond that you'll receive `429 Too Many Requests`. Wait at least 20 seconds before retrying, and space background jobs (such as full paginated exports) so they stay under the cap.
 
 ## Keeping work orders in sync
 
@@ -66,7 +66,7 @@ Errors:
 
 ## Pagination and filtering
 
-List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters — pass a field name with a value (comma-separate multiple values) to filter the result set. Each endpoint's reference page lists its notable filters.
+List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as field filters. Pass a field name with a value (comma-separate multiple values) to filter the result set. Each endpoint's reference page lists its notable filters.
 
 ## Date formats
 
@@ -76,7 +76,7 @@ When sending date-times, use ISO 8601 with a `T` between the date and time and a
 
 ## Technician time data
 
-The WrenchMode endpoints expose per-technician work and drive time: `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` returns a per-technician drive/work/total rollup (window capped at 1 month), and `GET /v1/supplier/wrench_mode/events` returns the raw event log behind it. Service-call expansions (`/with_work_logs`, `/with_tech_details`) give the per-visit story.
+The WrenchMode endpoints expose per-technician work and drive time: `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` returns a per-technician drive/work/total rollup (window capped at 1 month). `GET /v1/supplier/wrench_mode/events` returns the raw event log behind it. Service-call expansions (`/with_work_logs`, `/with_tech_details`) give the per-visit story.
 
 ## Detailed guides
 

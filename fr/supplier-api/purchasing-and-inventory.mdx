@@ -2,7 +2,7 @@
 
 > Gérez tout le cycle de vie des achats : demandes d'achat, bons de commande et postes, réceptions et retours, catalogues, niveaux de stock et webhook Order.co.
 
-Les endpoints d'inventaire sous `/v1/supplier/inventory/` couvrent tout le cycle de vie des achats : les techniciens créent des **demandes d'achat** (PR), le service des achats les transforme en **bons de commande** (PO) auprès des fournisseurs, les marchandises arrivent sous forme de **réceptions**, et les niveaux de stock se mettent à jour par **emplacement de stock**. La même surface est reflétée pour les équipes internes des acheteurs dans l'[API Internal Teams](/partners-api/introduction).
+Les endpoints d'inventaire sous `/v1/supplier/inventory/` couvrent tout le cycle de vie des achats. Les techniciens créent des **demandes d'achat** (PR), le service des achats les transforme en **bons de commande** (PO) auprès des fournisseurs, les marchandises arrivent sous forme de **réceptions**, et les niveaux de stock se mettent à jour par **emplacement de stock**. La même surface est reflétée pour les équipes internes des acheteurs dans l'[API Internal Teams](/partners-api/introduction).
 
 Tous les exemples supposent :
 
@@ -31,7 +31,7 @@ Deux écritures de statut :
 - `PATCH /v1/supplier/inventory/purchase_requests/{id}/cancelled` annule, et ne fonctionne que depuis un statut annulable (`requested` ou `approved`) ; tout autre statut renvoie `400`.
 - `PATCH /v1/supplier/inventory/purchase_requests/{id}/{status}` définit n'importe quel statut de la liste ci-dessus. Les noms inconnus sont rejetés.
 
-En fonctionnement normal, vous définissez rarement directement les statuts de PR : ils sont **recalculés à partir des postes** au fur et à mesure que vous les associez à des PO, et la satisfaction se produit à la complétion des bons de travail.
+En fonctionnement normal, vous définissez rarement directement les statuts de PR. Ils sont **recalculés à partir des postes** au fur et à mesure que vous les associez à des PO, et la satisfaction se produit à la complétion des bons de travail.
 
 ### Postes de PR
 
@@ -46,7 +46,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 Ces deux endpoints ne sont pas soumis à la limite de débit et utilisent les valeurs par défaut de pagination internes plutôt que le plafond externe 10/25.
 
-Le pont entre les PR et les PO est `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}` : il prend des identifiants de postes de PR séparés par des virgules, définit chacun à `orderInProgress` avec son `associatedPurchaseOrderLineItemId`, et recalcule le statut de chaque PR parente. Les identifiants pour lesquels vous n'avez pas la permission sont silencieusement supprimés, comparez donc la liste retournée avec ce que vous avez envoyé.
+Le pont entre les PR et les PO est `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}`. Il prend des identifiants de postes de PR séparés par des virgules, définit chacun à `orderInProgress` avec son `associatedPurchaseOrderLineItemId`, et recalcule le statut de chaque PR parente. Les identifiants pour lesquels vous n'avez pas la permission sont silencieusement supprimés. Comparez donc la liste retournée avec ce que vous avez envoyé.
 
 ## Bons de commande
 
@@ -85,7 +85,7 @@ curl -X POST "$BASE/v1/supplier/inventory/purchase_orders" \
   }'
 ```
 
-Les postes distinguent les lignes de pièces des lignes d'équipement via `isEquipmentLine` ; les lignes de pièces portent `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, les lignes d'équipement les équivalents `equipment*`. `prLineItemIds` relie la ligne aux demandes d'achat qu'elle satisfait. Passer un `id` de premier niveau met à jour un PO existant.
+Les postes distinguent les lignes de pièces des lignes d'équipement via `isEquipmentLine`. Les lignes de pièces portent `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, les lignes d'équipement les équivalents `equipment*`. `prLineItemIds` relie la ligne aux demandes d'achat qu'elle satisfait. Passer un `id` de premier niveau met à jour un PO existant.
 
 ### Remplacer les postes en masse
 
@@ -95,7 +95,7 @@ Les postes distinguent les lignes de pièces des lignes d'équipement via `isEqu
 Tous les postes **non reçus** du bon de commande cible sont d'abord supprimés, puis les articles soumis sont créés. Envoyez toujours l'ensemble complet des lignes ouvertes prévues, jamais seulement le delta. Les articles pour lesquels vous n'avez pas la permission d'écriture sont silencieusement ignorés.
 </Warning>
 
-`supplierFacilityId` et `supplierCompanyId` sur chaque article sont écrasés depuis votre clé, les listes d'identifiants de pièces/équipements/PR du PO sont recalculées, et la notification de bon de commande est renvoyée. Non soumis à la limite de débit.
+OpenWrench écrase `supplierFacilityId` et `supplierCompanyId` sur chaque article à partir de votre clé. Les listes d'identifiants de pièces/équipements/PR du PO sont recalculées et la notification de bon de commande est renvoyée. Non soumis à la limite de débit.
 
 ### Marquer comme commandé
 
@@ -129,7 +129,7 @@ curl -X PUT "$BASE/v1/supplier/inventory/purchase_order_receipts" \
 Requis : `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy`, `supplierFacilityId`. Règles :
 
 - `receivedQuantity` doit être non nul. **Une quantité négative enregistre un retour.**
-- La réception met à jour les quantités et coûts reçus du poste du PO et les enregistrements de stock à l'emplacement de stock de destination ; le statut du PO se cumule à `partially_received`/`received` en conséquence.
+- La réception met à jour les quantités et coûts reçus du poste du PO et les enregistrements de stock à l'emplacement de stock de destination. Le statut du PO se cumule à `partially_received`/`received` en conséquence.
 - Pour l'équipement sérialisé, `equipmentPerStockLocationReceiptValues` (ou `assetReceiptValues`/`receiptValuesWithoutId`) porte une entrée `{ serialNumber, assetNumber }` par unité. La longueur de la liste doit être égale à `receivedQuantity`, ces tableaux ne sont pas autorisés sur les retours, et les numéros de série ou d'actif déjà utilisés sont rejetés.
 - Les métadonnées de facture fournisseur (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) peuvent être enregistrées sur la réception.
 
@@ -151,12 +151,12 @@ Données de référence en lecture seule, toutes avec pagination standard et fil
 
 ## Webhook Order.co
 
-`POST /v1/supplier/inventory/webhook/purchase_order` est un webhook **entrant** pour les systèmes d'achat tiers, actuellement Order.co, et uniquement pour les entreprises fournisseurs qui y sont enregistrées (les autres reçoivent `400`). Le payload porte `order_id` (l'identifiant tiers), `purchase_order_number` (l'identifiant OpenWrench du PO en tant que chaîne), un `status` et un objet `message` spécifique au statut. Effets par statut :
+`POST /v1/supplier/inventory/webhook/purchase_order` est un webhook **entrant** pour les systèmes d'achat tiers, actuellement Order.co. Il est réservé aux entreprises fournisseurs qui y sont enregistrées (les autres reçoivent `400`). Le payload porte `order_id` (l'identifiant tiers), `purchase_order_number` (l'identifiant OpenWrench du PO en tant que chaîne), un `status` et un objet `message` spécifique au statut. Effets par statut :
 
-- `approved` / `error` — ajoute une note au PO.
-- `rejected` — annule le PO.
-- `completed` — marque le PO comme commandé.
-- `shipping_update` — ajoute une note d'expédition ; lorsque `message.shipment_delivery_date` est présent, crée automatiquement des réceptions pour tous les postes non reçus.
+- `approved` / `error` : ajoute une note au PO.
+- `rejected` : annule le PO.
+- `completed` : marque le PO comme commandé.
+- `shipping_update` : ajoute une note d'expédition ; lorsque `message.shipment_delivery_date` est présent, crée automatiquement des réceptions pour tous les postes non reçus.
 
 Chaque requête et réponse est auditée, et la forme de la réponse varie selon la branche.
 

@@ -19,7 +19,7 @@ Ce que vous voyez dépend du type de fournisseur auquel votre clé appartient :
 - **Les clés d'équipe de service interne** (votre entreprise fournisseur est l'équipe interne de l'acheteur) reçoivent des enregistrements complets.
 - **Les clés de fournisseur tiers** reçoivent des enregistrements masqués sur les bons de travail, emplacements et factures : les champs privés à l'acheteur sont vidés avant que la réponse ne soit retournée.
 
-Si un champ que vous attendez est systématiquement vide, le masquage est la première chose à vérifier. La portée elle-même ne peut pas être élargie par des filtres ; les filtres de sécurité locataire dérivés de votre clé s'appliquent toujours.
+Si un champ que vous attendez est systématiquement vide, le masquage est la première chose à vérifier. Les filtres ne peuvent pas élargir la portée elle-même ; les filtres de sécurité locataire dérivés de votre clé s'appliquent toujours.
 
 ## Entreprises acheteurs
 
@@ -64,7 +64,7 @@ La lecture d'un actif unique enrichit les compteurs de l'actif (type d'enveloppe
 
 ## Étiquettes d'actifs
 
-Les étiquettes d'actifs sont des marqueurs définis par l'acheteur sur les actifs (un nom plus une couleur optionnelle). Elles appartiennent toujours à une entreprise acheteur, donc l'accès via l'API Fournisseur est limité aux clés de l'équipe de service interne d'un acheteur : ces clés voient le catalogue de leur entreprise acheteur, tandis que la clé d'un fournisseur tiers obtient une liste vide.
+Les étiquettes d'actifs sont des marqueurs définis par l'acheteur sur les actifs (un nom plus une couleur optionnelle). Elles appartiennent toujours à une entreprise acheteur. L'accès via l'API Fournisseur est donc limité aux clés de l'équipe de service interne d'un acheteur : ces clés voient le catalogue de leur entreprise acheteur, tandis que la clé d'un fournisseur tiers obtient une liste vide.
 
 ```bash
 # Le catalogue (clés d'équipe de service interne uniquement)

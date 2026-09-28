@@ -2,7 +2,7 @@
 
 > Lisez, approuvez et payez les factures des fournisseurs avec l'API Acheteur OpenWrench, y compris les transitions de statut, la synchronisation avec les systèmes de comptabilité fournisseurs, les exports aplatis et les mises à jour groupées.
 
-Les fournisseurs facturent les bons de travail complétés au moyen de factures ; l'API Acheteur est l'endroit où votre intégration comptable les lit, les fait progresser dans le circuit d'approbation et les marque comme payées. Les factures peuvent aussi être rattachées à un projet plutôt qu'à un bon de travail. Les mêmes statuts et endpoints de paiement s'appliquent, avec les différences signalées ci-dessous.
+Les fournisseurs facturent les bons de travail complétés au moyen de factures. L'API Acheteur est l'endroit où votre intégration comptable les lit, les fait progresser dans le circuit d'approbation et les marque comme payées. Les factures peuvent aussi être rattachées à un projet plutôt qu'à un bon de travail. Les mêmes statuts et endpoints de paiement s'appliquent, avec les différences signalées ci-dessous.
 
 Tous les exemples supposent :
 
@@ -43,7 +43,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-Une facture est reliée à son `supplierFacilityId` plus **exactement un** des identifiants `workOrderId` ou `projectId` (l'autre est `null`, tout comme le `workOrder` / `project` hydraté). Les factures de bon de travail portent toujours `locationId` et `buyerFacilityId` ; les factures de projet ne les portent que si le client les a fournis, donc les deux peuvent être `null`. La facture porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`, cumulés dans `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées sous forme de chaînes. Un court résumé de la portée dérivé par IA peut apparaître dans `title`. Le PDF rendu se trouve dans `invoicePDFs` ; les fichiers d'appui se trouvent dans `attachments` (voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments)).
+Une facture est reliée à son `supplierFacilityId` plus **exactement un** des identifiants `workOrderId` ou `projectId` (l'autre est `null`, tout comme le `workOrder` / `project` hydraté). Les factures de bon de travail portent toujours `locationId` et `buyerFacilityId` ; les factures de projet ne les portent que si le client les a fournis, donc les deux peuvent être `null`. La facture porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`. Ces sections se cumulent dans `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées sous forme de chaînes. Un court résumé de la portée dérivé par IA peut apparaître dans `title`. Le PDF rendu se trouve dans `invoicePDFs` ; les fichiers d'appui se trouvent dans `attachments` (voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments)).
 
 ### Filtrer par type d'entité
 
@@ -87,7 +87,7 @@ curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
   -d '{ "workOrderId": "9001" }'
 ```
 
-La recherche tente `workOrderId` en premier et se rabat sur `externalWorkOrderId`, toujours au sein de votre entreprise. Les factures déjà `paid` sont retournées inchangées (réessai sans risque) ; les factures `approved` ou `processing` sont marquées comme payées ; une facture dans tout autre statut retourne `400` avec « Invoice not found ».
+La recherche tente `workOrderId` en premier et se rabat sur `externalWorkOrderId`, toujours au sein de votre entreprise. Les factures déjà `paid` sont retournées inchangées (réessai sans risque). Les factures `approved` ou `processing` sont marquées comme payées. Une facture dans tout autre statut retourne `400` avec « Invoice not found ».
 
 ## Factures de projet
 
@@ -102,7 +102,7 @@ Les factures de projet sont rattachées à un projet (`projectId`) plutôt qu'à
 - Le contrôle de doublons « une facture par fournisseur » au niveau du bon de travail.
 - La validation sur `taxLineItems` limitée à la devise (les montants sont toujours validés comme numériques).
 
-Les analyses de coût par emplacement et de coût par établissement n'incluent que les factures qui portent le champ correspondant, donc une facture de projet créée sans `locationId` ou `buyerFacilityId` est exclue de ces rapports.
+Les analyses de coût par emplacement et de coût par établissement n'incluent que les factures qui portent le champ correspondant. Une facture de projet créée sans `locationId` ou `buyerFacilityId` est donc exclue de ces rapports.
 
 Le raccourci `POST status/paid/by_work_order_id` ne correspond qu'aux factures de bon de travail ; pour une facture de projet, marquez-la comme payée par `id` via `POST status/paid`.
 

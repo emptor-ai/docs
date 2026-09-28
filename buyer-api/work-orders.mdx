@@ -184,7 +184,7 @@ When your integration receives this `409`, wait for the technician to check out 
 | `WorkUnsatisfactory` | Buyer | You rejected the completed work. |
 | `CancelledWithReason` | Buyer | Cancelled. |
 
-The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps; your side observes them through [webhooks](/buyer-api/webhooks) or by polling (`statusChangedAt`, `statusChanges`) and acts on the buyer-owned ones.
+The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps. Your side observes them through [webhooks](/buyer-api/webhooks) or by polling (`statusChangedAt`, `statusChanges`) and acts on the buyer-owned ones.
 
 ## Notes
 
@@ -206,7 +206,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
   }'
 ```
 
-**Tag people on a note** by adding `taggedUsers` beside the `note`: a list of contact email addresses to @mention. OpenWrench folds each email into `note.elements` as a `user` element, the same shape the apps write for an @mention, so you don't need to build the `elements` structure yourself. Tagged contacts are added to the work order's subscriber list if they aren't subscribed already.
+**Tag people on a note** by adding `taggedUsers` beside the `note`: a list of contact email addresses to @mention. OpenWrench folds each email into `note.elements` as a `user` element, the same shape the apps write for an @mention. You don't need to build the `elements` structure yourself. Tagged contacts are added to the work order's subscriber list if they aren't subscribed already.
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes" \
@@ -230,7 +230,7 @@ Rules for `taggedUsers`:
 - An entry that is not a valid email address, or a list of more than 25 emails, is rejected with a `400` of type `invalidInputDataException`. Nothing is persisted.
 - An empty list is ignored. Sending `taggedUsers` without a `note` object is rejected with `400`.
 
-**Bulk-append photos** with `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Use it when you have a batch of photos to post (a technician's before/after set, for example): subscribers receive a single grouped notification instead of one notification per photo. The body is `{ "id": <woId>, "notes": [ ... ] }` with 1–25 notes, and each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. Repeating the same photo URL within a request is rejected with `400`. The server stamps every note in the batch with the same `noteAddedAt` and preserves the order you sent them in.
+**Bulk-append photos** with `PATCH /v1/buyer/work_order/work_orders/append_notes/bulk`. Use it when you have a batch of photos to post (a technician's before/after set, for example): subscribers receive a single grouped notification instead of one notification per photo. The body is `{ "id": <woId>, "notes": [ ... ] }` with 1–25 notes. Each note must carry a `photo` URL and no other content: `text` must be empty and `video`, `audio`, `otherFile`, and `elements` must be absent. Repeating the same photo URL within a request is rejected with `400`. The server stamps every note in the batch with the same `noteAddedAt` and preserves the order you sent them in.
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \

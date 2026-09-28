@@ -49,7 +49,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 `GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` retourne des relations acheteur–fournisseur, chacune enrichie de vos détails de relation (contacts et adresses courriel de routage).
 
 <Warning>
-**Le rang est transmis par l'ordre du tableau.** Tout `sort_by` que vous passez est délibérément ignoré afin que l'ordre du tableau soit toujours égal au rang. L'endpoint est paginé (par défaut 10, max 25 par page), le rang se poursuit donc à travers les pages : le premier élément de la page deux est de rang 11.
+**Le rang est transmis par l'ordre du tableau.** Tout `sort_by` que vous passez est délibérément ignoré afin que l'ordre du tableau soit toujours égal au rang. L'endpoint est paginé (par défaut 10, max 25 par page). Le rang se poursuit donc à travers les pages : le premier élément de la page deux est de rang 11.
 </Warning>
 
 ## Modèle de répartition automatisée
@@ -59,4 +59,4 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 3. Prenez l'établissement fournisseur de la première relation et assignez-le, soit au moment de la création (`supplierFacilityId` dans le corps de création), soit ensuite avec `PATCH /v1/buyer/work_order/work_orders/{id}`.
 4. Si le fournisseur refuse, le bon de travail revient à `PendingApproval` (ou un fournisseur du réseau privé peut être choisi automatiquement, selon votre configuration). En cas de refus, relancez le classement et assignez le candidat suivant.
 
-Les échelles d'escalade, les SLA de temps de réponse et les compteurs de refus peuvent tous être superposés à cette boucle ; l'endpoint de classement vous donne les candidats ordonnés, et le `statusChanges` du bon de travail vous indique comment chaque tentative s'est déroulée.
+Les échelles d'escalade, les SLA de temps de réponse et les compteurs de refus peuvent tous être superposés à cette boucle. L'endpoint de classement vous donne les candidats ordonnés, et le `statusChanges` du bon de travail vous indique comment chaque tentative s'est déroulée.
