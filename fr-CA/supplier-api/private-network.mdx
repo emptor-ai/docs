@@ -4,7 +4,7 @@ sidebarTitle: "Réseau privé"
 description: "Ajoutez des établissements de fournisseurs sous-traitants à votre réseau privé et invitez-les sur OpenWrench depuis l'API Fournisseur."
 ---
 
-Les endpoints de réseau privé de l'API Fournisseur permettent à un établissement fournisseur de tenir son propre réseau d'établissements sous-traitants et d'inviter ceux avec lesquels il souhaite travailler sur OpenWrench. Les relations vivent sur la ressource `SupplierSupplierRelationship` ; l'endpoint d'invitation envoie le courriel de référence.
+Les endpoints de réseau privé de l'API Fournisseur permettent à un établissement fournisseur de tenir son propre réseau d'établissements sous-traitants et d'inviter ceux avec lesquels il souhaite travailler sur OpenWrench. Les relations vivent sur la ressource `SupplierSupplierRelationship`; l'endpoint d'invitation envoie le courriel de référence.
 
 Tous les exemples supposent :
 
@@ -49,7 +49,7 @@ L'enregistrement de la relation porte les détails d'acheminement utilisés plus
 
 Vous devez d'abord créer le `SupplierSupplierRelationship` (voir ci-dessus). Si aucune relation n'existe pour `(votre établissement, sfId)`, l'endpoint renvoie `404` avec `could not find supplier supplier relationship...`. Cela reflète le flux d'invitation de réseau privé côté acheteur. L'endpoint renvoie `400` lorsque le contact de l'appelant n'a pas d'établissement.
 
-Le corps JSON facultatif peut inclure un `note` ; lorsqu'il est présent, son texte apparaît dans le corps du courriel sous la salutation.
+Le corps JSON facultatif peut inclure un `note`; lorsqu'il est présent, son texte apparaît dans le corps du courriel sous la salutation.
 
 ```bash
 curl -X POST \
@@ -77,7 +77,7 @@ Le destinataire à `toEmail` reçoit un courriel avec :
 - **Alias d'expéditeur :** le nom complet du référent, afin que le message paraisse provenir d'une personne de votre équipe.
 - **CC :** le contact référent à `fromEmail`.
 - **Corps :** une salutation au contact invité, la `note` (le cas échéant) et une ligne « you'll get notified at ... » listant les courriels auxquels OpenWrench enverra le travail dispatché.
-- **Lien CTA :** pour un tout nouveau contact fournisseur, `https://partners.useopenwrench.com/supplier/signup?email=<toEmail>` afin qu'il puisse terminer l'inscription ; sinon, le lien du portail simple `https://partners.useopenwrench.com`.
+- **Lien CTA :** pour un tout nouveau contact fournisseur, `https://partners.useopenwrench.com/supplier/signup?email=<toEmail>` afin qu'il puisse terminer l'inscription; sinon, le lien du portail simple `https://partners.useopenwrench.com`.
 
 La liste notified-at dans le texte suit une chaîne de priorité sur la relation : `workOrdersRoutedTo` s'il n'est pas vide, sinon `supplierAccountEmails` s'il n'est pas vide, sinon le `toEmail` invité lui-même. Configurez les champs d'acheminement sur la relation avant d'inviter si vous voulez que l'invitation prévisualise les vraies destinations de dispatch.
 
