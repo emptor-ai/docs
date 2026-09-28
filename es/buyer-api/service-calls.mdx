@@ -4,10 +4,6 @@ sidebarTitle: "Llamadas de servicio"
 description: "Lee llamadas de servicio con registros de trabajo y detalles del técnico en la Buyer API para verificar visitas, auditar horas y conciliar facturas."
 ---
 
-# Llamadas de servicio y evidencia de visita en la Buyer API
-
-> Lee llamadas de servicio con registros de trabajo y detalles del técnico desde la Buyer API de OpenWrench para verificar visitas, auditar horas de trabajo y conciliar facturas.
-
 Una **llamada de servicio** es una visita del proveedor asociada a una orden de trabajo: quién fue programado, cuándo hizo check-in y check-out, qué documentó. Las órdenes de trabajo incluyen sus llamadas en `associatedServiceCalls` (con `lastServiceCall` como atajo), y la Buyer API añade tres endpoints de lectura que expanden una sola llamada con evidencia más rica.
 
 Todos los ejemplos asumen:

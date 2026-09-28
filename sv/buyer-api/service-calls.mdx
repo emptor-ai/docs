@@ -1,11 +1,8 @@
 ---
 title: "Servicebesök och besöksbevis i Buyer API"
+sidebarTitle: "Servicebesök"
 description: "Läs servicebesök med arbetsloggar och teknikeruppgifter i Buyer API för att verifiera besök, granska faktisk arbetstid och stämma av fakturor."
 ---
-
-# Servicebesök och besöksbevis i Buyer API
-
-> Läs servicebesök med arbetsloggar och teknikeruppgifter från OpenWrench Buyer API för att verifiera besök, granska arbetstid och stämma av fakturor.
 
 Ett **servicebesök** är ett leverantörsbesök mot en arbetsorder: vem som var schemalagd, när de checkade in och ut, vad de dokumenterade. Arbetsordrar bäddar in sina besök i `associatedServiceCalls` (med `lastServiceCall` som en genväg), och Buyer API lägger till tre läs-slutpunkter som utökar ett enskilt besök med rikare bevis.
 

@@ -1,11 +1,8 @@
 ---
 title: "Appels de service et preuves de visite dans l'API Acheteur"
+sidebarTitle: "Appels de service"
 description: "Lisez les appels de service, journaux de travail et détails des techniciens pour vérifier les visites, auditer la main-d'œuvre et réconcilier les factures."
 ---
-
-# Appels de service et preuves de visite dans l'API Acheteur
-
-> Lisez les appels de service avec les journaux de travail et les détails des techniciens depuis l'API Acheteur OpenWrench pour vérifier les visites, auditer le temps de main-d'œuvre et réconcilier les factures.
 
 Un **appel de service** est une visite de fournisseur sur un bon de travail : qui était prévu, quand ils sont arrivés et repartis, ce qu'ils ont documenté. Les bons de travail incorporent leurs appels dans `associatedServiceCalls` (avec `lastServiceCall` comme raccourci), et l'API Acheteur ajoute trois endpoints de lecture qui étendent un appel unique avec des preuves plus riches.
 
