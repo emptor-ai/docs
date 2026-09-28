@@ -37,7 +37,7 @@ Shared request fields: `workOrderId` and `numberOfTechs` are always required. `i
 All paths are under `/v1/supplier/work_order/`. There are no buyer-side equivalents: check-in and check-out cannot be driven from the Buyer API.
 
 <Warning>
-**`check_in`, `check_out`, and their `remote_` variants require an existing service call `id`.** They update a visit; they do not create one. Sending them without `id` returns `400 InvalidInputException` with `"required param: id"`. Start the visit with `tech_scheduled` (which creates the first service call and returns the work order with the new call in `associatedServiceCalls` / `lastServiceCall`), then reuse that `id` on every later update of the same visit.
+**`check_in`, `check_out`, and their `remote_` variants require an existing service call `id`.** They update a visit; they do not create one. Sending them without `id` returns `400 InvalidInputException` with `"required param: id"`. Start the visit with `tech_scheduled`. It creates the first service call and returns the work order with the new call in `associatedServiceCalls` / `lastServiceCall`. Reuse that `id` on every later update of the same visit.
 
 The work order also has to be past acceptance before `tech_scheduled` is valid. If it is still in `PendingConfirmationByServiceProvider` (the buyer status "Open - Pending Contractor Confirmation"), [accept it first](/supplier-api/work-orders#accept-or-decline) with `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
 </Warning>
@@ -56,9 +56,9 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   }'
 ```
 
-`serviceScheduledAt` must be an ISO 8601 date-time with a `T` separator and an explicit offset (e.g. `2026-08-22T09:00:00.000-07:00`, or `...Z` for UTC). A space-separated value like `2026-08-22 09:00:00+00:00` is rejected as invalid input. See [Date formats](/supplier-api/introduction#date-formats).
+`serviceScheduledAt` must be an ISO 8601 date-time with a `T` separator and an explicit offset (for example, `2026-08-22T09:00:00.000-07:00`, or `...Z` for UTC). A space-separated value like `2026-08-22 09:00:00+00:00` is rejected as invalid input. See [Date formats](/supplier-api/introduction#date-formats).
 
-`leadTechnicianEmail` is the tech's email on the visit and is typed as a plain string in the schema. If a `tech_scheduled` request fails with a generic unhandled exception, first confirm the work order is [past acceptance](/supplier-api/work-orders#accept-or-decline) and that `serviceScheduledAt` is in the ISO 8601 form above; both are common causes of a non-descriptive `tech_scheduled` failure.
+`leadTechnicianEmail` is the tech's email on the visit and is typed as a plain string in the schema. If a `tech_scheduled` request fails with a generic unhandled exception, first confirm the work order is [past acceptance](/supplier-api/work-orders#accept-or-decline). Then confirm that `serviceScheduledAt` is in the ISO 8601 form above. Both are common causes of a non-descriptive `tech_scheduled` failure.
 
 To move the appointment later, call `tech_rescheduled` with the service call's `id` and the new `serviceScheduledAt`.
 
@@ -111,7 +111,7 @@ Common `checkOutStatus` values:
 
 **To complete a work order, check out with `WaitingForReview`.** `WorkReviewedAndCompleted` is a buyer-owned status. The buyer sets it after reviewing your work, or OpenWrench sets it automatically when auto-approval applies (see below). The buyer can also reject the work with `WorkUnsatisfactory`. You learn the buyer's decision through the `workorder.status_update` [webhook](/supplier-api/webhooks).
 
-Parts and stock consumed on the visit are recorded through `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` on the same payload; the ids come from your [inventory catalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+Record parts and stock consumed on the visit through `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` on the same payload. The ids come from your [inventory catalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 Two automation behaviors trigger at this point:
 
