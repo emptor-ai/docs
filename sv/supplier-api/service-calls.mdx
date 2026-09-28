@@ -1,6 +1,8 @@
-# Servicebesök: schemaläggning, incheckning och slutförande
-
-> Driv besökets livscykel med Supplier API: schemalägg och omschemalägg tekniker, checka in och ut, sätt slutstatus och läs arbetsloggar.
+---
+title: "Servicebesök: schemaläggning, incheckning och slutförande"
+sidebarTitle: "Servicebesök"
+description: "Driv besökets livscykel med Supplier API: schemalägg och omschemalägg tekniker, checka in och ut, sätt slutstatus och läs arbetsloggar."
+---
 
 Ett **servicebesök** är ett teknikerbesök mot en arbetsorder. Supplier API driver hela besökets livscykel via fem statusuppdateringsslutpunkter plus läsutökningar. Det här är den mest nyansrika delen av API:et; detaljerna nedan är värda att läsa innan du skriver kod.
 
@@ -98,17 +100,23 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
-Vanliga val för `checkOutStatus`:
+Vanliga värden för `checkOutStatus`:
 
-- `WaitingForReview` — arbetet är klart, lämna över till köparen för granskning.
-- `TechScheduled` eller `PartsRequested` med flera — besöket slutade men jobbet fortsätter (uppföljningsbesök, väntar på delar).
+| `checkOutStatus` | Använd när |
+| --- | --- |
+| `WaitingForReview` | Arbetet är klart. Jobbet går till köparen för granskning. |
+| `WorkIncompleteWithReason` | Besöket avslutades utan att arbetet blev klart. Förklara varför i `checkOutNotes`. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Besöket avslutades och jobbet väntar på delar. |
+| `TechAssigned`, `TechScheduled` | Besöket avslutades och ytterligare ett besök behövs. |
 
-Delar och lager som förbrukas vid besöket registreras via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload; id:na kommer från din [lagerkatalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+**Slutför en arbetsorder genom att checka ut med `WaitingForReview`.** `WorkReviewedAndCompleted` är en status som ägs av köparen. Köparen sätter den efter att ha granskat ditt arbete, eller så sätter OpenWrench den automatiskt när automatiskt godkännande gäller (se nedan). Köparen kan också avvisa arbetet med `WorkUnsatisfactory`. Du får veta köparens beslut via [webhooken](/sv/supplier-api/webhooks) `workorder.status_update`.
+
+Delar och lager som förbrukas vid besöket registreras via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload; id:na kommer från din [lagerkatalog](/sv/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 Två automationsbeteenden utlöses vid denna punkt:
 
 - **Auto-godkännande.** För tredjepartsleverantörer vars köparföretag har `autoApproveWorkOrdersCompletedByThirdParty` aktiverat uppgraderas ett `WaitingForReview`-utfall automatiskt till `WorkReviewedAndCompleted`.
-- **Auto-publicering av fakturor.** När den resulterande statusen är `WorkReviewedAndCompleted` kan regler för auto-publicering av fakturor köras och publicera ditt fakturautkast. Se [Offerter och fakturering](/supplier-api/quotes-and-invoicing).
+- **Auto-publicering av fakturor.** När den resulterande statusen är `WorkReviewedAndCompleted` kan regler för auto-publicering av fakturor köras och publicera ditt fakturautkast. Se [Offerter och fakturering](/sv/supplier-api/quotes-and-invoicing).
 
 `remote_check_in` och `remote_check_out` beter sig identiskt för arbete som utförs off-site.
 
@@ -127,7 +135,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-För tidsrapportering på flottnivå över alla tekniker, använd [WrenchMode](/supplier-api/wrenchmode) istället för att iterera besök.
+För tidsrapportering på flottnivå över alla tekniker, använd [WrenchMode](/sv/supplier-api/wrenchmode) istället för att iterera besök.
 
 ## Jobb med flera besök
 

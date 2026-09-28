@@ -1,6 +1,8 @@
-# Appels de service : planification, arrivée et complétion
-
-> Pilotez le cycle de vie de la visite avec l'API Fournisseur : planifier et replanifier les techniciens, s'enregistrer et quitter, définir les statuts de complétion et lire les journaux de travail.
+---
+title: "Appels de service : planification, arrivée et complétion"
+sidebarTitle: "Appels de service"
+description: "Pilotez le cycle de vie de la visite avec l'API Fournisseur : planifier et replanifier les techniciens, s'enregistrer et quitter, définir les statuts de complétion et lire les journaux de travail."
+---
 
 Un **appel de service** est une visite de technicien sur un bon de travail. L'API Fournisseur pilote l'ensemble du cycle de vie de la visite à travers cinq endpoints de mise à jour de statut ainsi que des expansions de lecture. C'est la partie la plus nuancée de l'API; les détails ci-dessous méritent d'être lus avant d'écrire du code.
 
@@ -98,17 +100,23 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
-Choix courants pour `checkOutStatus` :
+Valeurs courantes de `checkOutStatus` :
 
-- `WaitingForReview` — travail terminé, remise à l'acheteur pour révision.
-- `TechScheduled` ou `PartsRequested` et compagnie — la visite s'est terminée mais le travail se poursuit (visite de suivi, en attente de pièces).
+| `checkOutStatus` | À utiliser quand |
+| --- | --- |
+| `WaitingForReview` | Le travail est terminé. Le travail est remis à l'acheteur pour révision. |
+| `WorkIncompleteWithReason` | La visite s'est terminée sans que le travail soit achevé. Expliquez pourquoi dans `checkOutNotes`. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | La visite s'est terminée et le travail est en attente de pièces. |
+| `TechAssigned`, `TechScheduled` | La visite s'est terminée et une autre visite est nécessaire. |
 
-Les pièces et le stock consommés durant la visite sont enregistrés via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile; les ids proviennent de votre [catalogue d'inventaire](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+**Pour compléter un bon de travail, effectuez le départ avec `WaitingForReview`.** `WorkReviewedAndCompleted` est un statut qui appartient à l'acheteur. L'acheteur le définit après avoir révisé votre travail, ou OpenWrench le définit automatiquement lorsque l'approbation automatique s'applique (voir ci-dessous). L'acheteur peut aussi rejeter le travail avec `WorkUnsatisfactory`. Vous apprenez la décision de l'acheteur par le [webhook](/fr-CA/supplier-api/webhooks) `workorder.status_update`.
+
+Les pièces et le stock consommés durant la visite sont enregistrés via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile; les ids proviennent de votre [catalogue d'inventaire](/fr-CA/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 Deux comportements d'automatisation se déclenchent à ce moment :
 
 - **Approbation automatique.** Pour les fournisseurs tiers dont l'entreprise acheteuse a `autoApproveWorkOrdersCompletedByThirdParty` activé, un résultat `WaitingForReview` est automatiquement promu à `WorkReviewedAndCompleted`.
-- **Publication automatique de facture.** Chaque fois que le statut résultant est `WorkReviewedAndCompleted`, les règles de publication automatique de facture peuvent s'exécuter et publier votre brouillon de facture. Voir [Soumissions et facturation](/supplier-api/quotes-and-invoicing).
+- **Publication automatique de facture.** Chaque fois que le statut résultant est `WorkReviewedAndCompleted`, les règles de publication automatique de facture peuvent s'exécuter et publier votre brouillon de facture. Voir [Soumissions et facturation](/fr-CA/supplier-api/quotes-and-invoicing).
 
 `remote_check_in` et `remote_check_out` se comportent de façon identique pour le travail effectué hors site.
 
@@ -127,7 +135,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-Pour un rapport de temps à l'échelle de la flotte à travers tous les techniciens, utilisez [WrenchMode](/supplier-api/wrenchmode) plutôt que d'itérer sur les appels.
+Pour un rapport de temps à l'échelle de la flotte à travers tous les techniciens, utilisez [WrenchMode](/fr-CA/supplier-api/wrenchmode) plutôt que d'itérer sur les appels.
 
 ## Travaux à plusieurs visites
 

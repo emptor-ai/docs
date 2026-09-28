@@ -1,6 +1,8 @@
-# Llamadas de servicio: programación, check-in y finalización
-
-> Conduce el ciclo de vida de la visita con la Supplier API: programa y reprograma técnicos, haz check-in y check-out, establece estados de finalización y lee registros de trabajo.
+---
+title: "Llamadas de servicio: programación, check-in y finalización"
+sidebarTitle: "Llamadas de servicio"
+description: "Conduce el ciclo de vida de la visita con la Supplier API: programa y reprograma técnicos, haz check-in y check-out, establece estados de finalización y lee registros de trabajo."
+---
 
 Una **llamada de servicio** es una visita de un técnico contra una orden de trabajo. La Supplier API conduce todo el ciclo de vida de la visita a través de cinco endpoints de actualización de estado más expansiones de lectura. Es la parte más matizada de la API; los detalles a continuación vale la pena leerlos antes de escribir código.
 
@@ -98,17 +100,23 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
-Opciones comunes de `checkOutStatus`:
+Valores comunes de `checkOutStatus`:
 
-- `WaitingForReview`: trabajo terminado, entregar al comprador para revisión.
-- `TechScheduled` o `PartsRequested` y similares: la visita terminó pero el trabajo continúa (visita de seguimiento, esperando partes).
+| `checkOutStatus` | Úsalo cuando |
+| --- | --- |
+| `WaitingForReview` | El trabajo está terminado. El trabajo pasa al comprador para revisión. |
+| `WorkIncompleteWithReason` | La visita terminó sin completar el trabajo. Explica el motivo en `checkOutNotes`. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | La visita terminó y el trabajo está a la espera de partes. |
+| `TechAssigned`, `TechScheduled` | La visita terminó y se necesita otra visita. |
 
-Las partes y stock consumidos en la visita se registran mediante `partsWithQuantity`, `stockLocationIds` y `equipmentPerStockLocationIds` en el mismo payload; los ids vienen de tu [catálogo de inventario](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+**Para completar una orden de trabajo, haz check-out con `WaitingForReview`.** `WorkReviewedAndCompleted` es un estado que pertenece al comprador. El comprador lo establece después de revisar tu trabajo, u OpenWrench lo establece automáticamente cuando aplica la auto-aprobación (ver abajo). El comprador también puede rechazar el trabajo con `WorkUnsatisfactory`. Te enteras de la decisión del comprador mediante el [webhook](/es/supplier-api/webhooks) `workorder.status_update`.
+
+Las partes y stock consumidos en la visita se registran mediante `partsWithQuantity`, `stockLocationIds` y `equipmentPerStockLocationIds` en el mismo payload; los ids vienen de tu [catálogo de inventario](/es/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 En este punto se disparan dos comportamientos de automatización:
 
 - **Auto-aprobación.** Para proveedores terceros cuya empresa compradora tenga `autoApproveWorkOrdersCompletedByThirdParty` habilitado, un resultado `WaitingForReview` se promueve automáticamente a `WorkReviewedAndCompleted`.
-- **Auto-publicación de facturas.** Cuando el estado resultante sea `WorkReviewedAndCompleted`, las reglas de auto-publicación de facturas pueden ejecutarse y publicar tu factura en borrador. Consulta [Cotizaciones y facturación](/supplier-api/quotes-and-invoicing).
+- **Auto-publicación de facturas.** Cuando el estado resultante sea `WorkReviewedAndCompleted`, las reglas de auto-publicación de facturas pueden ejecutarse y publicar tu factura en borrador. Consulta [Cotizaciones y facturación](/es/supplier-api/quotes-and-invoicing).
 
 `remote_check_in` y `remote_check_out` se comportan de forma idéntica para trabajo hecho fuera del sitio.
 
@@ -127,7 +135,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-Para reportes de tiempo a nivel de flota entre todos los técnicos, usa [WrenchMode](/supplier-api/wrenchmode) en lugar de iterar llamadas.
+Para reportes de tiempo a nivel de flota entre todos los técnicos, usa [WrenchMode](/es/supplier-api/wrenchmode) en lugar de iterar llamadas.
 
 ## Trabajos multi-visita
 

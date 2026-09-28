@@ -75,7 +75,9 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
 
 **Refuser** avec `POST .../status_update/decline`. Seuls les contacts de l'établissement fournisseur affecté au bon de travail peuvent refuser. Le bon de travail quitte votre file via le flux de changement de fournisseur : son statut revient à `PendingApproval`, ou un fournisseur du réseau privé est choisi automatiquement, selon la configuration de l'acheteur. Le `text` de la note est enregistré comme raison du refus et se reflète dans ce que voit l'acheteur, alors soyez précis.
 
-Les deux appels prennent `{ "id": ..., "note": { ... } }` et retournent le bon de travail mis à jour.
+Les deux appels prennent `{ "id": ..., "note": { ... } }` et retournent le bon de travail mis à jour. `id` est l'`id` numérique du bon de travail (un int64 qui doit exister), et non la chaîne d'affichage `woNumber`. Envoyez-le comme un nombre JSON, et non comme une chaîne entre guillemets. Pour vérifier la valeur avant l'envoi, récupérez-la avec `GET /v1/supplier/work_order/work_orders/{id}`.
+
+Il n'existe aucun endpoint `status_update` de bon de travail pour compléter un travail. Vous complétez le travail par le [départ de l'appel de service](/fr-CA/supplier-api/service-calls#3-quitter-et-définir-le-résultat).
 
 ## Tenir l'acheteur informé
 
