@@ -110,7 +110,7 @@ Le raccourci `POST status/paid/by_work_order_id` ne correspond qu'aux factures d
 
 **Ajouter la page de détail du bon de travail au PDF.** `PATCH /v1/buyer/invoice/file/invoice_pdf/add_work_order_detail_page/{invoiceId}` régénère le PDF de la facture avec la page de détail du bon de travail annexée et retourne le nouveau lien PDF (type d'enveloppe `UpdatedInvoicePdf`). Pas de corps de requête ; non soumis à la limite de débit.
 
-**Mise à jour groupée avec filtres.** `PATCH /v1/buyer/invoice/bulk_update_with_filters` applique une mise à jour de colonnes à chaque facture correspondant à un filtre, toujours contrainte à votre entreprise. Les deux mappings sont libres : colonne→valeur :
+**Mise à jour groupée avec filtres.** `PATCH /v1/buyer/invoice/bulk_update_with_filters` applique une mise à jour de colonnes à chaque facture correspondant à un filtre, toujours contrainte à votre entreprise. Les deux sont des mappings colonne→valeur libres :
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/invoice/bulk_update_with_filters" \
