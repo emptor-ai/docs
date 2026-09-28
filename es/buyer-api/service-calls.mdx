@@ -54,6 +54,6 @@ Antes de aprobar una orden de trabajo completada o su factura:
 1. Obtén la orden de trabajo y lee `associatedServiceCalls`.
 2. Para cada llamada, solicita `/with_work_logs/with_tech_details`.
 3. Contrasta `checkInGeoLocation` contra la ubicación, compara `trueWorkTimeMillis` contra las horas de trabajo facturadas y revisa las notas e imágenes de check-out.
-4. Aprueba mediante las [acciones de estado de la orden de trabajo](/es/buyer-api/work-orders#buyer-status-actions) o disputa mediante `work_unsatisfactory`, citando en la nota lo que encontraste.
+4. Aprueba mediante las [acciones de estado de la orden de trabajo](/es/buyer-api/work-orders#acciones-de-estado-del-comprador) o disputa mediante `work_unsatisfactory`, citando en la nota lo que encontraste.
 
 Los errores siguen la envoltura estándar: `404` para una llamada desconocida, `400` para una llamada fuera de tu alcance.

@@ -58,7 +58,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
 ```
 
-**Equipo por ubicación de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) es un registro por unidad física serializada: número de serie, condición y procedencia. Estas son las unidades que crean los [recibos con números de serie](/es/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive).
+**Equipo por ubicación de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) es un registro por unidad física serializada: número de serie, condición y procedencia. Estas son las unidades que crean los [recibos con números de serie](/es/partners-api/purchasing-flow#4-registrar-recibos-a-medida-que-llegan-los-artículos).
 
 Los recibos son la ruta de escritura al stock por esta API; el lado de lectura aquí es cómo concilias el stock de OpenWrench contra tu ERP.
 

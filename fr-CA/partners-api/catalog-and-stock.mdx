@@ -52,7 +52,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
 ```
 
-**Équipement par emplacement de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) : une fiche par unité physique sérialisée — numéro de série, état et provenance. Ce sont les unités que les [réceptions avec numéros de série](/fr-CA/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) créent.
+**Équipement par emplacement de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) : une fiche par unité physique sérialisée — numéro de série, état et provenance. Ce sont les unités que les [réceptions avec numéros de série](/fr-CA/partners-api/purchasing-flow#4-enregistrer-les-réceptions-à-mesure-que-les-marchandises-arrivent) créent.
 
 Les réceptions sont le chemin d'écriture dans le stock via cette API; le côté lecture ici est la façon dont vous réconciliez le stock OpenWrench avec votre ERP.
 
