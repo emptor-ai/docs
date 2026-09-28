@@ -41,7 +41,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/purchase_request_line_items/count_by?status=approved"
 ```
 
-PR-statusar kan också sättas direkt när ditt godkännandeflöde finns utanför OpenWrench: `PATCH .../purchase_requests/{id}/{status}` för valfri status i vokabuläret, och `PATCH .../purchase_requests/{id}/cancelled` för att avbryta (endast från `requested` eller `approved`; annars `400`).
+PR-statusar kan också sättas direkt när ditt godkännandeflöde finns utanför OpenWrench: `PATCH .../purchase_requests/{id}/{status}` för valfri status i vokabulären, och `PATCH .../purchase_requests/{id}/cancelled` för att avbryta (endast från `requested` eller `approved`; annars `400`).
 
 ## 2. Skapa inköpsordern
 
