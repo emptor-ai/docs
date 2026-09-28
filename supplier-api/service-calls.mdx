@@ -100,10 +100,16 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
-Common `checkOutStatus` choices:
+Common `checkOutStatus` values:
 
-- `WaitingForReview` — work finished, hand off to the buyer for review.
-- `TechScheduled` or `PartsRequested` and friends — the visit ended but the job continues (follow-up visit, waiting on parts).
+| `checkOutStatus` | Use when |
+| --- | --- |
+| `WaitingForReview` | The work is finished. The job goes to the buyer for review. |
+| `WorkIncompleteWithReason` | The visit ended without finishing the work. Explain why in `checkOutNotes`. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | The visit ended and the job is waiting on parts. |
+| `TechAssigned`, `TechScheduled` | The visit ended and another visit is needed. |
+
+**To complete a work order, check out with `WaitingForReview`.** `WorkReviewedAndCompleted` is a buyer-owned status. The buyer sets it after reviewing your work, or OpenWrench sets it automatically when auto-approval applies (see below). The buyer can also reject the work with `WorkUnsatisfactory`. You learn the buyer's decision through the `workorder.status_update` [webhook](/supplier-api/webhooks).
 
 Parts and stock consumed on the visit are recorded through `partsWithQuantity`, `stockLocationIds`, and `equipmentPerStockLocationIds` on the same payload; the ids come from your [inventory catalog](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
