@@ -28,7 +28,7 @@ export SECRET="<shared-secret>"
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/me"
 ```
 
-Appelez-le une fois au démarrage : la création de bon de travail nécessite votre `buyerCompanyId` et l'id d'établissement [dans le corps de la requête](/fr-CA/buyer-api/work-orders#create-a-work-order), et journaliser l'identité rend les erreurs de clé évidentes.
+Appelez-le une fois au démarrage : la création de bon de travail nécessite votre `buyerCompanyId` et l'id d'établissement [dans le corps de la requête](/fr-CA/buyer-api/work-orders#créer-un-bon-de-travail), et journaliser l'identité rend les erreurs de clé évidentes.
 
 ## Approvisionner des utilisateurs acheteurs
 

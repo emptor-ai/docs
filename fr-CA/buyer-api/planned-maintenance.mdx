@@ -64,7 +64,7 @@ curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
   }'
 ```
 
-`scheduleId`, `status`, `lastRunAt` et `lastRunDueAt` sont requis; `woId` relie le bon de travail que l'exécution a créé (créez-le d'abord via l'endpoint [bons de travail](/fr-CA/buyer-api/work-orders#create-a-work-order), avec `isPM: true` et `plannedMaintenanceScheduleId` définis), et `log` contient des diagnostics en format libre.
+`scheduleId`, `status`, `lastRunAt` et `lastRunDueAt` sont requis; `woId` relie le bon de travail que l'exécution a créé (créez-le d'abord via l'endpoint [bons de travail](/fr-CA/buyer-api/work-orders#créer-un-bon-de-travail), avec `isPM: true` et `plannedMaintenanceScheduleId` définis), et `log` contient des diagnostics en format libre.
 
 La boucle complète du planificateur externe :
 

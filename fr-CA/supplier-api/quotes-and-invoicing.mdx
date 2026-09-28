@@ -110,7 +110,7 @@ Chaque précondition non satisfaite renvoie `400` : votre établissement doit po
 ## Flux de facturation de bout en bout
 
 1. Le bon de travail atteint l'étape de soumission : soumettez une proposition, attendez `awarded`.
-2. Complétez le travail via le [départ d'appel de service](/fr-CA/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+2. Complétez le travail via le [départ d'appel de service](/fr-CA/supplier-api/service-calls#3-quitter-et-définir-le-résultat).
 3. Créez le brouillon de facture; générez votre PDF.
 4. Une fois que le bon de travail affiche Completed, `upload_and_publish`.
 5. Sondez le statut de la facture jusqu'à `paid`, et réconciliez contre `markedPaidAt`.

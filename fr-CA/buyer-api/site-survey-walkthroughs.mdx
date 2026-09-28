@@ -65,6 +65,6 @@ Lorsqu'un constat d'inspection nécessite une correction, créez le bon de trava
 - `siteSurveyTaskTitleId` : la tâche précise à l'intérieur de celle-ci.
 - `includeWalkthroughTaskList` : copie optionnellement la liste de tâches de la visite d'inspection sur le bon de travail.
 
-`walkThroughId` et `siteSurveyTaskTitleId` **doivent être fournis ensemble ou pas du tout**; sinon la création est rejetée. Voir [Créer un bon de travail](/fr-CA/buyer-api/work-orders#create-a-work-order) pour le reste de la charge utile.
+`walkThroughId` et `siteSurveyTaskTitleId` **doivent être fournis ensemble ou pas du tout**; sinon la création est rejetée. Voir [Créer un bon de travail](/fr-CA/buyer-api/work-orders#créer-un-bon-de-travail) pour le reste de la charge utile.
 
 Le lien est visible dans les deux sens : le bon de travail porte `walkThroughId`, et les réponses aux tâches de la visite d'inspection référencent les bons de travail qui en sont issus. Cela fait de « tous les constats ouverts des inspections du trimestre dernier, avec leur état de correction » un rapport à deux requêtes.
