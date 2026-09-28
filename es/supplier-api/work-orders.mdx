@@ -201,5 +201,5 @@ Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de prob
 
 1. Registra un endpoint de [webhook](/es/supplier-api/webhooks) para `workorder.create` y `workorder.status_update`. En cada entrega, obtén la orden de trabajo por id. Haz la carga inicial única desde el endpoint de listado y mantenlo fuera del ciclo en régimen estable, salvo como un sondeo de red de seguridad poco frecuente y con filtros estrechos.
 2. `confirm` o `decline` dentro de tu SLA.
-3. Programa la visita vía [llamadas de servicio](/es/supplier-api/service-calls); publica estados de partes y una ECD a medida que las cosas evolucionan.
+3. Programa la visita vía [llamadas de servicio](/es/supplier-api/service-calls); publica estados de partes y una fecha estimada de finalización a medida que las cosas evolucionan.
 4. Completa vía check-out, luego factura mediante [cotizaciones y facturación](/es/supplier-api/quotes-and-invoicing).
