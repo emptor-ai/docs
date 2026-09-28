@@ -63,6 +63,6 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 1. Llega una orden de trabajo (o se crea sin asignar).
 2. Llama al endpoint jerarquizado con el `locationId` y `problemTypeId` de la orden de trabajo.
 3. Toma la facility de proveedor de la primera relación y asígnala, ya sea al crear (`supplierFacilityId` en el cuerpo de creación) o después con `PATCH /v1/buyer/work_order/work_orders/{id}`.
-4. Si el proveedor rechaza, la orden de trabajo vuelve a `PendingApproval` (o un proveedor de red privada puede ser seleccionado automáticamente, según tu configuración). Al rechazar, vuelve a ejecutar la jerarquización y asigna el siguiente candidato.
+4. Si el proveedor rechaza, la orden de trabajo vuelve a `PendingApproval` (o OpenWrench puede seleccionar automáticamente un proveedor de red privada, según tu configuración). Al rechazar, vuelve a ejecutar la jerarquización y asigna el siguiente candidato.
 
-Las escaleras de escalamiento, los SLA de tiempo de respuesta y los conteos de rechazos pueden apilarse sobre este ciclo; el endpoint de jerarquización te da los candidatos ordenados, y `statusChanges` de la orden de trabajo te dice cómo fue cada intento.
+Las escaleras de escalamiento, los SLA de tiempo de respuesta y los conteos de rechazos pueden apilarse sobre este ciclo. El endpoint de jerarquización te da los candidatos ordenados, y `statusChanges` de la orden de trabajo te dice cómo fue cada intento.

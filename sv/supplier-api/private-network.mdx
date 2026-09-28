@@ -4,7 +4,7 @@ sidebarTitle: "Privat nätverk"
 description: "Lägg till underleverantörsanläggningar i ditt privata nätverk och bjud in dem till OpenWrench från Supplier API."
 ---
 
-Supplier API:s endpoints för privat nätverk låter en leverantörsanläggning underhålla sitt eget nätverk av underleverantörsanläggningar och bjuda in dem som den vill samarbeta med till OpenWrench. Relationerna finns på resursen `SupplierSupplierRelationship`; invite-endpointen skickar hänvisningsmejlet.
+Supplier API:s slutpunkter för privat nätverk låter en leverantörsanläggning underhålla sitt eget nätverk av underleverantörsanläggningar och bjuda in dem som den vill samarbeta med till OpenWrench. Relationerna finns på resursen `SupplierSupplierRelationship`; invite-slutpunkten skickar hänvisningsmejlet.
 
 Alla exempel förutsätter:
 
@@ -42,12 +42,12 @@ Relationens post bär de dirigeringsdetaljer som invite-mejlet senare använder:
 
 | Sökvägsparameter | Betydelse |
 | --- | --- |
-| `sfId` | Underleverantörens leverantörsanläggnings-id — måste vara `supplierFacilityId` för en befintlig relation vars källa är anroparens anläggning. |
+| `sfId` | Underleverantörens leverantörsanläggnings-id. Måste vara `supplierFacilityId` för en befintlig relation vars källa är anroparens anläggning. |
 | `fromEmail` | Mejl för den hänvisande kontakten på din anläggning. Används för att slå upp hänvisarens namn och för att sätta hänvisaren som CC på det utgående mejlet. |
 | `toEmail` | Mejl till personen som ska bjudas in på underleverantörens anläggning. |
 | `fN`, `lN` | Förnamn och efternamn att använda när den inbjudna ännu inte är en känd kontakt. |
 
-Du måste skapa `SupplierSupplierRelationship` först (se ovan). Om ingen relation finns för `(din anläggning, sfId)` svarar endpointen med `404` och `could not find supplier supplier relationship...`. Detta speglar invite-flödet i köparsidans privata nätverk. Endpointen svarar med `400` när anroparens kontakt saknar anläggning.
+Du måste skapa `SupplierSupplierRelationship` först (se ovan). Om ingen relation finns för `(din anläggning, sfId)` svarar slutpunkten med `404` och `could not find supplier supplier relationship...`. Detta speglar invite-flödet i köparsidans privata nätverk. Slutpunkten svarar med `400` när anroparens kontakt saknar anläggning.
 
 Den valfria JSON-kroppen kan innehålla ett `note`; när det anges visas texten i mejlets brödtext under hälsningen.
 
@@ -67,7 +67,7 @@ Ett lyckat anrop returnerar:
 
 ### Hantering av mottagaren
 
-Om `toEmail` inte matchar en befintlig leverantörskontakt skapar endpointen automatiskt en `supplier`-kontakt på anläggning `sfId` med `fN` och `lN` innan mejlet skickas. Den kontakten flaggas som ny, vilket styr CTA-länken (se nedan). Om mejlet redan mappar till en kontakt skapas ingen ny kontakt.
+Om `toEmail` inte matchar en befintlig leverantörskontakt skapar slutpunkten automatiskt en `supplier`-kontakt på anläggning `sfId` med `fN` och `lN` innan mejlet skickas. Den kontakten flaggas som ny, vilket styr CTA-länken (se nedan). Om mejlet redan mappar till en kontakt skapas ingen ny kontakt.
 
 ### Mejlet som skickas
 
