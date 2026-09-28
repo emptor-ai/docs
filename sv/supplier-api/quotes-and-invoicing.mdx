@@ -47,7 +47,7 @@ Beteende att känna till:
 - `locationId`, `buyerFacilityId` och `buyerCompanyId` härleds från arbetsordern; du kan inte sätta dem.
 - Osatta skattefält och sektionstotaler blir som standard `"0"`.
 - `requestForProposalId` blir som standard arbetsorderns RFP när det utelämnas.
-- `proposalPdfLink`, om skickad, måste vara en giltig URL. `attachments` tar `FileDetails` från [filuppladdningsslutpunkten](/supplier-api/files-and-users).
+- `proposalPdfLink`, om skickad, måste vara en giltig URL. `attachments` tar `FileDetails` från [filuppladdningsslutpunkten](/sv/supplier-api/files-and-users).
 - Att skicka ett `id` uppdaterar ett befintligt förslag.
 
 Följ utfallet genom att hämta om: `status` går från `pending` till `awarded` eller `declined` (avslagsskäl visas i `declineNotes`). Lista med `GET /v1/supplier/quote/proposals`, läs en med `GET /v1/supplier/quote/proposals/{id}`.
@@ -110,7 +110,7 @@ Varje förutsättning som misslyckas returnerar `400`: din anläggning måste ä
 ## End-to-end-faktureringsflöde
 
 1. Arbetsordern når offereringsfasen: skicka in ett förslag, vänta på `awarded`.
-2. Slutför arbetet via [utcheckning från servicebesök](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+2. Slutför arbetet via [utcheckning från servicebesök](/sv/supplier-api/service-calls#3-check-out-and-set-the-outcome).
 3. Skapa fakturautkastet; generera din PDF.
 4. När arbetsordern visar Completed, `upload_and_publish`.
 5. Polla fakturastatus tills `paid` och stäm av mot `markedPaidAt`.

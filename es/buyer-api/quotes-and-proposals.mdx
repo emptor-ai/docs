@@ -60,6 +60,6 @@ Otros campos útiles: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeAp
 
 1. El proveedor envía una propuesta; la orden de trabajo suele pausarse a la espera de aprobación.
 2. Tus aprobadores la otorgan o la rechazan en la app. Otorgarla eleva el techo de gasto efectivo para el trabajo.
-3. Cuando llega la [factura](/buyer-api/invoices) final, compara `invoiceTotalAfterTax` con el `totalAfterTax` de la propuesta otorgada antes de aprobar el pago. Marca las variaciones por encima de tu tolerancia para revisión humana.
+3. Cuando llega la [factura](/es/buyer-api/invoices) final, compara `invoiceTotalAfterTax` con el `totalAfterTax` de la propuesta otorgada antes de aprobar el pago. Marca las variaciones por encima de tu tolerancia para revisión humana.
 
 Un ciclo práctico de sondeo para un tablero de compras: filtra `status=pending`, ordena por `submittedAt` y pagina con `limit=25`, respetando el límite de tasa de 10 solicitudes por ventana de 20 segundos.

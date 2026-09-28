@@ -8,7 +8,7 @@ description: "Recorre el ciclo de compras de la Internal Teams API: lee solicitu
 
 > Recorre el ciclo de compras de la Internal Teams API de extremo a extremo: lee solicitudes de compra aprobadas, emite órdenes de compra, asocia líneas y registra recibos.
 
-Esta guía recorre el ciclo de compras de extremo a extremo con la Internal Teams API: los técnicos levantan **solicitudes de compra** (PRs), tu sistema de compras las convierte en **órdenes de compra** (POs) con un proveedor, y las mercancías llegan como **recibos** que actualizan el stock. Asume que tienes una clave de API de partner (ver la [introducción](/partners-api/introduction)).
+Esta guía recorre el ciclo de compras de extremo a extremo con la Internal Teams API: los técnicos levantan **solicitudes de compra** (PRs), tu sistema de compras las convierte en **órdenes de compra** (POs) con un proveedor, y las mercancías llegan como **recibos** que actualizan el stock. Asume que tienes una clave de API de partner (ver la [introducción](/es/partners-api/introduction)).
 
 Todos los ejemplos asumen:
 
@@ -145,5 +145,5 @@ Vuelve a leer un recibo con `GET /v1/partners/inventory/purchase_order_receipts/
 
 - Las creaciones no son idempotentes: reintentar una creación de PO agotada por timeout puede duplicar la orden. Usa el endpoint de listado con un filtro (por ejemplo sobre tus referencias externas al estilo `receiptNumber`) para verificar antes de reintentar.
 - Los problemas de permisos afloran como `400` (con la envoltura de error estándar), y los ids omitidos silenciosamente en los endpoints de bulk y de asociación significan que una llamada "exitosa" puede haber hecho menos de lo que pediste. Concilia siempre el payload de respuesta contra tu solicitud.
-- Los [endpoints del catálogo](/partners-api/catalog-and-stock) suministran los valores de `partId`, `equipmentTypeId`, `partEquipmentVendorId` y `stockLocationId` que necesita este flujo.
+- Los [endpoints del catálogo](/es/partners-api/catalog-and-stock) suministran los valores de `partId`, `equipmentTypeId`, `partEquipmentVendorId` y `stockLocationId` que necesita este flujo.
 - Cada cambio de orden de compra, línea de pedido o recibo realizado a través de estos endpoints queda registrado en el historial de auditoría de la orden de compra en OpenWrench, atribuido al contacto asociado a tu clave de API.

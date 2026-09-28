@@ -71,6 +71,6 @@ Cuando un hallazgo de encuesta requiere remediación, crea la orden de trabajo c
 - `siteSurveyTaskTitleId` — la tarea específica dentro de él.
 - `includeWalkthroughTaskList` — opcionalmente copia la lista de tareas del recorrido en la orden de trabajo.
 
-`walkThroughId` y `siteSurveyTaskTitleId` **deben suministrarse juntos o no suministrarse**; en caso contrario, la creación se rechaza. Consulta [Crear una orden de trabajo](/buyer-api/work-orders#create-a-work-order) para el resto del payload.
+`walkThroughId` y `siteSurveyTaskTitleId` **deben suministrarse juntos o no suministrarse**; en caso contrario, la creación se rechaza. Consulta [Crear una orden de trabajo](/es/buyer-api/work-orders#create-a-work-order) para el resto del payload.
 
 El enlace es visible en ambos sentidos: la orden de trabajo lleva `walkThroughId`, y las respuestas de tareas del recorrido referencian las órdenes de trabajo generadas a partir de ellas. Eso hace que "todos los hallazgos abiertos de las encuestas del último trimestre, con estado de remediación" sea un informe de dos consultas.

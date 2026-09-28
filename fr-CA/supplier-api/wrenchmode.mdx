@@ -61,7 +61,7 @@ Le vocabulaire d'événements se divise en événements de trajet (`began_trip` 
 
 - **Analyse** pour les tableaux de bord, la paie et les rapports d'utilisation : un chiffre par technicien par période, avec les calculs de pauses déjà faits.
 - **Événements bruts** pour auditer un total suspect, reconstituer une visite minute par minute, ou alimenter votre propre entrepôt d'analyse.
-- Les questions **par visite** sont généralement mieux servies par l'expansion d'appel de service `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, qui retourne exactement les événements dans la fenêtre arrivée/départ de la visite plus le `trueWorkTimeMillis` hors pauses. Voir [Appels de service](/supplier-api/service-calls#reading-a-service-call-back).
+- Les questions **par visite** sont généralement mieux servies par l'expansion d'appel de service `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, qui retourne exactement les événements dans la fenêtre arrivée/départ de la visite plus le `trueWorkTimeMillis` hors pauses. Voir [Appels de service](/fr-CA/supplier-api/service-calls#reading-a-service-call-back).
 
 ## Modèles éprouvés
 

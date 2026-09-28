@@ -2,7 +2,7 @@
 
 > Läs delar, utrustningstyper, leverantörer, lagerplatser, per-plats-inventering och delarna som förbrukas på arbetsordrar med Internal Teams API.
 
-Runt [inköpsflödet](/partners-api/purchasing-flow) finns referens- och lagerdatan: vad du kan beställa (delar, utrustningstyper), vem du beställer från (leverantörer), var det bor (lagerplatser och per-plats-inventering) och vart det tog vägen (förbrukning på arbetsordrar). Allt är skrivskyddat via Internal Teams API.
+Runt [inköpsflödet](/sv/partners-api/purchasing-flow) finns referens- och lagerdatan: vad du kan beställa (delar, utrustningstyper), vem du beställer från (leverantörer), var det bor (lagerplatser och per-plats-inventering) och vart det tog vägen (förbrukning på arbetsordrar). Allt är skrivskyddat via Internal Teams API.
 
 Alla exempel förutsätter:
 
@@ -52,7 +52,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
 ```
 
-**Utrustning per lagerplats** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) är en post per fysisk serialiserad enhet: serienummer, skick och proveniens. Det här är enheterna som [mottagningar med serienummer](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) skapar.
+**Utrustning per lagerplats** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) är en post per fysisk serialiserad enhet: serienummer, skick och proveniens. Det här är enheterna som [mottagningar med serienummer](/sv/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) skapar.
 
 Mottagningar är skrivvägen in i lager via det här API:et; läs-sidan här är hur du stämmer av OpenWrench-lager mot ditt ERP.
 

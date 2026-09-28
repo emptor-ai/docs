@@ -30,7 +30,7 @@ curl -X POST "$BASE/v1/supplier/file/upload" \
 
 La respuesta (envoltura tipo `FileManager`) es un registro `FileDetails`: `{ "fileName": "before.jpg", "fileId": "a1b2c3d4e5" }`. Los caracteres no ASCII se eliminan del nombre de archivo; un fallo de almacenamiento devuelve `500`.
 
-Usa el objeto devuelto tal cual en los campos de adjuntos: [adjuntos del proveedor](/supplier-api/work-orders#keep-the-buyer-informed) en órdenes de trabajo, `attachments` de propuestas y facturas, e imágenes de check-in/check-out. Los PDFs de factura tienen su propio [endpoint de subir-y-publicar](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
+Usa el objeto devuelto tal cual en los campos de adjuntos: [adjuntos del proveedor](/es/supplier-api/work-orders#keep-the-buyer-informed) en órdenes de trabajo, `attachments` de propuestas y facturas, e imágenes de check-in/check-out. Los PDFs de factura tienen su propio [endpoint de subir-y-publicar](/es/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
 
 **Descarga** con `GET /v1/supplier/file/download/{id}/{name}`, que transmite los bytes almacenados como adjunto. `{id}` es el `fileId`; `{name}` es el nombre de archivo con el que se sirve. Úsalo para extraer documentos proporcionados por el comprador desde `buyerAttachments`. Los fallos de descarga se responden con `400`.
 

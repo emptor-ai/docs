@@ -45,7 +45,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-En faktura länkar tillbaka till sitt `supplierFacilityId` plus **exakt ett** av `workOrderId` eller `projectId` (det andra är `null`, tillsammans med den hydrerade `workOrder` / `project`). Arbetsorderfakturor bär alltid `locationId` och `buyerFacilityId`; projektfakturor bär dem endast när klienten angav dem, så båda kan vara `null`. Fakturan bär pengauppdelningen i sektioner (arbete, material, resa, frakt, övrigt), var och en med rader, en `taxRate` och en `totalBeforeTax`, som rullar upp till `invoiceTotalBeforeTax`, `invoiceTax` och `invoiceTotalAfterTax`. Monetära värden serialiseras som strängar. En kort AI-härledd sammanfattning av omfattningen kan visas i `title`. Den renderade PDF:en finns i `invoicePDFs`; stödjande filer finns i `attachments` (se [Filer och bilagor](/buyer-api/files-and-attachments)).
+En faktura länkar tillbaka till sitt `supplierFacilityId` plus **exakt ett** av `workOrderId` eller `projectId` (det andra är `null`, tillsammans med den hydrerade `workOrder` / `project`). Arbetsorderfakturor bär alltid `locationId` och `buyerFacilityId`; projektfakturor bär dem endast när klienten angav dem, så båda kan vara `null`. Fakturan bär pengauppdelningen i sektioner (arbete, material, resa, frakt, övrigt), var och en med rader, en `taxRate` och en `totalBeforeTax`, som rullar upp till `invoiceTotalBeforeTax`, `invoiceTax` och `invoiceTotalAfterTax`. Monetära värden serialiseras som strängar. En kort AI-härledd sammanfattning av omfattningen kan visas i `title`. Den renderade PDF:en finns i `invoicePDFs`; stödjande filer finns i `attachments` (se [Filer och bilagor](/sv/buyer-api/files-and-attachments)).
 
 ### Filtrera efter entitetstyp
 
@@ -130,7 +130,7 @@ Den returnerar antalet uppdaterade fakturor. Det här är ett kraftverktyg som f
 En robust leverantörsreskontrasynk:
 
 1. Polla `GET /invoices?status=pending` (eller `publishedAt`-fönster) enligt schema.
-2. Hämta varje faktura. För arbetsorderfakturor, matcha totalsummor mot det godkända [förslaget](/buyer-api/quotes-and-proposals) och arbetsorderns `nte`. För projektfakturor, matcha mot din projektbudget i stället. NTE-kontrollen körs inte på serversidan för projektfakturor.
+2. Hämta varje faktura. För arbetsorderfakturor, matcha totalsummor mot det godkända [förslaget](/sv/buyer-api/quotes-and-proposals) och arbetsorderns `nte`. För projektfakturor, matcha mot din projektbudget i stället. NTE-kontrollen körs inte på serversidan för projektfakturor.
 3. `POST status/approved`, exportera till ditt AP-system och sedan `POST status/processing`.
 4. Vid avräkning, `POST status/paid` via id, eller `status/paid/by_work_order_id` med den arbetsorderreferens som ditt AP-system bär.
 5. Logga höljets `traceId` vid varje `400`/`406` så att supporten kan spåra den exakta förfrågan.

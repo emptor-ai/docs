@@ -67,7 +67,7 @@ El vocabulario de eventos se divide en eventos de viaje (`began_trip` hasta `tri
 
 - **Analítica** para tableros, nómina y reportes de utilización: un número por técnico por período, con la matemática de pausas ya hecha.
 - **Eventos brutos** para auditar un total sospechoso, reconstruir una visita minuto a minuto o alimentar tu propio warehouse analítico.
-- Las preguntas **por visita** suelen atenderse mejor con la expansión de llamada de servicio `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, que devuelve exactamente los eventos en la ventana de check-in/check-out de la visita más `trueWorkTimeMillis` sin pausas. Ver [Llamadas de servicio](/supplier-api/service-calls#reading-a-service-call-back).
+- Las preguntas **por visita** suelen atenderse mejor con la expansión de llamada de servicio `GET /v1/supplier/work_order/service_calls/{id}/with_work_logs`, que devuelve exactamente los eventos en la ventana de check-in/check-out de la visita más `trueWorkTimeMillis` sin pausas. Ver [Llamadas de servicio](/es/supplier-api/service-calls#reading-a-service-call-back).
 
 ## Patrones aplicados
 
