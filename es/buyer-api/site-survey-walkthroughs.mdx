@@ -34,7 +34,7 @@ Aplican la paginación estándar y los filtros por campo, además del alcance po
 
 ## Renderizar puntuaciones con rangos de mapa de calor
 
-Cada respuesta de recorrido incrusta la encuesta de sitio hidratada contra la que se ejecutó, bajo `siteSurvey`. La encuesta de sitio lleva un campo opcional `walkthroughHeatMapRanges`: un arreglo de bandas de color usadas para renderizar las puntuaciones del recorrido como un mapa de calor.
+Cada respuesta de recorrido incrusta la encuesta de sitio hidratada contra la que se ejecutó, bajo `siteSurvey`. La encuesta de sitio lleva un campo opcional `walkthroughHeatMapRanges`: un array de bandas de color usadas para renderizar las puntuaciones del recorrido como un mapa de calor.
 
 ```json
 {
@@ -55,7 +55,7 @@ Cada entrada tiene dos campos:
 - `color`: el color a renderizar para la banda, normalmente un código hexadecimal.
 - `lowerRange`: la puntuación más baja que cae en la banda. Una banda va desde su `lowerRange` hasta el `lowerRange` de la siguiente banda.
 
-Para colorear una puntuación del arreglo `scores` del recorrido, elige la banda con el `lowerRange` más alto que sea menor o igual a la puntuación.
+Para colorear una puntuación del array `scores` del recorrido, elige la banda con el `lowerRange` más alto que sea menor o igual a la puntuación.
 
 Configuras los rangos en la encuesta de sitio o en su plantilla. Si una encuesta no tiene rangos propios, OpenWrench rellena los rangos de la plantilla en el momento de la lectura, por lo que el `siteSurvey.walkthroughHeatMapRanges` incrustado ya viene resuelto. Nunca necesitas consultar la plantilla para encontrar las bandas. El campo es `null` cuando ni la encuesta ni su plantilla definen rangos; omite el renderizado del mapa de calor en ese caso.
 

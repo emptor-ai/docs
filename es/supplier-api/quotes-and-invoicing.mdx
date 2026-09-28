@@ -4,7 +4,7 @@ sidebarTitle: "Cotizaciones y facturación"
 description: "Crea propuestas para aprobación del comprador y factura órdenes de trabajo completadas: borradores de facturas, secciones de líneas y subida del PDF."
 ---
 
-El dinero fluye por dos objetos: **propuestas** (cotizaciones que el comprador aprueba antes de que proceda el trabajo) y **facturas** (la cuenta por el trabajo completado). Ambos son creados por los proveedores a través de esta API.
+El dinero fluye por dos objetos: **propuestas** (cotizaciones que el comprador aprueba antes de que proceda el trabajo) y **facturas** (la cuenta por el trabajo completado). Los proveedores crean ambos a través de esta API.
 
 <Note>
 Ninguno de los endpoints está disponible para claves de equipo interno de servicio; la cotización y facturación son para proveedores terceros que facturan a un comprador.
@@ -20,7 +20,7 @@ export SECRET="<shared-secret>"
 
 ## El dinero son cadenas, en secciones
 
-Las propuestas y facturas comparten una estructura de líneas. Los montos son **cadenas que deben parsearse como números** ("450.00", no 450.00 como float; los emisores deberían formatear con dos decimales y parsear como decimales). Las secciones son labor, material, viaje, flete y misc (las propuestas añaden costo incurrido), cada una con sus líneas, tasa de impuestos y `...TotalBeforeTax`, que se suman a los totales antes de impuestos, impuestos y después de impuestos. Las líneas de viaje, flete y misc son objetos simples `{ "description", "amount" }`.
+Las propuestas y facturas comparten una estructura de líneas. Los montos son **cadenas que deben parsearse como números** ("450.00", no 450.00 como float; deberías formatear con dos decimales y parsear como decimales). Las secciones son labor, material, viaje, flete y misc (las propuestas añaden costo incurrido). Cada una tiene sus líneas, tasa de impuestos y `...TotalBeforeTax`, que se suman a los totales antes de impuestos, impuestos y después de impuestos. Las líneas de viaje, flete y misc son objetos simples `{ "description", "amount" }`.
 
 ## Propuestas (cotizaciones)
 
@@ -93,7 +93,7 @@ Detalles que muerden:
 - Guardar una factura puede transicionar el estado de la orden de trabajo asociada según el mapeo de estado factura-a-orden. Un fallo de validación a nivel de guardado devuelve `406`.
 - Pasar un `id` actualiza una factura existente (solo borradores, en la práctica; los estados del lado del comprador no son tuyos para editar).
 
-### Sube el PDF y publica
+### Subir el PDF y publicar
 
 `POST /v1/supplier/invoice/file/upload_and_publish/{invoiceId}` hace ambos pasos a la vez: el PDF subido (parte multipart `file`, máx. 512 MB) se convierte en el único PDF de la factura, y el estado pasa a `pending`.
 

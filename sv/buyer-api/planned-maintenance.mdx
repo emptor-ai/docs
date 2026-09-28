@@ -66,9 +66,9 @@ curl -X POST "$BASE/v1/buyer/pm/scheduler_run_logs" \
   }'
 ```
 
-`scheduleId`, `status`, `lastRunAt` och `lastRunDueAt` är obligatoriska; `woId` länkar den arbetsorder som körningen skapade (skapa den först via [work orders](/sv/buyer-api/work-orders#skapa-en-arbetsorder)-slutpunkten, med `isPM: true` och `plannedMaintenanceScheduleId` satta), och `log` innehåller fri diagnostik.
+`scheduleId`, `status`, `lastRunAt` och `lastRunDueAt` är obligatoriska; `woId` länkar den arbetsorder som körningen skapade (skapa den först via [arbetsorder](/sv/buyer-api/work-orders#skapa-en-arbetsorder)-slutpunkten, med `isPM: true` och `plannedMaintenanceScheduleId` satta), och `log` innehåller fri diagnostik.
 
-Hela slingan för extern schemaläggare:
+Hela loopen för extern schemaläggare:
 
 1. Läs scheman och deras takt från API:et.
 2. När en körning blir aktuell, skapa PM-arbetsordern.
