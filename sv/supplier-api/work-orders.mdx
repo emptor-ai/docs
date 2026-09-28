@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Läsa din kö
 
 <Warning>
-  **Bygg inte din integration på list-slutpunkten.** `GET /v1/supplier/work_order/work_orders` är den dyraste läsningen i Supplier API, och att polla den för att upptäcka nya eller ändrade arbetsordrar är fel mönster. Den är långsam på stora köer, den förbrukar din [hastighetsgräns](/sv/supplier-api/introduction#hastighetsgränser) och den missar ändå ändringar mellan pollningarna. Använd [webhooks](/sv/supplier-api/webhooks) för att få veta att en arbetsorder tilldelades dig, bytte status eller fick en anteckning, och hämta sedan just den arbetsordern via id. Reservera listan för en engångsvis initial laddning och tillfällig avstämning, med ett smalt filter och en liten sida.
+  **Bygg inte din integration på list-slutpunkten.** `GET /v1/supplier/work_order/work_orders` är den dyraste läsningen i Supplier API, och att polla den för att upptäcka nya eller ändrade arbetsordrar är fel mönster. Den är långsam på stora köer, den förbrukar din [hastighetsgräns](/sv/supplier-api/introduction#hastighetsgränser) och den missar ändå ändringar mellan pollningarna. Använd [webhooks](/sv/supplier-api/webhooks) för att få veta att en arbetsorder tilldelades dig, bytte status eller fick en anteckning. Hämta sedan just den arbetsordern via id. Reservera listan för en engångsvis initial laddning och tillfällig avstämning, med ett smalt filter och en liten sida.
 </Warning>
 
 Mönstret som skalar är push, sedan hämtning via id:
@@ -75,7 +75,9 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
 
 **Avvisa** med `POST .../status_update/decline`. Endast kontakter tillhörande arbetsorderns tilldelade leverantörsanläggning får avvisa. Arbetsordern lämnar din kö via leverantörsbytesflödet: dess status återgår till `PendingApproval`, eller så plockas en privat nätverksleverantör automatiskt, beroende på köparens konfiguration. Anteckningens `text` registreras som avslagsskäl och återspeglas i vad köparen ser, så var specifik.
 
-Båda anropen tar `{ "id": ..., "note": { ... } }` och returnerar den uppdaterade arbetsordern.
+Båda anropen tar `{ "id": ..., "note": { ... } }` och returnerar den uppdaterade arbetsordern. `id` är arbetsorderns numeriska `id` (en int64 som måste finnas), inte visningssträngen `woNumber`. Skicka det som ett JSON-nummer, inte som en sträng inom citattecken. Hämta värdet med `GET /v1/supplier/work_order/work_orders/{id}` om du vill kontrollera det innan du skickar.
+
+Det finns ingen `status_update`-slutpunkt för arbetsordrar som slutför ett jobb. Du slutför arbetet via [utcheckning av servicebesöket](/sv/supplier-api/service-calls#3-checka-ut-och-sätt-utfallet).
 
 ## Håll köparen informerad
 
@@ -189,7 +191,7 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
 
 Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den första löv-problemtypen för platsens köparföretag, och `woPriorityId` till en standardprioritet för det företaget. Ett `assetId`, om det anges, måste existera, och dess område ärvs när `areaId` inte är satt. Fältet heter `needApproval` (utan "s") i den här skapa-kroppen. Ett `id` i kroppen ignoreras: det här anropet skapar alltid en ny arbetsorder.
 
-**Servern sätter den initiala statusen.** För en tredjepartsleverantörs nyckel ignoreras `status` och `isSupplierInitiated` i kroppen. Servern skapar arbetsordern som `SupplierInitiatedPendingApproval` med `isSupplierInitiated: true`. Köparens godkännandekonfiguration avgör sedan var den hamnar: den stannar i `SupplierInitiatedPendingApproval` tills en köpare godkänner den, eller, när köparen automatiskt godkänner leverantörsinitierade arbetsordrar, bekräftas den direkt till din anläggning som `ConfirmedByServiceProvider`. Nycklar som tillhör en köpares interna serviceteam, och betalande leverantörer som skapar en arbetsorder på en plats hos en kund de förvaltar, behåller den `status` de skickar. Om dessa nycklar utelämnar `status` härleds den initiala statusen från köparföretagets konfiguration; ett internt team hamnar i `AssignedToInternalTech`.
+**Servern sätter den initiala statusen.** För en tredjepartsleverantörs nyckel ignoreras `status` och `isSupplierInitiated` i kroppen. Servern skapar arbetsordern som `SupplierInitiatedPendingApproval` med `isSupplierInitiated: true`. Köparens godkännandekonfiguration avgör sedan var den hamnar. När köparen automatiskt godkänner leverantörsinitierade arbetsordrar bekräftar OpenWrench den direkt till din anläggning som `ConfirmedByServiceProvider`. Annars stannar den i `SupplierInitiatedPendingApproval` tills en köpare godkänner den. Två typer av nycklar behåller den `status` de skickar: nycklar som tillhör en köpares interna serviceteam, och betalande leverantörer som skapar en arbetsorder på en plats hos en kund de förvaltar. Om dessa nycklar utelämnar `status` härleds den initiala statusen från köparföretagets konfiguration; ett internt team hamnar i `AssignedToInternalTech`.
 
 ## Problemtyper
 

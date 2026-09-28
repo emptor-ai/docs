@@ -4,10 +4,6 @@ sidebarTitle: "Llamadas de servicio"
 description: "Conduce la visita con la Supplier API: programa y reprograma técnicos, haz check-in y check-out, fija estados de finalización y lee registros de trabajo."
 ---
 
-# Llamadas de servicio: programación, check-in y finalización
-
-> Conduce el ciclo de vida de la visita con la Supplier API: programa y reprograma técnicos, haz check-in y check-out, establece estados de finalización y lee registros de trabajo.
-
 Una **llamada de servicio** es una visita de un técnico contra una orden de trabajo. La Supplier API conduce todo el ciclo de vida de la visita a través de cinco endpoints de actualización de estado más expansiones de lectura. Es la parte más matizada de la API; los detalles a continuación vale la pena leerlos antes de escribir código.
 
 Todos los ejemplos asumen:
@@ -41,7 +37,7 @@ Campos compartidos de la solicitud: `workOrderId` y `numberOfTechs` siempre son 
 Todas las rutas están bajo `/v1/supplier/work_order/`. No hay equivalentes del lado del comprador: el check-in y el check-out no pueden dirigirse desde la Buyer API.
 
 <Warning>
-**`check_in`, `check_out` y sus variantes `remote_` requieren un `id` de service call existente.** Actualizan una visita; no la crean. Enviarlos sin `id` devuelve `400 InvalidInputException` con `"required param: id"`. Inicia la visita con `tech_scheduled` (que crea el primer service call y devuelve la orden de trabajo con el nuevo call en `associatedServiceCalls` / `lastServiceCall`), y luego reutiliza ese `id` en cada actualización posterior de la misma visita.
+**`check_in`, `check_out` y sus variantes `remote_` requieren un `id` de service call existente.** Actualizan una visita; no la crean. Enviarlos sin `id` devuelve `400 InvalidInputException` con `"required param: id"`. Inicia la visita con `tech_scheduled`. Crea el primer service call y devuelve la orden de trabajo con el nuevo call en `associatedServiceCalls` / `lastServiceCall`. Reutiliza ese `id` en cada actualización posterior de la misma visita.
 
 La orden de trabajo también tiene que estar más allá de la aceptación antes de que `tech_scheduled` sea válido. Si todavía está en `PendingConfirmationByServiceProvider` (el estado del comprador "Open - Pending Contractor Confirmation"), [acéptala primero](/es/supplier-api/work-orders#aceptar-o-rechazar) con `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
 </Warning>
@@ -60,9 +56,9 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   }'
 ```
 
-`serviceScheduledAt` debe ser una fecha-hora ISO 8601 con separador `T` y un offset explícito (por ejemplo `2026-08-22T09:00:00.000-07:00`, o `...Z` para UTC). Un valor separado por espacio como `2026-08-22 09:00:00+00:00` se rechaza como entrada inválida. Consulta [Formatos de fecha](/es/supplier-api/introduction#formatos-de-fecha).
+`serviceScheduledAt` debe ser una fecha-hora ISO 8601 con separador `T` y un offset explícito (por ejemplo, `2026-08-22T09:00:00.000-07:00`, o `...Z` para UTC). Un valor separado por espacio como `2026-08-22 09:00:00+00:00` se rechaza como entrada inválida. Consulta [Formatos de fecha](/es/supplier-api/introduction#formatos-de-fecha).
 
-`leadTechnicianEmail` es el correo del técnico en la visita y está tipado como una cadena simple en el esquema. Si una solicitud `tech_scheduled` falla con una excepción no controlada genérica, primero confirma que la orden de trabajo esté [más allá de la aceptación](/es/supplier-api/work-orders#aceptar-o-rechazar) y que `serviceScheduledAt` tenga el formato ISO 8601 anterior; ambas son causas comunes de un fallo poco descriptivo de `tech_scheduled`.
+`leadTechnicianEmail` es el correo del técnico en la visita y está tipado como una cadena simple en el esquema. Si una solicitud `tech_scheduled` falla con una excepción no controlada genérica, primero confirma que la orden de trabajo esté [más allá de la aceptación](/es/supplier-api/work-orders#aceptar-o-rechazar). Luego confirma que `serviceScheduledAt` tenga el formato ISO 8601 anterior. Ambas son causas comunes de un fallo poco descriptivo de `tech_scheduled`.
 
 Para mover la cita más tarde, llama a `tech_rescheduled` con el `id` de la llamada de servicio y el nuevo `serviceScheduledAt`.
 
@@ -104,17 +100,23 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out
   }'
 ```
 
-Opciones comunes de `checkOutStatus`:
+Valores comunes de `checkOutStatus`:
 
-- `WaitingForReview`: trabajo terminado, entregar al comprador para revisión.
-- `TechScheduled` o `PartsRequested` y similares: la visita terminó pero el trabajo continúa (visita de seguimiento, esperando partes).
+| `checkOutStatus` | Úsalo cuando |
+| --- | --- |
+| `WaitingForReview` | El trabajo está terminado. El trabajo pasa al comprador para revisión. |
+| `WorkIncompleteWithReason` | La visita terminó sin completar el trabajo. Explica el motivo en `checkOutNotes`. |
+| `PartsRequested`, `PartsOnOrder`, `PartsReceived` | La visita terminó y el trabajo está a la espera de partes. |
+| `TechAssigned`, `TechScheduled` | La visita terminó y se necesita otra visita. |
 
-Las partes y stock consumidos en la visita se registran mediante `partsWithQuantity`, `stockLocationIds` y `equipmentPerStockLocationIds` en el mismo payload; los ids vienen de tu [catálogo de inventario](/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+**Para completar una orden de trabajo, haz check-out con `WaitingForReview`.** `WorkReviewedAndCompleted` es un estado que pertenece al comprador. El comprador lo establece después de revisar tu trabajo, u OpenWrench lo establece automáticamente cuando aplica la auto-aprobación (ver abajo). El comprador también puede rechazar el trabajo con `WorkUnsatisfactory`. Te enteras de la decisión del comprador mediante el [webhook](/es/supplier-api/webhooks) `workorder.status_update`.
+
+Registra las partes y el stock consumidos en la visita mediante `partsWithQuantity`, `stockLocationIds` y `equipmentPerStockLocationIds` en el mismo payload. Los ids vienen de tu [catálogo de inventario](/es/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 En este punto se disparan dos comportamientos de automatización:
 
 - **Auto-aprobación.** Para proveedores terceros cuya empresa compradora tenga `autoApproveWorkOrdersCompletedByThirdParty` habilitado, un resultado `WaitingForReview` se promueve automáticamente a `WorkReviewedAndCompleted`.
-- **Auto-publicación de facturas.** Cuando el estado resultante sea `WorkReviewedAndCompleted`, las reglas de auto-publicación de facturas pueden ejecutarse y publicar tu factura en borrador. Consulta [Cotizaciones y facturación](/supplier-api/quotes-and-invoicing).
+- **Auto-publicación de facturas.** Cuando el estado resultante sea `WorkReviewedAndCompleted`, las reglas de auto-publicación de facturas pueden ejecutarse y publicar tu factura en borrador. Consulta [Cotizaciones y facturación](/es/supplier-api/quotes-and-invoicing).
 
 `remote_check_in` y `remote_check_out` se comportan de forma idéntica para trabajo hecho fuera del sitio.
 
@@ -133,7 +135,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/service_calls/4402/with_work_logs/with_tech_details"
 ```
 
-Para reportes de tiempo a nivel de flota entre todos los técnicos, usa [WrenchMode](/supplier-api/wrenchmode) en lugar de iterar llamadas.
+Para reportes de tiempo a nivel de flota entre todos los técnicos, usa [WrenchMode](/es/supplier-api/wrenchmode) en lugar de iterar llamadas.
 
 ## Trabajos multi-visita
 

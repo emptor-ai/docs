@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Lire votre file
 
 <Warning>
-  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle. C'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été assigné, a changé de statut ou a reçu une note, puis récupérez ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
+  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle. C'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été assigné, a changé de statut ou a reçu une note. Récupérez ensuite ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
 </Warning>
 
 Le modèle qui passe à l'échelle est la poussée, puis la récupération par id :
@@ -75,7 +75,9 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
 
 **Refuser** avec `POST .../status_update/decline`. Seuls les contacts de l'établissement fournisseur affecté au bon de travail peuvent refuser. Le bon de travail quitte votre file via le flux de changement de fournisseur : son statut revient à `PendingApproval`, ou un fournisseur du réseau privé est choisi automatiquement, selon la configuration de l'acheteur. Le `text` de la note est enregistré comme raison du refus et se reflète dans ce que voit l'acheteur, alors soyez précis.
 
-Les deux appels prennent `{ "id": ..., "note": { ... } }` et retournent le bon de travail mis à jour.
+Les deux appels prennent `{ "id": ..., "note": { ... } }` et retournent le bon de travail mis à jour. `id` est l'`id` numérique du bon de travail (un int64 qui doit exister), et non la chaîne d'affichage `woNumber`. Envoyez-le comme un nombre JSON, et non comme une chaîne entre guillemets. Pour vérifier la valeur avant l'envoi, récupérez-la avec `GET /v1/supplier/work_order/work_orders/{id}`.
+
+Il n'existe aucun endpoint `status_update` de bon de travail pour compléter un travail. Vous complétez le travail par le [départ de l'appel de service](/fr-CA/supplier-api/service-calls#3-quitter-et-définir-le-résultat).
 
 ## Tenir l'acheteur informé
 
@@ -189,7 +191,7 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
 
 Valeurs par défaut lorsqu'omises : `problemTypeId` retombe sur le premier type de problème feuille de l'entreprise acheteuse de l'emplacement, et `woPriorityId` sur une priorité par défaut pour cette entreprise. Un `assetId`, s'il est fourni, doit exister, et son secteur est hérité lorsque `areaId` n'est pas défini. Le champ est `needApproval` (sans « s ») sur ce corps de création. Un `id` dans le corps est ignoré : cet appel crée toujours un nouveau bon de travail.
 
-**Le serveur fixe le statut initial.** Pour une clé de fournisseur tiers, tout `status` ou `isSupplierInitiated` dans le corps est ignoré. Le serveur crée le bon de travail en `SupplierInitiatedPendingApproval` avec `isSupplierInitiated: true`. La configuration d'approbation de l'acheteur décide ensuite de sa destination : il reste en `SupplierInitiatedPendingApproval` jusqu'à ce qu'un acheteur l'approuve ou, lorsque l'acheteur approuve automatiquement les bons de travail à l'initiative du fournisseur, il est immédiatement confirmé à votre établissement en `ConfirmedByServiceProvider`. Les clés appartenant à l'équipe de service interne d'un acheteur, ainsi que les fournisseurs payants qui créent un bon de travail à l'emplacement d'un client qu'ils gèrent, conservent le `status` qu'ils envoient. Si ces clés omettent `status`, le statut initial est dérivé de la configuration de l'entreprise acheteuse; une équipe interne arrive en `AssignedToInternalTech`.
+**Le serveur fixe le statut initial.** Pour une clé de fournisseur tiers, tout `status` ou `isSupplierInitiated` dans le corps est ignoré. Le serveur crée le bon de travail en `SupplierInitiatedPendingApproval` avec `isSupplierInitiated: true`. La configuration d'approbation de l'acheteur décide ensuite de sa destination. Lorsque l'acheteur approuve automatiquement les bons de travail à l'initiative du fournisseur, OpenWrench le confirme immédiatement à votre établissement en `ConfirmedByServiceProvider`. Sinon, il reste en `SupplierInitiatedPendingApproval` jusqu'à ce qu'un acheteur l'approuve. Deux types de clés conservent le `status` qu'elles envoient : les clés appartenant à l'équipe de service interne d'un acheteur, et les fournisseurs payants qui créent un bon de travail à l'emplacement d'un client qu'ils gèrent. Si ces clés omettent `status`, le statut initial est dérivé de la configuration de l'entreprise acheteuse; une équipe interne arrive en `AssignedToInternalTech`.
 
 ## Types de problèmes
 

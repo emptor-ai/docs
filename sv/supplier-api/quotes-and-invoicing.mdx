@@ -105,7 +105,7 @@ Varje förutsättning som misslyckas returnerar `400`: din anläggning måste ä
 
 ### Läsa och stämma av
 
-`GET /v1/supplier/invoice/invoices` (filtrerbar, t.ex. `?status=pending`) och `GET /v1/supplier/invoice/invoices/{id}`. Tredjepartsleverantörer ser maskerade poster med köpar-privata fält bortrensade. Polla status för att driva ditt AR-huvudbok: `approvedAt`, `processedAt` och `markedPaidAt` tidsstämplar köparens framsteg.
+`GET /v1/supplier/invoice/invoices` (filtrerbar, t.ex. `?status=pending`) och `GET /v1/supplier/invoice/invoices/{id}`. Tredjepartsleverantörer ser maskerade poster med köpar-privata fält bortrensade. Polla status för att driva din AR-huvudbok: `approvedAt`, `processedAt` och `markedPaidAt` tidsstämplar köparens framsteg.
 
 ## End-to-end-faktureringsflöde
 
