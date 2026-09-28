@@ -201,5 +201,5 @@ Valeurs par défaut lorsqu'omises : `problemTypeId` retombe sur le premier type 
 
 1. Enregistrez un endpoint [webhook](/fr-CA/supplier-api/webhooks) pour `workorder.create` et `workorder.status_update`. À chaque livraison, récupérez le bon de travail par id. Faites le chargement initial unique depuis l'endpoint de liste, et gardez celui-ci hors de la boucle en régime permanent, sauf comme sondage filet de sécurité peu fréquent et étroitement filtré.
 2. `confirm` ou `decline` dans votre entente de service.
-3. Planifiez la visite via les [appels de service](/fr-CA/supplier-api/service-calls); publiez des statuts de pièces et une ECD au fil des développements.
+3. Planifiez la visite via les [appels de service](/fr-CA/supplier-api/service-calls); publiez des statuts de pièces et une date d'achèvement estimée au fil des développements.
 4. Complétez via le départ, puis facturez via [soumissions et facturation](/fr-CA/supplier-api/quotes-and-invoicing).

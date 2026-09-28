@@ -201,5 +201,5 @@ Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den först
 
 1. Registrera en [webhook](/sv/supplier-api/webhooks)-slutpunkt för `workorder.create` och `workorder.status_update`. Vid varje leverans, hämta arbetsordern via id. Gör den engångsvisa initiala laddningen från list-slutpunkten, och håll den utanför den löpande loopen förutom som en gles, snävt filtrerad säkerhetspollning.
 2. `confirm` eller `decline` inom din SLA.
-3. Schemalägg besöket via [servicebesök](/sv/supplier-api/service-calls); posta reservdelsstatusar och ett ECD när saker utvecklas.
+3. Schemalägg besöket via [servicebesök](/sv/supplier-api/service-calls); posta reservdelsstatusar och ett uppskattat slutdatum när saker utvecklas.
 4. Slutför via utcheckning och fakturera sedan via [offerter och fakturering](/sv/supplier-api/quotes-and-invoicing).
