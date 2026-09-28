@@ -287,7 +287,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Une intégration de répartition typique :
 
 1. Mettez en cache `me`, les types de problèmes et les emplacements au démarrage.
-2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez non assigné, puis classez les fournisseurs et effectuez l'assignation par `PATCH`).
+2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez-le sans fournisseur affecté, puis classez les fournisseurs et effectuez l'affectation par `PATCH`).
 3. Suivez la progression du fournisseur via les [webhooks](/fr-CA/buyer-api/webhooks) (`workorder.status_update`), en récupérant chaque bon de travail par id à l'arrivée d'un événement. Gardez `GET /work_orders?statusChangedAt=...` comme passe de réconciliation peu fréquente, pas comme signal principal.
 4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Appels de service](/fr-CA/buyer-api/service-calls) pour les preuves de visite) et postez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
 5. Réconciliez le côté monétaire via [Soumissions et propositions](/fr-CA/buyer-api/quotes-and-proposals) et [Factures](/fr-CA/buyer-api/invoices).
