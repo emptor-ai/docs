@@ -40,7 +40,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/partners/inventory/stoc
 
 Två posttyper uttrycker vad som hålls var:
 
-**Delar per lagerplats** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) är en post per del per plats: kvantiteter tillgängliga, reserverade och tillgängliga, binlagringsplats och kostnader.
+**Delar per lagerplats** (`GET /v1/partners/inventory/parts_per_stock_locations`, +`/{id}`) är en post per del per plats: kvantiteter i lager, reserverade och tillgängliga, binlagringsplats och kostnader.
 
 ```bash
 # Var finns del 210 lagrad?

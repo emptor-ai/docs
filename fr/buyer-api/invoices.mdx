@@ -121,7 +121,7 @@ curl -X PATCH "$BASE/v1/buyer/invoice/bulk_update_with_filters" \
 
 Il retourne le nombre de factures mises à jour. C'est un outil puissant qui contourne les effets secondaires de transition par facture, alors préférez les endpoints de statut sauf si vous avez vraiment besoin d'un balayage. Non soumis à la limite de débit.
 
-**Publier les brouillons pour les bons de travail complétés.** `PATCH /v1/buyer/invoice/publish_draft_invoices_if_wo_complete_and_auto_publish_enabled` publie les factures fournisseur en brouillon dont le bon de travail est complet, pour les fournisseurs qui ont activé la publication automatique. Elle nécessite une clé d'API acheteur **super-administrateur** et retourne `403` pour une clé normale. Prévu pour des tâches d'entretien planifiées.
+**Publier les brouillons pour les bons de travail complétés.** `PATCH /v1/buyer/invoice/publish_draft_invoices_if_wo_complete_and_auto_publish_enabled` publie les factures fournisseur en brouillon dont le bon de travail est complet, pour les fournisseurs qui ont activé la publication automatique. Il nécessite une clé d'API acheteur **super-administrateur** et retourne `403` pour une clé normale. Prévu pour des tâches d'entretien planifiées.
 
 ## Modèle de synchronisation comptabilité fournisseurs
 
