@@ -130,7 +130,7 @@ Les lectures de l'API externe sont servies par un réplica de lecture, si bien q
 
 ## Assembler le tout
 
-La [boucle d'intégration typique](/fr-CA/supplier-api/work-orders#boucle-dintégration-typique), pilotée par les webhooks :
+La [boucle d'intégration typique](/fr-CA/supplier-api/work-orders#boucle-d-intégration-typique), pilotée par les webhooks :
 
 1. Enregistrez un endpoint pour `workorder.create` et `workorder.status_update` (ajoutez `workorder.new_note` si vous répliquez la conversation).
 2. Sur `workorder.create`, récupérez le bon de travail et créez le travail dans votre système. Puis distinguez selon `newStatus` : `PendingConfirmationByServiceProvider` signifie que l'acheteur vous attend, faites donc `confirm` ou `decline` dans votre entente de service; `SupplierInitiatedPendingApproval` signifie que votre propre demande attend l'acheteur, ne faites donc rien tant qu'un `workorder.status_update` n'a pas rapporté l'issue; tout autre statut signifie que le bon de travail est déjà à vous, passez donc directement à la planification.
