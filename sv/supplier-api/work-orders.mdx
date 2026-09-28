@@ -75,7 +75,9 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
 
 **Avvisa** med `POST .../status_update/decline`. Endast kontakter tillhörande arbetsorderns tilldelade leverantörsanläggning får avvisa. Arbetsordern lämnar din kö via leverantörsbytesflödet: dess status återgår till `PendingApproval`, eller så plockas en privat nätverksleverantör automatiskt, beroende på köparens konfiguration. Anteckningens `text` registreras som avslagsskäl och återspeglas i vad köparen ser, så var specifik.
 
-Båda anropen tar `{ "id": ..., "note": { ... } }` och returnerar den uppdaterade arbetsordern.
+Båda anropen tar `{ "id": ..., "note": { ... } }` och returnerar den uppdaterade arbetsordern. `id` är arbetsorderns numeriska `id` (en int64 som måste finnas), inte visningssträngen `woNumber`. Skicka det som ett JSON-nummer, inte som en sträng inom citattecken. Hämta värdet med `GET /v1/supplier/work_order/work_orders/{id}` om du vill kontrollera det innan du skickar.
+
+Det finns ingen `status_update`-slutpunkt för arbetsordrar som slutför ett jobb. Du slutför arbetet via [utcheckning av servicebesöket](/sv/supplier-api/service-calls#3-checka-ut-och-sätt-utfallet).
 
 ## Håll köparen informerad
 

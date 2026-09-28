@@ -75,7 +75,9 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders/status_update/confirm" \
 
 **Rechaza** con `POST .../status_update/decline`. Solo los contactos de la instalación de proveedor asignada a la orden de trabajo pueden rechazar. La orden de trabajo abandona tu cola a través del flujo de cambio de proveedor: su estado vuelve a `PendingApproval`, o se elige automáticamente un proveedor de red privada, según la configuración del comprador. El `text` de la nota se registra como motivo del rechazo y se refleja en lo que el comprador ve, así que hazlo específico.
 
-Ambas llamadas toman `{ "id": ..., "note": { ... } }` y devuelven la orden de trabajo actualizada.
+Ambas llamadas toman `{ "id": ..., "note": { ... } }` y devuelven la orden de trabajo actualizada. `id` es el `id` numérico de la orden de trabajo (un int64 que debe existir), no la cadena de visualización `woNumber`. Envíalo como un número JSON, no como una cadena entre comillas. Para verificar el valor antes de enviarlo, obtenlo con `GET /v1/supplier/work_order/work_orders/{id}`.
+
+No existe un endpoint `status_update` de orden de trabajo para completar un trabajo. Completas el trabajo mediante el [check-out de la llamada de servicio](/es/supplier-api/service-calls#3-check-out-y-establecer-el-resultado).
 
 ## Mantener informado al comprador
 
