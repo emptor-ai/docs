@@ -2,7 +2,7 @@
 
 > Lisez les pièces, les types d'équipement, les vendeurs, les emplacements de stock, l'inventaire par emplacement et les pièces consommées sur les bons de travail avec l'API Équipes internes.
 
-Autour du [flux d'achats](/partners-api/purchasing-flow) se trouvent les données de référence et de stock : ce que vous pouvez commander (pièces, types d'équipement), auprès de qui vous commandez (vendeurs), où cela vit (emplacements de stock et inventaire par emplacement), et où cela est allé (consommation sur bons de travail). Tout cela est en lecture seule via l'API Équipes internes.
+Autour du [flux d'achats](/fr-CA/partners-api/purchasing-flow) se trouvent les données de référence et de stock : ce que vous pouvez commander (pièces, types d'équipement), auprès de qui vous commandez (vendeurs), où cela vit (emplacements de stock et inventaire par emplacement), et où cela est allé (consommation sur bons de travail). Tout cela est en lecture seule via l'API Équipes internes.
 
 Tous les exemples supposent :
 
@@ -52,7 +52,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
 ```
 
-**Équipement par emplacement de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) : une fiche par unité physique sérialisée — numéro de série, état et provenance. Ce sont les unités que les [réceptions avec numéros de série](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) créent.
+**Équipement par emplacement de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) : une fiche par unité physique sérialisée — numéro de série, état et provenance. Ce sont les unités que les [réceptions avec numéros de série](/fr-CA/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive) créent.
 
 Les réceptions sont le chemin d'écriture dans le stock via cette API; le côté lecture ici est la façon dont vous réconciliez le stock OpenWrench avec votre ERP.
 

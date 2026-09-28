@@ -54,6 +54,6 @@ Autres champs utiles : `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeA
 
 1. Le fournisseur soumet une proposition; le bon de travail se met généralement en pause en attente d'approbation.
 2. Vos approbateurs l'accordent ou la refusent dans l'application. L'octroi relève le plafond de dépenses effectif du travail.
-3. Lorsque la [facture](/buyer-api/invoices) finale arrive, comparez `invoiceTotalAfterTax` au `totalAfterTax` de la proposition octroyée avant d'approuver le paiement. Signalez les écarts au-delà de votre tolérance pour révision humaine.
+3. Lorsque la [facture](/fr-CA/buyer-api/invoices) finale arrive, comparez `invoiceTotalAfterTax` au `totalAfterTax` de la proposition octroyée avant d'approuver le paiement. Signalez les écarts au-delà de votre tolérance pour révision humaine.
 
 Une boucle de sondage pratique pour un tableau de bord des achats : filtrez par `status=pending`, triez par `submittedAt` et paginez avec `limit=25`, en respectant la limite de débit de 10 requêtes par fenêtre de 20 secondes.

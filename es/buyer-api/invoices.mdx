@@ -45,7 +45,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-Una factura enlaza de vuelta a su `supplierFacilityId` más **exactamente uno** de `workOrderId` o `projectId` (el otro es `null`, junto con el `workOrder` / `project` hidratado). Las facturas de orden de trabajo siempre llevan `locationId` y `buyerFacilityId`; las facturas de proyecto los llevan solo cuando el cliente los proporcionó, por lo que ambos pueden ser `null`. La factura lleva el desglose monetario en secciones (labor, material, viaje, flete, misc), cada una con líneas, una `taxRate` y un `totalBeforeTax`, que se suman a `invoiceTotalBeforeTax`, `invoiceTax` e `invoiceTotalAfterTax`. Los valores monetarios se serializan como cadenas. Un breve resumen del alcance derivado por IA puede aparecer en `title`. El PDF renderizado está en `invoicePDFs`; los archivos de soporte están en `attachments` (ver [Archivos y adjuntos](/buyer-api/files-and-attachments)).
+Una factura enlaza de vuelta a su `supplierFacilityId` más **exactamente uno** de `workOrderId` o `projectId` (el otro es `null`, junto con el `workOrder` / `project` hidratado). Las facturas de orden de trabajo siempre llevan `locationId` y `buyerFacilityId`; las facturas de proyecto los llevan solo cuando el cliente los proporcionó, por lo que ambos pueden ser `null`. La factura lleva el desglose monetario en secciones (labor, material, viaje, flete, misc), cada una con líneas, una `taxRate` y un `totalBeforeTax`, que se suman a `invoiceTotalBeforeTax`, `invoiceTax` e `invoiceTotalAfterTax`. Los valores monetarios se serializan como cadenas. Un breve resumen del alcance derivado por IA puede aparecer en `title`. El PDF renderizado está en `invoicePDFs`; los archivos de soporte están en `attachments` (ver [Archivos y adjuntos](/es/buyer-api/files-and-attachments)).
 
 ### Filtrar por tipo de entidad
 
@@ -130,7 +130,7 @@ Devuelve el número de facturas actualizadas. Es una herramienta potente que sal
 Una sincronización robusta de cuentas por pagar:
 
 1. Consulta `GET /invoices?status=pending` (o ventanas de `publishedAt`) según programación.
-2. Descarga cada factura. Para facturas de orden de trabajo, contrasta los totales con la [propuesta](/buyer-api/quotes-and-proposals) aprobada y el `nte` de la orden de trabajo. Para facturas de proyecto, contrasta con tu presupuesto de proyecto en su lugar. La verificación de NTE no se ejecuta del lado del servidor para facturas de proyecto.
+2. Descarga cada factura. Para facturas de orden de trabajo, contrasta los totales con la [propuesta](/es/buyer-api/quotes-and-proposals) aprobada y el `nte` de la orden de trabajo. Para facturas de proyecto, contrasta con tu presupuesto de proyecto en su lugar. La verificación de NTE no se ejecuta del lado del servidor para facturas de proyecto.
 3. `POST status/approved`, exporta a tu sistema AP y luego `POST status/processing`.
 4. En la liquidación, `POST status/paid` por id, o `status/paid/by_work_order_id` con la referencia de la orden de trabajo que lleva tu sistema AP.
 5. Registra el `traceId` de la envoltura en cualquier `400`/`406` para que soporte pueda rastrear la solicitud exacta.

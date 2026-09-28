@@ -8,7 +8,7 @@ description: "Lee partes, tipos de equipo, proveedores, ubicaciones de stock, in
 
 > Lee partes, tipos de equipo, proveedores, ubicaciones de stock, inventario por ubicación y las partes consumidas en órdenes de trabajo con la Internal Teams API.
 
-Alrededor del [flujo de compras](/partners-api/purchasing-flow) se sitúan los datos de referencia y de stock: qué puedes pedir (partes, tipos de equipo), a quién le pides (proveedores), dónde vive (ubicaciones de stock e inventario por ubicación) y a dónde fue (consumo en órdenes de trabajo). Todo eso es de solo lectura a través de la Internal Teams API.
+Alrededor del [flujo de compras](/es/partners-api/purchasing-flow) se sitúan los datos de referencia y de stock: qué puedes pedir (partes, tipos de equipo), a quién le pides (proveedores), dónde vive (ubicaciones de stock e inventario por ubicación) y a dónde fue (consumo en órdenes de trabajo). Todo eso es de solo lectura a través de la Internal Teams API.
 
 Todos los ejemplos asumen:
 
@@ -58,7 +58,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/partners/inventory/parts_per_stock_locations?stockLocationId=7"
 ```
 
-**Equipo por ubicación de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) es un registro por unidad física serializada: número de serie, condición y procedencia. Estas son las unidades que crean los [recibos con números de serie](/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive).
+**Equipo por ubicación de stock** (`GET /v1/partners/inventory/equipment_per_stock_locations`, +`/{id}`) es un registro por unidad física serializada: número de serie, condición y procedencia. Estas son las unidades que crean los [recibos con números de serie](/es/partners-api/purchasing-flow#4-record-receipts-as-goods-arrive).
 
 Los recibos son la ruta de escritura al stock por esta API; el lado de lectura aquí es cómo concilias el stock de OpenWrench contra tu ERP.
 

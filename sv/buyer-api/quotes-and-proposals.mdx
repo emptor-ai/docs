@@ -54,6 +54,6 @@ Andra användbara fält: `workOrderId`, `supplierFacilityId`, `workOrderNTEBefor
 
 1. Leverantören skickar in ett förslag; arbetsordern pausar oftast i väntan på godkännande.
 2. Dina godkännare tilldelar eller avvisar det i appen. En tilldelning höjer det effektiva utgiftstaket för jobbet.
-3. När den slutliga [fakturan](/buyer-api/invoices) anländer, jämför `invoiceTotalAfterTax` mot det tilldelade förslagets `totalAfterTax` innan du godkänner betalning. Flagga avvikelser över din tolerans för mänsklig granskning.
+3. När den slutliga [fakturan](/sv/buyer-api/invoices) anländer, jämför `invoiceTotalAfterTax` mot det tilldelade förslagets `totalAfterTax` innan du godkänner betalning. Flagga avvikelser över din tolerans för mänsklig granskning.
 
 En praktisk pollningsloop för en inköpsdashboard: filtrera `status=pending`, sortera efter `submittedAt` och paginera med `limit=25`, respekterande hastighetsgränsen på 10 förfrågningar per 20-sekundersfönster.

@@ -53,7 +53,7 @@ Comportamiento a conocer:
 - `locationId`, `buyerFacilityId` y `buyerCompanyId` se derivan de la orden de trabajo; no puedes establecerlos.
 - Los campos de impuestos y totales de sección no establecidos toman por defecto `"0"`.
 - `requestForProposalId` toma por defecto el RFP de la orden de trabajo cuando se omite.
-- `proposalPdfLink`, si se envía, debe ser una URL válida. `attachments` toma `FileDetails` del [endpoint de subida de archivos](/supplier-api/files-and-users).
+- `proposalPdfLink`, si se envía, debe ser una URL válida. `attachments` toma `FileDetails` del [endpoint de subida de archivos](/es/supplier-api/files-and-users).
 - Pasar un `id` actualiza una propuesta existente.
 
 Rastrea el resultado volviendo a consultar: `status` se mueve de `pending` a `awarded` o `declined` (los motivos del rechazo aparecen en `declineNotes`). Lista con `GET /v1/supplier/quote/proposals`, lee una con `GET /v1/supplier/quote/proposals/{id}`.
@@ -116,7 +116,7 @@ Cada precondición que falla devuelve `400`: tu instalación debe ser dueña de 
 ## Flujo de facturación de extremo a extremo
 
 1. La orden de trabajo llega a cotización: envía una propuesta y espera `awarded`.
-2. Completa el trabajo mediante el [check-out de la llamada de servicio](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+2. Completa el trabajo mediante el [check-out de la llamada de servicio](/es/supplier-api/service-calls#3-check-out-and-set-the-outcome).
 3. Crea la factura en borrador; genera tu PDF.
 4. Una vez que la orden de trabajo aparezca como Completed, `upload_and_publish`.
 5. Consulta el estado de la factura por sondeo hasta `paid`, y concilia contra `markedPaidAt`.

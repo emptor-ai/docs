@@ -45,7 +45,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
 ```
 
-Une facture est reliée à son `supplierFacilityId` en plus d'**exactement un** de `workOrderId` ou `projectId` (l'autre est `null`, tout comme l'objet hydraté `workOrder` / `project`). Les factures de bon de travail portent toujours `locationId` et `buyerFacilityId`; les factures de projet ne les portent que si le client les a fournis, alors les deux peuvent être `null`. La facture porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`, se totalisant à `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées en chaînes de caractères. Un court résumé de la portée dérivé par IA peut apparaître dans `title`. Le PDF rendu se trouve dans `invoicePDFs`; les fichiers de soutien sont dans `attachments` (voir [Fichiers et pièces jointes](/buyer-api/files-and-attachments)).
+Une facture est reliée à son `supplierFacilityId` en plus d'**exactement un** de `workOrderId` ou `projectId` (l'autre est `null`, tout comme l'objet hydraté `workOrder` / `project`). Les factures de bon de travail portent toujours `locationId` et `buyerFacilityId`; les factures de projet ne les portent que si le client les a fournis, alors les deux peuvent être `null`. La facture porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`, se totalisant à `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées en chaînes de caractères. Un court résumé de la portée dérivé par IA peut apparaître dans `title`. Le PDF rendu se trouve dans `invoicePDFs`; les fichiers de soutien sont dans `attachments` (voir [Fichiers et pièces jointes](/fr-CA/buyer-api/files-and-attachments)).
 
 ### Filtrer par type d'entité
 
@@ -130,7 +130,7 @@ Il retourne le nombre de factures mises à jour. C'est un outil puissant qui con
 Une synchronisation robuste des comptes fournisseurs :
 
 1. Sondez `GET /invoices?status=pending` (ou des fenêtres `publishedAt`) selon un horaire.
-2. Récupérez chaque facture. Pour les factures de bon de travail, comparez les totaux à la [proposition](/buyer-api/quotes-and-proposals) approuvée et au `nte` du bon de travail. Pour les factures de projet, comparez plutôt à votre budget de projet. La vérification NTE ne s'exécute pas côté serveur pour les factures de projet.
+2. Récupérez chaque facture. Pour les factures de bon de travail, comparez les totaux à la [proposition](/fr-CA/buyer-api/quotes-and-proposals) approuvée et au `nte` du bon de travail. Pour les factures de projet, comparez plutôt à votre budget de projet. La vérification NTE ne s'exécute pas côté serveur pour les factures de projet.
 3. `POST status/approved`, exportez vers votre système de comptes fournisseurs, puis `POST status/processing`.
 4. Au règlement, `POST status/paid` par id, ou `status/paid/by_work_order_id` en fonction de la référence de bon de travail que porte votre système de comptes fournisseurs.
 5. Journalisez le `traceId` de l'enveloppe sur tout `400`/`406` afin que le soutien puisse retracer la requête exacte.

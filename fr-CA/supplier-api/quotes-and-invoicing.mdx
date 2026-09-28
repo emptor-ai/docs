@@ -47,7 +47,7 @@ Comportement à connaître :
 - `locationId`, `buyerFacilityId` et `buyerCompanyId` sont dérivés du bon de travail; vous ne pouvez pas les définir.
 - Les champs de taxe et les totaux de section non définis sont par défaut à `"0"`.
 - `requestForProposalId` prend par défaut la RFP du bon de travail lorsqu'il est omis.
-- `proposalPdfLink`, s'il est envoyé, doit être une URL valide. `attachments` prend des `FileDetails` de [l'endpoint de téléversement de fichier](/supplier-api/files-and-users).
+- `proposalPdfLink`, s'il est envoyé, doit être une URL valide. `attachments` prend des `FileDetails` de [l'endpoint de téléversement de fichier](/fr-CA/supplier-api/files-and-users).
 - Passer un `id` met à jour une proposition existante.
 
 Suivez le résultat en récupérant à nouveau : `status` passe de `pending` à `awarded` ou `declined` (les raisons de refus apparaissent dans `declineNotes`). Listez avec `GET /v1/supplier/quote/proposals`, lisez-en une avec `GET /v1/supplier/quote/proposals/{id}`.
@@ -110,7 +110,7 @@ Chaque précondition non satisfaite renvoie `400` : votre établissement doit po
 ## Flux de facturation de bout en bout
 
 1. Le bon de travail atteint l'étape de soumission : soumettez une proposition, attendez `awarded`.
-2. Complétez le travail via le [départ d'appel de service](/supplier-api/service-calls#3-check-out-and-set-the-outcome).
+2. Complétez le travail via le [départ d'appel de service](/fr-CA/supplier-api/service-calls#3-check-out-and-set-the-outcome).
 3. Créez le brouillon de facture; générez votre PDF.
 4. Une fois que le bon de travail affiche Completed, `upload_and_publish`.
 5. Sondez le statut de la facture jusqu'à `paid`, et réconciliez contre `markedPaidAt`.
