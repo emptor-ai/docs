@@ -37,7 +37,7 @@ Delade förfrågningsfält: `workOrderId` och `numberOfTechs` krävs alltid. `id
 Alla sökvägar ligger under `/v1/supplier/work_order/`. Det finns inga motsvarigheter på köparsidan: check-in och check-out kan inte styras från Buyer API.
 
 <Warning>
-**`check_in`, `check_out` och deras `remote_`-varianter kräver ett befintligt service call-`id`.** De uppdaterar ett besök; de skapar inte ett. Att skicka dem utan `id` returnerar `400 InvalidInputException` med `"required param: id"`. Starta besöket med `tech_scheduled` (som skapar det första service call:et och returnerar arbetsordern med det nya call:et i `associatedServiceCalls` / `lastServiceCall`), och återanvänd sedan det `id`:et vid varje senare uppdatering av samma besök.
+**`check_in`, `check_out` och deras `remote_`-varianter kräver ett befintligt service call-`id`.** De uppdaterar ett besök; de skapar inte ett. Att skicka dem utan `id` returnerar `400 InvalidInputException` med `"required param: id"`. Starta besöket med `tech_scheduled`. Det skapar det första service call:et och returnerar arbetsordern med det nya call:et i `associatedServiceCalls` / `lastServiceCall`. Återanvänd det `id`:et vid varje senare uppdatering av samma besök.
 
 Arbetsordern måste också ha passerat acceptansen innan `tech_scheduled` är giltigt. Om den fortfarande är `PendingConfirmationByServiceProvider` (köparstatusen "Open - Pending Contractor Confirmation"), [acceptera den först](/sv/supplier-api/work-orders#acceptera-eller-avvisa) med `POST /v1/supplier/work_order/work_orders/status_update/confirm`.
 </Warning>
@@ -56,9 +56,9 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/tech_sche
   }'
 ```
 
-`serviceScheduledAt` måste vara en ISO 8601 datum-tid med en `T`-separator och en explicit offset (t.ex. `2026-08-22T09:00:00.000-07:00`, eller `...Z` för UTC). Ett mellanslagsseparerat värde som `2026-08-22 09:00:00+00:00` avvisas som ogiltig indata. Se [Datumformat](/sv/supplier-api/introduction#datumformat).
+`serviceScheduledAt` måste vara en ISO 8601 datum-tid med en `T`-separator och en explicit offset (till exempel `2026-08-22T09:00:00.000-07:00`, eller `...Z` för UTC). Ett mellanslagsseparerat värde som `2026-08-22 09:00:00+00:00` avvisas som ogiltig indata. Se [Datumformat](/sv/supplier-api/introduction#datumformat).
 
-`leadTechnicianEmail` är teknikerns e-post för besöket och är typad som en vanlig sträng i schemat. Om en `tech_scheduled`-förfrågan misslyckas med ett generiskt ohanterat undantag, bekräfta först att arbetsordern har [passerat acceptans](/sv/supplier-api/work-orders#acceptera-eller-avvisa) och att `serviceScheduledAt` följer ISO 8601-formatet ovan; båda är vanliga orsaker till ett föga beskrivande `tech_scheduled`-fel.
+`leadTechnicianEmail` är teknikerns e-post för besöket och är typad som en vanlig sträng i schemat. Om en `tech_scheduled`-förfrågan misslyckas med ett generiskt ohanterat undantag, bekräfta först att arbetsordern har [passerat acceptans](/sv/supplier-api/work-orders#acceptera-eller-avvisa). Bekräfta sedan att `serviceScheduledAt` följer ISO 8601-formatet ovan. Båda är vanliga orsaker till ett föga beskrivande `tech_scheduled`-fel.
 
 För att flytta bokningen senare, anropa `tech_rescheduled` med servicebesökets `id` och det nya `serviceScheduledAt`.
 
@@ -111,7 +111,7 @@ Vanliga värden för `checkOutStatus`:
 
 **Slutför en arbetsorder genom att checka ut med `WaitingForReview`.** `WorkReviewedAndCompleted` är en status som ägs av köparen. Köparen sätter den efter att ha granskat ditt arbete, eller så sätter OpenWrench den automatiskt när automatiskt godkännande gäller (se nedan). Köparen kan också avvisa arbetet med `WorkUnsatisfactory`. Du får veta köparens beslut via [webhooken](/sv/supplier-api/webhooks) `workorder.status_update`.
 
-Delar och lager som förbrukas vid besöket registreras via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload; id:na kommer från din [lagerkatalog](/sv/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
+Registrera delar och lager som förbrukas vid besöket via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload. Id:na kommer från din [lagerkatalog](/sv/supplier-api/purchasing-and-inventory#catalog-parts-equipment-vendors-and-stock).
 
 Två automationsbeteenden utlöses vid denna punkt:
 
