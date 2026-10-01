@@ -30,7 +30,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/location
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/multiple/1204,1205,1210"
 ```
 
-Notes :
+Remarques :
 
 - L'endpoint de liste limite `limit` à **10** (la plupart des endpoints de liste permettent 25). Planifiez vos boucles de pagination en conséquence.
 - `multiple/{ids}` prend des ids séparés par des virgules et **omet silencieusement** tout id pour lequel vous n'avez pas la permission de lecture. Vérifiez quels ids ont été retournés plutôt que de présumer que tous l'ont été.
