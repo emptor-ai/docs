@@ -106,7 +106,7 @@ Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la
 - **Las entregas fallidas se reintentan** desde la pasarela con un esquema de espera creciente. Haz que tu manejador sea idempotente para que un reintento tras un éxito parcial no cause daño.
 - **Las entregas son al menos una vez.** El mismo evento puede llegar más de una vez incluso sin un fallo de tu lado. Deduplica con `event_type` más `workOrderId` más `changedAt` (o `addedAt` para las notas).
 - **El orden no está garantizado.** Dos eventos de la misma orden de trabajo pueden llegar desordenados. No derives el estado de la secuencia de eventos; obtén la orden de trabajo y confía en su `status`.
-- **Los eventos antiguos se descartan, no se entregan tarde.** Un evento que no se haya pasado a la pasarela dentro de las tres horas siguientes al cambio se descarta. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia sondeando `GET /v1/buyer/work_order/work_orders?statusChangedAt=...` para el periodo que te perdiste.
+- **Los eventos antiguos se descartan, no se entregan tarde.** Un evento que no se haya pasado a la pasarela dentro de las tres horas siguientes al cambio se descarta. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia con `GET /v1/buyer/work_order/work_orders`: lista las órdenes de trabajo creadas (`createdAtStartDate`) o completadas (`completedAtStartDate`) desde que empezó la interrupción, además de las abiertas (`isActive=true`), y compáralas con tus registros.
 
 {/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 
@@ -129,4 +129,4 @@ Una integración de despacho impulsada por webhooks:
 1. Registra un endpoint para `workorder.create` y `workorder.status_update` (añade `workorder.new_note` si replicas la conversación).
 2. En `workorder.create`, obtén la orden de trabajo y crea el registro correspondiente en tu sistema. Si despachas desde tu lado, haz `PATCH` del `supplierFacilityId` como se describe en [Órdenes de trabajo](/es/buyer-api/work-orders#reasignar-un-proveedor).
 3. En `workorder.status_update`, obtén la orden de trabajo. Cuando `newStatus` sea `WaitingForReview`, ejecuta tu flujo de revisión y publica `work_reviewed_and_completed` o `work_unsatisfactory`.
-4. Ejecuta un sondeo periódico sobre `statusChangedAt` como red de seguridad para cualquier cosa que la ruta de webhooks haya perdido.
+4. Ejecuta una conciliación ocasional como red de seguridad para cualquier cosa que la ruta de webhooks haya perdido: lista las órdenes de trabajo abiertas (`isActive=true`) y las completadas recientemente (una ventana de `completedAtStartDate`), y compáralas con tus registros.

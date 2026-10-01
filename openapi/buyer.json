@@ -2972,6 +2972,9 @@
             "$ref": "#/components/parameters/woFilter_isActive"
           },
           {
+            "$ref": "#/components/parameters/woFilter_hasBuyerArchived"
+          },
+          {
             "$ref": "#/components/parameters/woFilter_locationId"
           },
           {
@@ -3177,6 +3180,9 @@
           },
           {
             "$ref": "#/components/parameters/woFilter_isActive"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_hasBuyerArchived"
           },
           {
             "$ref": "#/components/parameters/woFilter_locationId"
@@ -7093,7 +7099,7 @@
         "name": "isActive",
         "in": "query",
         "required": false,
-        "description": "`true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value.",
+        "description": "`true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. Archived work orders are included either way; add `hasBuyerArchived=false` to leave them out.",
         "schema": {
           "type": "string",
           "enum": [
@@ -7366,6 +7372,19 @@
           "type": "string"
         },
         "example": "ops@example.com,manager@example.com"
+      },
+      "woFilter_hasBuyerArchived": {
+        "name": "hasBuyerArchived",
+        "in": "query",
+        "required": false,
+        "description": "`false` leaves out work orders your team has archived; `true` returns only archived ones. Archiving is separate from status, so open work can be archived too.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
       }
     },
     "schemas": {

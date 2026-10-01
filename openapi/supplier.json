@@ -1656,6 +1656,9 @@
             "$ref": "#/components/parameters/woFilter_isActive"
           },
           {
+            "$ref": "#/components/parameters/woFilter_hasSupplierArchived"
+          },
+          {
             "$ref": "#/components/parameters/woFilter_locationId"
           },
           {
@@ -1810,6 +1813,9 @@
           },
           {
             "$ref": "#/components/parameters/woFilter_isActive"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_hasSupplierArchived"
           },
           {
             "$ref": "#/components/parameters/woFilter_locationId"
@@ -17316,7 +17322,7 @@
         "name": "isActive",
         "in": "query",
         "required": false,
-        "description": "`true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value.",
+        "description": "`true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. Archived work orders are included either way; add `hasSupplierArchived=false` to leave them out.",
         "schema": {
           "type": "string",
           "enum": [
@@ -17556,6 +17562,19 @@
         "description": "Work from one client. Get buyer company ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Has no effect for internal service teams, which only ever see their own company's work. One value.",
         "schema": {
           "type": "integer"
+        }
+      },
+      "woFilter_hasSupplierArchived": {
+        "name": "hasSupplierArchived",
+        "in": "query",
+        "required": false,
+        "description": "`false` leaves out work orders your team has archived; `true` returns only archived ones. Archiving is separate from status, so open work can be archived too.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
         }
       }
     }

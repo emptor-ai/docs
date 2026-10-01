@@ -66,7 +66,7 @@ Fel:
 
 ## Paginering och filtrering
 
-List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som fältfilter. Skicka ett fältnamn med ett värde (kommaseparera flera värden) för att filtrera resultatuppsättningen. Referensens sida för varje slutpunkt listar dess viktigare filter.
+List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som filter. Varje slutpunkt stöder sin egen uppsättning filternycklar, och nycklar den inte känner igen ignoreras i stället för att avvisas. Filter med flera värden använder en pluralnyckel med kommaseparerade värden (`statuses=TechScheduled,TechRescheduled`). För arbetsordrar, se [filterreferensen](/supplier-api/work-orders#filter-reference) (på engelska).
 
 ## Datumformat
 

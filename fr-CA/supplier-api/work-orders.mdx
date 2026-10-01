@@ -36,7 +36,7 @@ Les endpoints de liste et de comptage servent aux deux moments qu'un webhook ne 
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?statuses=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Count by filter, without fetching rows
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -50,7 +50,7 @@ La liste et le comptage déterminent quels bons de travail correspondent dans l'
 - **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, et le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Encadrez la valeur de guillemets doubles pour exiger la phrase exacte.
 - **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'id donné.
 - **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
-- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur une fenêtre `statusChangedAt` ou d'autres colonnes indexées.
+- **Les filtres non reconnus sont ignorés.** Un paramètre de requête qui n'est pas un filtre pris en charge ne restreint pas les résultats, et la requête aboutit quand même. Cela inclut les clés mal orthographiées ainsi que `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, `assignedAt` et `walkthroughId`, qui ne figurent pas dans l'index de recherche. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui. La liste des filtres pris en charge figure dans la [référence des filtres](/supplier-api/work-orders#filter-reference) (en anglais).
 - **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures. Votre propre changement fraîchement écrit, ou un bon de travail assigné il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
 - **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
 - **Masquage de données.** Si vous êtes un fournisseur tiers (pas l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, les emplacements et les factures avant que la réponse soit retournée. Les champs manquants sont généralement du masquage, pas des bogues. Voir [Données de référence](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les détails.

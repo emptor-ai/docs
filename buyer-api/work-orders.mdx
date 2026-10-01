@@ -114,7 +114,8 @@ Keys are case-sensitive. A singular key (`status`) takes one value; the plural k
 | `id`, `ids` | One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. |
 | `status`, `statuses`, `notStatuses` | The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). |
 | `displayStatus`, `displayStatuses` | The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. |
-| `isActive` | `true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. |
+| `isActive` | `true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. Archived work orders are included either way; add `hasBuyerArchived=false` to leave them out. |
+| `hasBuyerArchived` | `false` leaves out work orders your team has archived; `true` returns only archived ones. Archiving is separate from status, so open work can be archived too. |
 
 **What and where**
 

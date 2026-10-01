@@ -66,7 +66,7 @@ Errores:
 
 ## Paginación y filtrado
 
-Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order` (`asc` | `desc`). Los parámetros de consulta adicionales se tratan como filtros de campo: pasa un nombre de campo con un valor (separa varios valores por coma) para filtrar el conjunto de resultados. Cada página de referencia lista sus filtros más destacados.
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order` (`asc` | `desc`). Los parámetros de consulta adicionales se tratan como filtros. Cada endpoint admite su propio conjunto de claves de filtro, y las claves que no reconoce se ignoran en lugar de rechazarse. Los filtros de varios valores usan una clave en plural con valores separados por comas (`statuses=TechScheduled,TechRescheduled`). Para órdenes de trabajo, consulta la [referencia de filtros](/supplier-api/work-orders#filter-reference) (en inglés).
 
 ## Formatos de fecha
 

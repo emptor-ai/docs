@@ -36,7 +36,7 @@ List- och räkningsslutpunkterna är till för de två tillfällen en webhook in
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?statuses=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Count by filter, without fetching rows
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -50,7 +50,7 @@ Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökin
 - **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar och problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom dubbla citattecken för att kräva den exakta frasen.
 - **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
 - **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
-- **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på ett `statusChangedAt`-fönster eller andra indexerade kolumner.
+- **Okända filter ignoreras.** En frågeparameter som inte är ett filter som stöds smalnar inte av resultaten, och anropet lyckas ändå. Det gäller felstavade nycklar och `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, `assignedAt` och `walkthroughId`, som inte finns i sökindexet. Innan du förlitar dig på ett nytt filter, jämför `count_by` med och utan det. Listan över filter som stöds finns i [filterreferensen](/supplier-api/work-orders#filter-reference) (på engelska).
 - **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick. En ändring du just skrivit, eller en arbetsorder som tilldelades för några sekunder sedan, kan tillfälligt saknas i listresultat och räkningar.
 - **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
 - **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/sv/supplier-api/reference-data#datamaskering) för detaljer.
