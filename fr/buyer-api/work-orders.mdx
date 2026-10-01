@@ -79,14 +79,14 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ ; séparez une valeur par des virgules pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la restriction locataire dérivée de votre clé. Vous ne voyez donc jamais que les bons de travail de votre entreprise.
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre. Pour correspondre à l'une de plusieurs valeurs, utilisez la clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`) ; `status=Unassigned,PendingApproval` cherche un unique statut portant ce nom littéral et ne renvoie rien. Les filtres se combinent toujours avec la restriction locataire dérivée de votre clé. Vous ne voyez donc jamais que les bons de travail de votre entreprise.
 
 La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. Cela change quelques comportements :
 
 - **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes de pointage d'entrée et de sortie des visites de service, et le nom du type de problème. Il correspond aussi aux numéros de référence tels que le numéro de bon de travail, le numéro de PO et le numéro de série de l'actif. Mettez la valeur entre guillemets (`search="walk-in cooler"`) pour exiger la phrase exacte.
 - **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'identifiant donné.
 - **Tri.** `sort_by` accepte `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
-- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur des fenêtres de `statusChangedAt` ou d'autres colonnes indexées.
+- **Les filtres non reconnus sont ignorés.** Un paramètre de requête qui n'est pas un filtre pris en charge ne restreint pas les résultats, et la requête aboutit quand même. Cela inclut les clés mal orthographiées ainsi que `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` et `walkthroughId`, qui ne figurent pas dans l'index de recherche. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui. La liste des filtres pris en charge figure dans la [référence des filtres](/buyer-api/work-orders#filter-reference) (en anglais).
 - **Fraîcheur.** Les mises à jour de l'index de recherche et de la réplique accusent un léger retard sur les écritures. Un bon de travail créé il y a quelques millisecondes peut donc être brièvement absent des résultats de liste et des comptages.
 - **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Restreignez le filtre plutôt que de paginer aussi loin.
 
@@ -178,7 +178,7 @@ Valeurs de `status` que vous verrez et pourrez définir via l'API :
 | `WorkUnsatisfactory` | Acheteur | Vous avez refusé le travail terminé. |
 | `CancelledWithReason` | Acheteur | Annulé. |
 
-Les transitions détenues par le fournisseur arrivent via l'intégration propre du fournisseur ou les applications OpenWrench. Votre côté les observe via les [webhooks](/buyer-api/webhooks) ou par interrogation (`statusChangedAt`, `statusChanges`) et agit sur celles détenues par l'acheteur.
+Les transitions détenues par le fournisseur arrivent via l'intégration propre du fournisseur ou les applications OpenWrench. Votre côté les observe via les [webhooks](/buyer-api/webhooks) ou en récupérant le bon de travail (`statusChanges` contient l'historique complet) et agit sur celles détenues par l'acheteur.
 
 ## Notes
 
@@ -258,6 +258,6 @@ Une intégration de répartition typique :
 
 1. Mettez en cache `me`, les types de problème et les emplacements au démarrage.
 2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez sans assignation, puis classez les fournisseurs et `PATCH` l'assignation).
-3. Suivez la progression du fournisseur via les [webhooks](/buyer-api/webhooks) (`workorder.status_update`), avec `GET /work_orders?statusChangedAt=...` comme interrogation de repli.
+3. Suivez la progression du fournisseur via les [webhooks](/buyer-api/webhooks) (`workorder.status_update`), avec un appel de liste étroitement filtré (`GET /work_orders?isActive=true&locationId=...`) comme interrogation de repli peu fréquente.
 4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Visites de service](/buyer-api/service-calls) pour les preuves de visite) et publiez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
 5. Rapprochez le volet financier via [Soumissions et propositions](/buyer-api/quotes-and-proposals) et [Factures](/buyer-api/invoices).

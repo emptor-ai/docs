@@ -81,14 +81,14 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`. Varje annan frågeparameter behandlas som ett fältfilter; kommaseparera ett värde för att matcha något av flera (`status=Unassigned,PendingApproval`). Filter kombineras alltid med tenant-avgränsningen som härleds från din nyckel, så du ser bara ditt företags arbetsordrar.
+List-slutpunkter tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`. Varje annan frågeparameter behandlas som ett filter. För att matcha något av flera värden använder du pluralnyckeln med kommaseparerade värden (`statuses=Unassigned,PendingApproval`); `status=Unassigned,PendingApproval` letar efter en enda status med just det namnet och returnerar ingenting. Filter kombineras alltid med tenant-avgränsningen som härleds från din nyckel, så du ser bara ditt företags arbetsordrar.
 
 Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Det ändrar några beteenden:
 
 - **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar och problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom citattecken (`search="walk-in cooler"`) för att kräva den exakta frasen.
 - **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
 - **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
-- **Oindexerade filter ignoreras.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` och `walkthroughId` finns inte i sökindexet och smalnar inte längre av resultaten. Filtrera istället på `statusChangedAt`-fönster eller andra indexerade kolumner.
+- **Okända filter ignoreras.** En frågeparameter som inte är ett filter som stöds smalnar inte av resultaten, och anropet lyckas ändå. Det gäller felstavade nycklar och `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` och `walkthroughId`, som inte finns i sökindexet. Innan du förlitar dig på ett nytt filter, jämför `count_by` med och utan det. Listan över filter som stöds finns i [filterreferensen](/buyer-api/work-orders#filter-reference) (på engelska).
 - **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick, så en arbetsorder som skapades för millisekunder sedan kan tillfälligt saknas i listresultat och räkningar.
 - **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
 
@@ -97,7 +97,7 @@ Räkningsslutpunkten kör samma sökindexfråga som listan, så en räkning stä
 Hämta en enskild arbetsorder med `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Använd listan för att söka, inte för att bevaka ändringar.** Om din integration behöver veta när arbetsordrar skapas, byter status eller får en ny anteckning, registrera en [webhook](/sv/buyer-api/webhooks). Hämta arbetsordern som anges i varje händelse via dess id. Att polla list-slutpunkten enligt schema är långsamt på stora konton, förbrukar din hastighetsgräns och missar ändå ändringar mellan pollningarna. Spara listanropen till ad hoc-frågor, den engångsvisa initiala laddningen och en tillfällig snävt filtrerad avstämning (`statusChangedAt`-fönster, litet `limit`).
+  **Använd listan för att söka, inte för att bevaka ändringar.** Om din integration behöver veta när arbetsordrar skapas, byter status eller får en ny anteckning, registrera en [webhook](/sv/buyer-api/webhooks). Hämta arbetsordern som anges i varje händelse via dess id. Att polla list-slutpunkten enligt schema är långsamt på stora konton, förbrukar din hastighetsgräns och missar ändå ändringar mellan pollningarna. Spara listanropen till ad hoc-frågor, den engångsvisa initiala laddningen och en tillfällig snävt filtrerad avstämning (till exempel `isActive=true` för en plats, eller ett `completedAtStartDate`-fönster, med ett litet `limit`).
 </Warning>
 
 ## Tilldela om en leverantör
@@ -184,7 +184,7 @@ När din integration får detta `409`, vänta tills teknikern checkar ut (eller 
 | `WorkUnsatisfactory` | Köparen | Du har avvisat det utförda arbetet. |
 | `CancelledWithReason` | Köparen | Avbrutet. |
 
-De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via [webhooks](/sv/buyer-api/webhooks) eller polling (`statusChangedAt`, `statusChanges`) och agerar på de köparägda.
+De leverantörsägda övergångarna kommer in via leverantörens egen integration eller OpenWrench-apparna; din sida observerar dem via [webhooks](/sv/buyer-api/webhooks) eller genom att hämta arbetsordern (`statusChanges` innehåller hela historiken) och agerar på de köparägda.
 
 ## Anteckningar
 
@@ -288,6 +288,6 @@ En typisk utskicksintegration:
 
 1. Cacha `me`, problemtyper och platser vid start.
 2. Skapa arbetsordern med `supplierFacilityId` satt (eller skapa otilldelad, rangordna sedan leverantörer och `PATCH` tilldelningen).
-3. Följ leverantörens framsteg via [webhooks](/sv/buyer-api/webhooks) (`workorder.status_update`), och hämta varje arbetsorder via id när en händelse kommer in. Behåll `GET /work_orders?statusChangedAt=...` som en gles avstämningskörning, inte som den primära signalen.
+3. Följ leverantörens framsteg via [webhooks](/sv/buyer-api/webhooks) (`workorder.status_update`), och hämta varje arbetsorder via id när en händelse kommer in. Behåll ett snävt filtrerat listanrop (`GET /work_orders?isActive=true&locationId=...`) som en gles avstämningskörning, inte som den primära signalen.
 4. När leverantören når `WaitingForReview`, verifiera arbetet (se [Servicebesök](/sv/buyer-api/service-calls) för besöksbevis) och posta `work_reviewed_and_completed`, eller `work_unsatisfactory` med en anteckning.
 5. Stäm av pengasidan genom [Offerter och förslag](/sv/buyer-api/quotes-and-proposals) och [Fakturor](/sv/buyer-api/invoices).

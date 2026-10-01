@@ -60,7 +60,7 @@ Erreurs :
 
 ## Pagination et filtrage
 
-Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order` (`asc` | `desc`). Les paramètres de requête supplémentaires sont traités comme des filtres de champ. Passez un nom de champ avec une valeur (séparez plusieurs valeurs par des virgules) pour filtrer le jeu de résultats. La page de référence de chaque endpoint énumère ses filtres notables.
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order` (`asc` | `desc`). Les paramètres de requête supplémentaires sont traités comme des filtres. Chaque endpoint prend en charge son propre ensemble de clés de filtre, et les clés qu'il ne reconnaît pas sont ignorées plutôt que rejetées. Les filtres à plusieurs valeurs utilisent une clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`). Pour les bons de travail, consultez la [référence des filtres](/buyer-api/work-orders#filter-reference) (en anglais).
 
 ## Formats de date
 

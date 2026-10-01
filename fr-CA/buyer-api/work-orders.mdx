@@ -81,14 +81,14 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-Les endpoints de liste prennent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre de champ; séparez une valeur par une virgule pour correspondre à plusieurs (`status=Unassigned,PendingApproval`). Les filtres se combinent toujours avec la portée de locataire dérivée de votre clé, donc vous ne voyez jamais que les bons de travail de votre entreprise.
+Les endpoints de liste prennent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre. Pour correspondre à l'une de plusieurs valeurs, utilisez la clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`); `status=Unassigned,PendingApproval` cherche un unique statut portant ce nom littéral et ne renvoie rien. Les filtres se combinent toujours avec la portée de locataire dérivée de votre clé, donc vous ne voyez jamais que les bons de travail de votre entreprise.
 
 La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. Cela change quelques comportements :
 
 - **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, et le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Mettez la valeur entre guillemets (`search="walk-in cooler"`) pour exiger la phrase exacte.
 - **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'id donné.
 - **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
-- **Les filtres non indexés sont ignorés.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId` et `walkthroughId` ne figurent pas dans l'index de recherche et ne restreignent plus les résultats. Filtrez plutôt sur des fenêtres `statusChangedAt` ou d'autres colonnes indexées.
+- **Les filtres non reconnus sont ignorés.** Un paramètre de requête qui n'est pas un filtre pris en charge ne restreint pas les résultats, et la requête aboutit quand même. Cela inclut les clés mal orthographiées ainsi que `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` et `walkthroughId`, qui ne figurent pas dans l'index de recherche. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui. La liste des filtres pris en charge figure dans la [référence des filtres](/buyer-api/work-orders#filter-reference) (en anglais).
 - **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures, alors un bon de travail créé il y a quelques millisecondes peut être brièvement absent des résultats de liste et des comptages.
 - **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
 
@@ -97,7 +97,7 @@ L'endpoint de comptage exécute la même requête d'index de recherche que la li
 Récupérez un bon de travail avec `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Utilisez la liste pour interroger, pas pour surveiller les changements.** Si votre intégration doit savoir quand des bons de travail sont créés, changent de statut ou reçoivent une nouvelle note, enregistrez un [webhook](/fr-CA/buyer-api/webhooks). Récupérez par id le bon de travail nommé dans chaque événement. Sonder l'endpoint de liste selon un horaire est lent sur les gros comptes, dépense votre limite de débit et manque quand même les changements entre les sondages. Réservez les appels de liste aux requêtes ponctuelles, au chargement initial unique et à une réconciliation occasionnelle étroitement filtrée (fenêtre `statusChangedAt`, petit `limit`).
+  **Utilisez la liste pour interroger, pas pour surveiller les changements.** Si votre intégration doit savoir quand des bons de travail sont créés, changent de statut ou reçoivent une nouvelle note, enregistrez un [webhook](/fr-CA/buyer-api/webhooks). Récupérez par id le bon de travail nommé dans chaque événement. Sonder l'endpoint de liste selon un horaire est lent sur les gros comptes, dépense votre limite de débit et manque quand même les changements entre les sondages. Réservez les appels de liste aux requêtes ponctuelles, au chargement initial unique et à une réconciliation occasionnelle étroitement filtrée (par exemple `isActive=true` pour un emplacement, ou une fenêtre `completedAtStartDate`, avec un petit `limit`).
 </Warning>
 
 ## Réaffecter un fournisseur
@@ -184,7 +184,7 @@ Valeurs de `status` que vous verrez et définirez via l'API :
 | `WorkUnsatisfactory` | Acheteur | Vous avez refusé le travail complété. |
 | `CancelledWithReason` | Acheteur | Annulé. |
 
-Les transitions appartenant au fournisseur arrivent via sa propre intégration ou les applications OpenWrench; votre côté les observe via les [webhooks](/fr-CA/buyer-api/webhooks) ou le sondage (`statusChangedAt`, `statusChanges`) et agit sur celles qui vous appartiennent.
+Les transitions appartenant au fournisseur arrivent via sa propre intégration ou les applications OpenWrench; votre côté les observe via les [webhooks](/fr-CA/buyer-api/webhooks) ou en récupérant le bon de travail (`statusChanges` contient l'historique complet) et agit sur celles qui vous appartiennent.
 
 ## Notes
 
@@ -288,6 +288,6 @@ Une intégration de répartition typique :
 
 1. Mettez en cache `me`, les types de problèmes et les emplacements au démarrage.
 2. Créez le bon de travail avec `supplierFacilityId` défini (ou créez-le sans fournisseur affecté, puis classez les fournisseurs et effectuez l'affectation par `PATCH`).
-3. Suivez la progression du fournisseur via les [webhooks](/fr-CA/buyer-api/webhooks) (`workorder.status_update`), en récupérant chaque bon de travail par id à l'arrivée d'un événement. Gardez `GET /work_orders?statusChangedAt=...` comme passe de réconciliation peu fréquente, pas comme signal principal.
+3. Suivez la progression du fournisseur via les [webhooks](/fr-CA/buyer-api/webhooks) (`workorder.status_update`), en récupérant chaque bon de travail par id à l'arrivée d'un événement. Gardez un appel de liste étroitement filtré (`GET /work_orders?isActive=true&locationId=...`) comme passe de réconciliation peu fréquente, pas comme signal principal.
 4. Lorsque le fournisseur atteint `WaitingForReview`, vérifiez le travail (voir [Appels de service](/fr-CA/buyer-api/service-calls) pour les preuves de visite) et postez `work_reviewed_and_completed`, ou `work_unsatisfactory` avec une note.
 5. Réconciliez le côté monétaire via [Soumissions et propositions](/fr-CA/buyer-api/quotes-and-proposals) et [Factures](/fr-CA/buyer-api/invoices).

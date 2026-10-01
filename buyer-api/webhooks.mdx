@@ -106,7 +106,7 @@ Every delivery is signed. The gateway computes an HMAC over the raw request body
 - **The gateway retries failed deliveries** with a backoff schedule. Make your handler idempotent so a retry after a partial success does no harm.
 - **Deliveries are at-least-once.** The same event can arrive more than once even without a failure on your side. Deduplicate on `event_type` plus `workOrderId` plus `changedAt` (or `addedAt` for notes).
 - **Order is not guaranteed.** Two events for the same work order can arrive out of order. Do not derive state from the sequence of events; fetch the work order and trust its `status`.
-- **Stale events are dropped, not delivered late.** An event that has not been handed to the gateway within three hours of the change is discarded. After an outage on OpenWrench's side, or if your endpoint was down for longer than the retry window, reconcile by polling `GET /v1/buyer/work_order/work_orders?statusChangedAt=...` for the period you missed.
+- **Stale events are dropped, not delivered late.** An event that has not been handed to the gateway within three hours of the change is discarded. After an outage on OpenWrench's side, or if your endpoint was down for longer than the retry window, reconcile with `GET /v1/buyer/work_order/work_orders`: list the work orders created (`createdAtStartDate`) or completed (`completedAtStartDate`) since the outage began, plus the open ones (`isActive=true`), and compare them with your records.
 
 {/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 
@@ -129,4 +129,4 @@ A dispatch integration driven by webhooks:
 1. Register an endpoint for `workorder.create` and `workorder.status_update` (add `workorder.new_note` if you mirror the conversation).
 2. On `workorder.create`, fetch the work order, and create the matching record in your system. If you dispatch from your side, `PATCH` the `supplierFacilityId` as described in [Work orders](/buyer-api/work-orders#reassign-a-supplier).
 3. On `workorder.status_update`, fetch the work order. When `newStatus` is `WaitingForReview`, run your review flow and post `work_reviewed_and_completed` or `work_unsatisfactory`.
-4. Run a periodic poll on `statusChangedAt` as a safety net for anything the webhook path missed.
+4. Run an occasional reconciliation as a safety net for anything the webhook path missed: list open work orders (`isActive=true`) and recently completed ones (a `completedAtStartDate` window), and compare them with your records. See the [filter reference](/buyer-api/work-orders#filter-reference).

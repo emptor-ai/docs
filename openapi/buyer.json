@@ -2924,7 +2924,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Lists work orders for the caller's buyer company. The page and total are resolved in the search index, then the matching records are loaded from the read replica; a just-created work order can be briefly absent while the index and replica catch up. Filtering: every query parameter other than the pagination parameters is matched against the work order's indexed search-document fields (multi-value filters are comma-separated strings). `assetId`/`assetIds` also match sub-assets. Filters not present in the search document (`updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`) are ignored. `sort_by` supports `createdAt`, `locationName`, `woPriority`, and `lastServiceCallServiceScheduledAt`; any other value falls back to `createdAt` descending. `offset + limit` cannot exceed the 10,000-result search window. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Lists work orders for the caller's buyer company. The page and total are resolved in the search index, then the matching records are loaded from the read replica; a just-created work order can be briefly absent while the index and replica catch up. Filtering: the supported filters are listed as parameters below. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list; `not…` keys exclude. If a parameter is repeated, only the first value is used. A query parameter that is not a supported filter (for example `statusChangedAt`, `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`, or a misspelled key) is ignored rather than rejected. A non-numeric id or a boolean other than `true`/`false` can fail the request with a 500. `sort_by` supports `createdAt`, `locationName`, `woPriority`, and `lastServiceCallServiceScheduledAt`; any other value falls back to `createdAt` descending. `offset + limit` cannot exceed the 10,000-result search window. Filters are combined with the tenant-security filters derived from the API key.",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -2946,6 +2946,111 @@
               "type": "string"
             },
             "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_id"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_ids"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isActive"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_hasBuyerArchived"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_labelIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isPM"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastDue"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastEstimatedCompletion"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_unscheduledOrPastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_buyerProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_siteSurveyTaskTitleId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_supplierFacilityId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_supplierFacilityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isStale"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdByEmails"
           }
         ],
         "responses": {
@@ -2999,7 +3104,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Count of work orders matching the given filters. The count runs the same search-index query as the list endpoint, so it always agrees with the list results, including the ignored unindexed filters (`updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`) and the brief lag before a just-created work order is counted. Filters are combined with the tenant-security filters derived from the API key.",
+        "description": "Count of work orders matching the given filters. The count runs the same search-index query as the list endpoint, so it always agrees with the list results. It accepts the same filters (listed as parameters below), ignores the same unsupported parameters, and has the same brief lag before a just-created work order is counted. Filters are combined with the tenant-security filters derived from the API key.",
         "responses": {
           "200": {
             "description": "Success.",
@@ -3051,6 +3156,111 @@
               "type": "string"
             },
             "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_id"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_ids"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isActive"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_hasBuyerArchived"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_labelIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isPM"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastDue"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastEstimatedCompletion"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_unscheduledOrPastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_buyerProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_siteSurveyTaskTitleId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_supplierFacilityId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_supplierFacilityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isStale"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdByEmails"
           }
         ]
       }
@@ -6817,6 +7027,362 @@
           "enum": [
             "asc",
             "desc"
+          ]
+        }
+      },
+      "woFilter_id": {
+        "name": "id",
+        "in": "query",
+        "required": false,
+        "description": "One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_ids": {
+        "name": "ids",
+        "in": "query",
+        "required": false,
+        "description": "One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "9001,9002"
+      },
+      "woFilter_status": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). One value. To match several, use the plural key.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_statuses": {
+        "name": "statuses",
+        "in": "query",
+        "required": false,
+        "description": "The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "WaitingForReview"
+      },
+      "woFilter_notStatuses": {
+        "name": "notStatuses",
+        "in": "query",
+        "required": false,
+        "description": "The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). Comma-separated list; excludes every value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_displayStatus": {
+        "name": "displayStatus",
+        "in": "query",
+        "required": false,
+        "description": "The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_displayStatuses": {
+        "name": "displayStatuses",
+        "in": "query",
+        "required": false,
+        "description": "The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isActive": {
+        "name": "isActive",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. Archived work orders are included either way; add `hasBuyerArchived=false` to leave them out.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Work at these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Work at these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_assetId": {
+        "name": "assetId",
+        "in": "query",
+        "required": false,
+        "description": "Work on these assets, whether as the main asset or a sub-asset. Get asset ids from [`GET /v1/buyer/asset/assets`](/buyer-api/assets-and-locations#assets). One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_assetIds": {
+        "name": "assetIds",
+        "in": "query",
+        "required": false,
+        "description": "Work on these assets, whether as the main asset or a sub-asset. Get asset ids from [`GET /v1/buyer/asset/assets`](/buyer-api/assets-and-locations#assets). Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_problemTypeId": {
+        "name": "problemTypeId",
+        "in": "query",
+        "required": false,
+        "description": "Work of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_problemTypeIds": {
+        "name": "problemTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Work of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_woPriorityId": {
+        "name": "woPriorityId",
+        "in": "query",
+        "required": false,
+        "description": "Work at these priorities. Priority ids are your company's own; each work order shows its priority in `woPriorityId`. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_woPriorityIds": {
+        "name": "woPriorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Work at these priorities. Priority ids are your company's own; each work order shows its priority in `woPriorityId`. Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_labelIds": {
+        "name": "labelIds",
+        "in": "query",
+        "required": false,
+        "description": "Work carrying at least one of these labels. Get label ids from the [label catalog](/buyer-api/work-orders#labels). Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isPM": {
+        "name": "isPM",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns only preventive maintenance work generated from a [PM schedule](/buyer-api/planned-maintenance); `false` leaves it out.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_createdAtStartDate": {
+        "name": "createdAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "woFilter_createdAtEndDate": {
+        "name": "createdAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 23:59:59"
+      },
+      "woFilter_completedAtStartDate": {
+        "name": "completedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest completion time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "woFilter_completedAtEndDate": {
+        "name": "completedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest completion time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 23:59:59"
+      },
+      "woFilter_lastServiceCallServiceScheduledAtStartDate": {
+        "name": "lastServiceCallServiceScheduledAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "woFilter_lastServiceCallServiceScheduledAtEndDate": {
+        "name": "lastServiceCallServiceScheduledAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 23:59:59"
+      },
+      "woFilter_pastDue": {
+        "name": "pastDue",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns open work whose due date has passed; `false` returns open work that is not yet due. Closed work (`Completed` or `Cancelled`) and work with no due date match neither value.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_pastSchedule": {
+        "name": "pastSchedule",
+        "in": "query",
+        "required": false,
+        "description": "Like `pastDue`, on the scheduled visit date: `true` returns open work whose scheduled date has passed.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_pastEstimatedCompletion": {
+        "name": "pastEstimatedCompletion",
+        "in": "query",
+        "required": false,
+        "description": "Like `pastDue`, on the supplier's estimated completion date. When no estimate has been given, the due date is used.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_unscheduledOrPastSchedule": {
+        "name": "unscheduledOrPastSchedule",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns work with no scheduled date, or whose scheduled date has passed: work that needs scheduling attention. Closed work is included, so add `isActive=true` to see only open work.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_buyerProjectId": {
+        "name": "buyerProjectId",
+        "in": "query",
+        "required": false,
+        "description": "Work in one project. A work order lists its projects in `buyerProjectIds`. One value.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_siteSurveyTaskTitleId": {
+        "name": "siteSurveyTaskTitleId",
+        "in": "query",
+        "required": false,
+        "description": "Follow-up work created from one walkthrough task: the `siteSurveyTaskTitleId` you sent when [creating the work order](/buyer-api/site-survey-walkthroughs#creating-follow-up-work-orders). One value.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_supplierFacilityId": {
+        "name": "supplierFacilityId",
+        "in": "query",
+        "required": false,
+        "description": "Work assigned to these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_supplierFacilityIds": {
+        "name": "supplierFacilityIds",
+        "in": "query",
+        "required": false,
+        "description": "Work assigned to these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isStale": {
+        "name": "isStale",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns open work that has stayed overdue for a set period without supplier progress, and that your team hasn't archived. The period is set for your company (14 days by default). Supplier activity on overdue work, such as accepting it or submitting it for review, restarts the period. If your company has turned stale tracking off, new work orders are not marked stale.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_createdByEmails": {
+        "name": "createdByEmails",
+        "in": "query",
+        "required": false,
+        "description": "Work created by these people, by email address: `createdByEmails=ops@example.com,manager@example.com`. Comma-separated list; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "ops@example.com,manager@example.com"
+      },
+      "woFilter_hasBuyerArchived": {
+        "name": "hasBuyerArchived",
+        "in": "query",
+        "required": false,
+        "description": "`false` leaves out work orders your team has archived; `true` returns only archived ones. Archiving is separate from status, so open work can be archived too.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
           ]
         }
       }

@@ -36,24 +36,87 @@ The list and count endpoints are for the two moments a webhook cannot cover. Use
 ```bash
 # Initial load or reconciliation: filter narrowly, page small, walk with offset
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/supplier/work_order/work_orders?status=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
+  "$BASE/v1/supplier/work_order/work_orders?statuses=PendingConfirmationByServiceProvider,ConfirmedByServiceProvider&limit=25&offset=0&sort_by=createdAt&order=asc"
 
 # Count by filter, without fetching rows
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`), and any other query parameter acts as a field filter. Everything is tenant-scoped to your facility.
+Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `order`). Every other query parameter is read as a filter from the [filter reference](#filter-reference) below. Filters combine with AND, and everything is tenant-scoped to your facility.
 
 The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. The count endpoint runs the same query as the list, so the two always agree. Behavior to know:
 
 - **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, and problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Wrap the value in double quotes to require the exact phrase.
-- **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
 - **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
-- **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on a `statusChangedAt` window or other indexed columns instead.
+- **Unrecognized filters are ignored.** Only the keys in the filter reference below are supported. Any other query parameter is ignored rather than rejected, and the request still succeeds. That includes misspelled keys and `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `assignedAt`, `buyerFacilityId`, and `walkthroughId`, which are not in the search index. Before relying on a new filter, compare `count_by` with and without it.
 - **Freshness.** Search index and replica updates lag writes by a moment. Your own just-written change, or a work order assigned seconds ago, can be briefly absent from list results and counts.
 - **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
 - **Data masking.** If you are a third-party supplier (not a buyer's internal service team), buyer-private fields are blanked on work orders, locations, and invoices before the response returns. Missing fields are usually masking, not bugs. See [Reference data](/supplier-api/reference-data#data-masking) for details.
+
+### Filter reference
+
+Keys are case-sensitive. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values; `notStatuses` excludes every listed status. Date filters are explained under [filter value rules](#filter-value-rules).
+
+**Status**
+
+| Filter | Matches |
+| --- | --- |
+| `id`, `ids` | One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. |
+| `status`, `statuses`, `notStatuses` | The detailed workflow status, for example `statuses=PendingConfirmationByServiceProvider` to find work waiting for you to accept. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). This is the work order's own status, even on work sub-contracted to you. Third-party suppliers never see `PendingApproval` work orders. |
+| `displayStatus`, `displayStatuses` | The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. |
+| `isActive` | `true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. Archived work orders are included either way; add `hasSupplierArchived=false` to leave them out. |
+| `hasSupplierArchived` | `false` leaves out work orders your team has archived; `true` returns only archived ones. Archiving is separate from status, so open work can be archived too. |
+
+**What and where**
+
+| Filter | Matches |
+| --- | --- |
+| `buyerCompanyId` | Work from one client. Get buyer company ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Has no effect for internal service teams, which only ever see their own company's work. |
+| `locationId`, `locationIds` | Work at these locations. Get location ids from [`GET /v1/supplier/location/locations`](/supplier-api/reference-data#locations-and-regions). |
+| `assetId`, `assetIds` | Work on these assets, whether as the main asset or a sub-asset. Get asset ids from [`GET /v1/supplier/asset/assets`](/supplier-api/reference-data#assets-and-asset-types). |
+| `problemTypeId`, `problemTypeIds` | Work of these problem types. Get ids from [`GET /v1/supplier/work_order/problem_types`](/supplier-api/work-orders#problem-types). |
+| `woPriorityId`, `woPriorityIds` | Work at these priorities. Priority ids belong to each client; each work order shows its priority in `woPriorityId`. |
+| `labelIds` | Work carrying at least one of these labels. Get label ids from the [label catalog](/supplier-api/work-orders#labels). |
+| `isPM` | `true` returns only preventive maintenance work generated from a client's PM schedule; `false` leaves it out. |
+
+**Who**
+
+| Filter | Matches |
+| --- | --- |
+| `fieldTechnicianEmail`, `fieldTechnicianEmails` | Work assigned to these technicians as primary technician, or restricted to them, by email address. |
+
+**Dates and deadlines**
+
+| Filter | Matches |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Work created within the window. |
+| `completedAtStartDate`, `completedAtEndDate` | Work completed within the window. Useful for reporting on finished work and for catching recent closures. |
+| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | Work whose most recent visit is scheduled within the window. Pair with `sort_by=lastServiceCallServiceScheduledAt` for a schedule view. |
+| `pastDue` | `true` returns open work whose due date has passed; `false` returns open work that is not yet due. Closed work (`Completed` or `Cancelled`) and work with no due date match neither value. |
+| `pastSchedule` | Like `pastDue`, on the scheduled visit date: `true` returns open work whose scheduled date has passed. |
+| `pastEstimatedCompletion` | Like `pastDue`, on the estimated completion date you set for the work order. When you haven't set one, the due date is used. |
+| `unscheduledOrPastSchedule` | `true` returns work with no scheduled date, or whose scheduled date has passed: work that needs scheduling attention. Closed work is included, so add `isActive=true` to see only open work. |
+
+### Filter value rules
+
+- **Use the plural key for several values.** `statuses=TechScheduled,TechRescheduled` matches either status. `status=TechScheduled,TechRescheduled` looks for one status with that literal name and returns nothing.
+- **One value per key.** If you repeat a parameter (`statuses=TechScheduled&statuses=TechRescheduled`), only the first is used. Comma-separate the values instead.
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required, and both ends of a window are inclusive. URL-encode the value (`curl -G --data-urlencode` does this for you). A date that does not parse is not rejected. It is read as 1 January 1970, so a bad start date matches everything and a bad end date matches nothing.
+- **Booleans are `true` or `false`.** `unscheduledOrPastSchedule` only acts on `true`.
+- **Values must be well formed.** A non-numeric id, or a boolean other than `true` or `false`, can fail the request with a `500` rather than a `400`.
+- **Tenant scoping can't be overridden.** The facility visibility applied from your API key always holds, whatever filters you pass.
+
+```bash
+# One technician's open work with a visit scheduled this week
+curl -G "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "fieldTechnicianEmail=tech@supplier.com" \
+  --data-urlencode "isActive=true" \
+  --data-urlencode "lastServiceCallServiceScheduledAtStartDate=09/07/2026 00:00:00" \
+  --data-urlencode "lastServiceCallServiceScheduledAtEndDate=09/13/2026 23:59:59" \
+  -d limit=25 -d sort_by=lastServiceCallServiceScheduledAt -d order=asc
+```
 
 ## Accept or decline
 

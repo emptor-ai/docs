@@ -106,7 +106,7 @@ Varje leverans är signerad. Gatewayen beräknar en HMAC över den råa förfrå
 - **Misslyckade leveranser görs om** av gatewayen enligt ett schema med ökande väntetid. Gör din hanterare idempotent så att ett omförsök efter en delvis lyckad körning inte gör skada.
 - **Leveranser sker minst en gång.** Samma händelse kan komma mer än en gång även utan något fel på din sida. Deduplicera på `event_type` plus `workOrderId` plus `changedAt` (eller `addedAt` för anteckningar).
 - **Ordningen garanteras inte.** Två händelser för samma arbetsorder kan komma i fel ordning. Härled inte tillståndet ur händelsesekvensen; hämta arbetsordern och lita på dess `status`.
-- **Gamla händelser kastas, de levereras inte sent.** En händelse som inte har lämnats över till gatewayen inom tre timmar från ändringen kastas. Efter ett avbrott på OpenWrenchs sida, eller om din slutpunkt var nere längre än omförsöksfönstret, stäm av genom att polla `GET /v1/buyer/work_order/work_orders?statusChangedAt=...` för perioden du missade.
+- **Gamla händelser kastas, de levereras inte sent.** En händelse som inte har lämnats över till gatewayen inom tre timmar från ändringen kastas. Efter ett avbrott på OpenWrenchs sida, eller om din slutpunkt var nere längre än omförsöksfönstret, stäm av med `GET /v1/buyer/work_order/work_orders`: lista arbetsordrar som skapats (`createdAtStartDate`) eller slutförts (`completedAtStartDate`) sedan avbrottet började, plus de öppna (`isActive=true`), och jämför dem med dina poster.
 
 {/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 
@@ -129,4 +129,4 @@ En dispatch-integration driven av webhooks:
 1. Registrera en slutpunkt för `workorder.create` och `workorder.status_update` (lägg till `workorder.new_note` om du speglar konversationen).
 2. Vid `workorder.create`, hämta arbetsordern och skapa motsvarande post i ditt system. Om du tilldelar från din sida, gör en `PATCH` av `supplierFacilityId` enligt [Arbetsordrar](/sv/buyer-api/work-orders#tilldela-om-en-leverantör).
 3. Vid `workorder.status_update`, hämta arbetsordern. När `newStatus` är `WaitingForReview`, kör ditt granskningsflöde och posta `work_reviewed_and_completed` eller `work_unsatisfactory`.
-4. Kör en periodisk polling på `statusChangedAt` som skyddsnät för allt som webhook-vägen kan ha missat.
+4. Kör en tillfällig avstämning som skyddsnät för allt som webhook-vägen kan ha missat: lista öppna arbetsordrar (`isActive=true`) och nyligen slutförda (ett `completedAtStartDate`-fönster), och jämför dem med dina poster.
