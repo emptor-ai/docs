@@ -51,7 +51,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 `GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` devuelve relaciones comprador-proveedor, cada una hidratada con los detalles de tu relación (contactos y correos de enrutamiento).
 
 <Warning>
-**El rango se expresa por el orden del array.** Cualquier `sort_by` que pases se descarta deliberadamente para que el orden del array siempre equivalga al rango. El endpoint es paginado (por defecto 10, máx. 25 por página), así que el rango continúa entre páginas: el primer elemento de la página dos es el rango 11.
+**El orden del array expresa el rango.** Cualquier `sort_by` que pases se descarta deliberadamente para que el orden del array siempre equivalga al rango. El endpoint es paginado (por defecto 10, máx. 25 por página), así que el rango continúa entre páginas: el primer elemento de la página dos es el rango 11.
 </Warning>
 
 ## Patrón de despacho automatizado

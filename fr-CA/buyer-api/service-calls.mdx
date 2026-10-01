@@ -41,7 +41,7 @@ L'`{id}` est l'id de l'appel de service, que vous lisez sur les `associatedServi
 
 ## Détails des techniciens et visibilité des tarifs
 
-`with_tech_details` retourne les techniciens de l'appel sous forme de fiches de contact. **`hourlyRate` n'est renseigné que lorsque l'appel a été effectué par votre propre équipe de service interne.** Les tarifs des fournisseurs tiers ne sont jamais exposés aux acheteurs, donc attendez-vous à ce que `hourlyRate` soit absent des visites de sous-traitants.
+`with_tech_details` retourne les techniciens de l'appel sous forme de fiches de contact. **OpenWrench ne renseigne `hourlyRate` que lorsque votre propre équipe de service interne a effectué l'appel.** OpenWrench n'expose jamais les tarifs des fournisseurs tiers aux acheteurs, donc attendez-vous à ce que `hourlyRate` soit absent des visites de sous-traitants.
 
 ## Modèle de vérification
 
