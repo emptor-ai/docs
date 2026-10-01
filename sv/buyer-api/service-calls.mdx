@@ -41,7 +41,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 ## Teknikeruppgifter och synlighet för timpris
 
-`with_tech_details` returnerar teknikerna på besöket som kontaktposter. **`hourlyRate` fylls i endast när besöket utfördes av ditt eget interna serviceteam.** Timpriser för tredjepartsleverantörer exponeras aldrig för köpare, så räkna med att `hourlyRate` saknas vid entreprenörsbesök.
+`with_tech_details` returnerar teknikerna på besöket som kontaktposter. **OpenWrench fyller i `hourlyRate` endast när ditt eget interna serviceteam utförde besöket.** OpenWrench exponerar aldrig timpriser för tredjepartsleverantörer för köpare, så räkna med att `hourlyRate` saknas vid entreprenörsbesök.
 
 ## Verifieringsmönster
 

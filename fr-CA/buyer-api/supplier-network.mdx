@@ -51,7 +51,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 `GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` retourne les relations acheteur-fournisseur, chacune hydratée avec les détails de votre relation (contacts et adresses courriel d'acheminement).
 
 <Warning>
-**Le rang est transmis par l'ordre du tableau.** Tout `sort_by` que vous passez est délibérément ignoré afin que l'ordre du tableau soit toujours égal au rang. L'endpoint est paginé (par défaut 10, maximum 25 par page), donc le rang continue à travers les pages : le premier élément de la deuxième page est le rang 11.
+**L'ordre du tableau transmet le rang.** Tout `sort_by` que vous passez est délibérément ignoré afin que l'ordre du tableau soit toujours égal au rang. L'endpoint est paginé (par défaut 10, maximum 25 par page), donc le rang continue à travers les pages : le premier élément de la deuxième page est le rang 11.
 </Warning>
 
 ## Modèle de répartition automatisée

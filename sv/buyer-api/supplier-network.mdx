@@ -51,7 +51,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 `GET /v1/buyer/private_network/buyer_supplier_relationships/ranked/{locationId}/{problemTypeId}` returnerar köpar–leverantör-relationer, var och en hydratiserad med dina relationsdetaljer (kontakter och routing-e-post).
 
 <Warning>
-**Rang uttrycks av arrayordning.** Varje `sort_by` du skickar släpps avsiktligt så att arrayordningen alltid är lika med rangen. Slutpunkten är paginerad (standard 10, max 25 per sida), så rangen fortsätter över sidor: den första posten på sida två är rang 11.
+**Arrayordningen uttrycker rang.** Varje `sort_by` du skickar släpps avsiktligt så att arrayordningen alltid är lika med rangen. Slutpunkten är paginerad (standard 10, max 25 per sida), så rangen fortsätter över sidor: den första posten på sida två är rang 11.
 </Warning>
 
 ## Mönster för automatiserat utskick
