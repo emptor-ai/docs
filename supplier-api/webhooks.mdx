@@ -36,7 +36,7 @@ Some detail on each:
 
 Two things you do **not** get an event for:
 
-- **Reassignment away from you.** If the buyer moves a work order to another supplier, it simply disappears from your queue. Reconcile against `GET /v1/supplier/work_order/work_orders` if that matters to you.
+- **Reassignment away from you.** If the buyer moves a work order to another supplier, it disappears from your queue. Reconcile against `GET /v1/supplier/work_order/work_orders` if that matters to you.
 - **Work orders you can only see.** If your facility is on a work order's visibility list rather than assigned to it, you receive its events only if OpenWrench has enabled visibility webhooks for your company. Ask support if you need this.
 
 You receive events for changes your own integration makes. Keep a record of the writes you made and skip the matching events, or treat every event as a signal to re-fetch and compare.
@@ -112,7 +112,7 @@ Every delivery is signed. The gateway computes an HMAC over the raw request body
 - **The gateway retries failed deliveries** with a backoff schedule. Make your handler idempotent so a retry after a partial success does no harm.
 - **Deliveries are at-least-once.** The same event can arrive more than once even without a failure on your side. Deduplicate on `event_type` plus `workOrderId` plus `changedAt` (or `addedAt` for notes).
 - **Order is not guaranteed.** Two events for the same work order can arrive out of order. Do not derive state from the sequence of events; fetch the work order and trust its `status`.
-- **Stale events are dropped, not delivered late.** An event that has not been handed to the gateway within three hours of the change is discarded. After an outage on OpenWrench's side, or if your endpoint was down for longer than the retry window, reconcile with `GET /v1/supplier/work_order/work_orders`: list the work orders created (`createdAtStartDate`) or completed (`completedAtStartDate`) since the outage began, plus your open ones (`isActive=true`), and compare them with your records.
+- **Stale events are dropped, not delivered late.** OpenWrench discards any event that has not reached the gateway within three hours of the change. After an outage on OpenWrench's side, or if your endpoint was down for longer than the retry window, reconcile with `GET /v1/supplier/work_order/work_orders`. List the work orders created (`createdAtStartDate`) or completed (`completedAtStartDate`) since the outage began, plus your open ones (`isActive=true`). Then compare them with your records.
 
 {/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 
