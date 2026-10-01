@@ -85,7 +85,7 @@ curl -X POST "$BASE/v1/buyer/asset/assets" \
 Behavior to know:
 
 - `buyerFacilityId` and `buyerCompanyId` are **derived from the location**, never read from the body.
-- **Refrigerant overrides are clearable.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory`, and `refrigerantRequiresProcessShutdown` are per-unit overrides of the asset type's defaults. Omitting the key keeps the stored value; an explicit `null` (or blank string) clears it back to inheriting from the type. `isRefrigerantTracked` behaves similarly: omitted or `null` keeps the stored value, and enrollment is turned off only by an explicit `false`.
+- **Refrigerant overrides are clearable.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory`, and `refrigerantRequiresProcessShutdown` are per-unit overrides of the asset type's defaults. Omitting the key keeps the stored value; an explicit `null` (or blank string) clears it back to inheriting from the type. `isRefrigerantTracked` behaves similarly: omitted or `null` keeps the stored value, and only an explicit `false` turns off enrollment.
 - `fullChargeLb` on an asset follows the same positivity and precision rules as on an [asset type](#asset-types).
 - **Sub-assets.** `parentId` makes this a sub-asset. It requires sub-assets to be enabled for your company, and the child must be at the same location as the parent.
 - Passing an `id` upserts an existing asset.
@@ -127,7 +127,7 @@ curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
 
 Behavior to know:
 
-- A missing or non-array `ids`, or an id that is not a whole number, is rejected with `400`.
+- OpenWrench rejects a missing or non-array `ids`, or an id that is not a whole number, with `400`.
 - Every id must be a live label from your company's catalog. Unknown or cross-tenant ids answer `400` with the offending ids listed.
 - The write requires asset write permission. An unknown, deleted, or foreign asset id answers the same `400` as a denied write, not a `404`.
 
