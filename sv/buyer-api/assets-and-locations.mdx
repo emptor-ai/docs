@@ -56,7 +56,7 @@ curl -X POST "$BASE/v1/buyer/asset/asset_types" \
 
 - `name` är det enda obligatoriska fältet. `buyerCompanyId` härleds från din nyckel och kan inte sättas.
 - `applianceCategory`, `refrigerantTypeCode` och `fullChargeLb` accepterar ett **explicit `null` för att rensa** klassnivåns standardvärde. `fullChargeLb` måste vara positivt när det anges.
-- `fullChargeLb` accepterar högst 5 decimaler och totalt 14 siffror, alltså upp till 9 siffror före decimaltecknet. De extra decimalerna gör att du kan lagra omräkningar från uns exakt, till exempel `0.0625` (1 oz), `0.03125` (ett halvt uns) eller `0.00625` (en tiondels uns). OpenWrench avvisar värden med högre precision med ett `400`-fel. Värdena avrundas inte.
+- `fullChargeLb` accepterar högst 5 decimaler och totalt 14 siffror, alltså upp till 9 siffror före decimaltecknet. De extra decimalerna gör att du kan lagra omräkningar från uns exakt, till exempel `0.0625` (1 oz), `0.03125` (ett halvt uns) eller `0.00625` (en tiondels uns). OpenWrench avvisar värden med högre precision med ett `400`-fel. OpenWrench avrundar dem inte.
 - Att skicka ett `id` uppdaterar en befintlig typ.
 
 Läs med `GET /v1/buyer/asset/asset_types` och `GET /v1/buyer/asset/asset_types/{id}`.
