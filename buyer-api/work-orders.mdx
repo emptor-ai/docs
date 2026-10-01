@@ -79,25 +79,114 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 # How many match, without fetching them
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
+
+# Open work orders at two locations with priority id 1 or 2, created in August
+curl -G "$BASE/v1/buyer/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "locationIds=1204,1310" \
+  --data-urlencode "woPriorityIds=1,2" \
+  --data-urlencode "isActive=true" \
+  --data-urlencode "createdAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "createdAtEndDate=08/31/2026 23:59:59" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
 ```
 
-List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `order`. Every other query parameter is treated as a field filter; comma-separate a value to match any of several (`status=Unassigned,PendingApproval`). Filters always combine with the tenant scoping derived from your key, so you only ever see your company's work orders.
+List endpoints take `offset`, `limit` (default 10, max 25), `sort_by`, and `order`. Every other query parameter is read as a filter from the [filter reference](#filter-reference) below. Filters combine with AND, and always combine with the tenant scoping derived from your key, so you only ever see your company's work orders.
 
 The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. That changes a few behaviors:
 
 - **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, and problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Quote the value (`search="walk-in cooler"`) to require the exact phrase.
-- **Asset filters include sub-assets.** `assetId=` and `assetIds=` match work orders whose main asset *or* any sub-asset is the given id.
 - **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
-- **Unindexed filters are ignored.** `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, and `walkthroughId` are not in the search index and no longer narrow the results. Filter on `statusChangedAt` windows or other indexed columns instead.
+- **Unrecognized filters are ignored.** A query parameter that is not in the filter reference doesn't narrow the results, and the request still succeeds. That includes misspelled keys and `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, and `walkthroughId`, which are not in the search index. Before relying on a new filter, compare `count_by` with and without it.
 - **Freshness.** Search index and replica updates lag writes by a moment, so a work order created milliseconds ago may be briefly absent from list results and counts.
 - **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
 
 The count endpoint runs the same search-index query as the list, so a count always agrees with the list it describes.
 
+### Filter reference
+
+Keys are case-sensitive. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values; a `not` key (`notStatuses`) excludes every listed value.
+
+**Status**
+
+| Filter | Matches |
+| --- | --- |
+| `id`, `ids` | Work order id, or a comma-separated list of ids. |
+| `status`, `statuses`, `notStatuses` | Machine status, for example `Unassigned` or `WaitingForReview`. See [the status model](#the-status-model). |
+| `displayStatus`, `displayStatuses` | Display status: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. |
+| `isActive` | `true`: display status `Pending`, `Open`, `InProgress`, or `OnHold`. `false`: `Completed` or `Cancelled`. `Deferred` work orders match neither. |
+| `hasBuyerArchived` | `true` or `false`: whether your team archived the work order. |
+
+**Location and asset**
+
+| Filter | Matches |
+| --- | --- |
+| `locationId`, `locationIds`, `notLocationIds` | Location ids. |
+| `regionId` | Work orders at any location in the region. |
+| `areaId` | One area id. |
+| `areas` | Area names, matched exactly. Separate several names with `$$`, not commas, because area names can contain commas: `areas=Kitchen$$Dining Room`. |
+| `assetId`, `assetIds`, `notAssetIds` | The main asset *or* any sub-asset. |
+| `assetTypeId`, `assetTypeIds`, `notAssetTypeIds` | Asset type ids. |
+| `isAssetDown` | `true` or `false`. |
+| `brandIds`, `notBrandIds` | Brand ids. |
+
+**Classification**
+
+| Filter | Matches |
+| --- | --- |
+| `problemTypeId`, `problemTypeIds`, `notProblemTypeIds` | Problem type ids. See [Problem types](#problem-types). |
+| `woPriorityId`, `woPriorityIds`, `notWoPriorityIds` | Priority ids. |
+| `spendCategoryId`, `spendCategoryIds`, `notSpendCategoryIds` | Spend category ids. |
+| `resolutionTypeId`, `resolutionTypeIds`, `notResolutionTypeIds` | Resolution type ids. |
+| `labelIds`, `notLabelIds` | Work orders carrying any of the labels, or none of them. Ids come from your [label catalog](#labels). |
+| `isPM`, `isCapex`, `isWarranty`, `isPrivate` | `true` or `false`. |
+| `hasRefrigerantEvents` | `true` or `false`: whether refrigerant servicing events are recorded against the work order. |
+| `plannedMaintenanceScheduleId` | Work orders generated from one PM schedule. See [Planned maintenance](/buyer-api/planned-maintenance). |
+| `buyerProjectId` | Work orders in one project. |
+| `siteSurveyTaskTitleId` | Work orders created from one walkthrough task. See [Site survey walkthroughs](/buyer-api/site-survey-walkthroughs). |
+| `baseLinkedWorkOrderId` | Work orders linked to the given work order id. |
+
+**Supplier and technician**
+
+| Filter | Matches |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds`, `notSupplierFacilityId`, `notSupplierFacilityIds` | The assigned supplier facility. |
+| `fieldTechnicianEmail`, `fieldTechnicianEmails` | Work orders assigned to the technician as primary tech, or restricted to that technician. |
+| `currentlyCheckedInTechEmail` | Work orders where the technician is checked in on the latest visit and has not checked out, excluding `Completed` and `Cancelled` work orders. Includes visits on sub-contracted work. |
+
+**Dates and deadlines**
+
+| Filter | Matches |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Creation time within the window. |
+| `completedAtStartDate`, `completedAtEndDate` | Completion time within the window. |
+| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | The latest visit is scheduled within the window. |
+| `pastDue` | `true`: the due date has passed. `false`: the due date is still ahead. Both exclude `Completed` and `Cancelled` work orders, and work orders without a due date match neither. |
+| `pastSchedule` | The same as `pastDue`, on the scheduled date. |
+| `pastEstimatedCompletion` | The same as `pastDue`, on the estimated completion date, falling back to the due date when no estimate is set. |
+| `unscheduledOrPastSchedule` | `true`: no scheduled date, or a scheduled date that has passed. Completed work orders are included. |
+| `isStale` | `true`: open work orders past their staleness time that your team has not archived. |
+
+**People and notes**
+
+| Filter | Matches |
+| --- | --- |
+| `createdByEmails`, `notCreatedByEmails` | The email of the contact who created the work order. |
+| `noteStatus`, `noteStatuses`, `notNoteStatus`, `notNoteStatuses` | The state of the last note in the buyer–supplier thread: `unread` (your API key's contact has not read it), `awaitingResponse`, `awaitingResponseStale` (awaiting a response for more than 7 days), or `awaitingMyResponse` (awaiting a response and tags your API key's contact). |
+
+### Filter value rules
+
+- **Use the plural key for several values.** `statuses=Unassigned,PendingApproval` matches either status. `status=Unassigned,PendingApproval` looks for one status with that literal name and returns nothing.
+- **One value per key.** If you repeat a parameter (`statuses=Unassigned&statuses=PendingApproval`), only the first is used. Comma-separate the values instead.
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required, and both ends of a window are inclusive. URL-encode the value (`curl -G --data-urlencode` does this for you). A date that does not parse is not rejected. It is read as 1 January 1970, so a bad start date matches everything and a bad end date matches nothing.
+- **Booleans are `true` or `false`.** `isStale` and `unscheduledOrPastSchedule` only act on `true`.
+- **Values must be well formed.** A non-numeric id, or a boolean other than `true` or `false`, can fail the request with a `500` rather than a `400`.
+- **Tenant scoping can't be overridden.** `buyerCompanyId` is always set from your API key, so passing it has no effect.
+
 Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
 
 <Warning>
-  **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks). Fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (`statusChangedAt` window, small `limit`).
+  **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks). Fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (for example `isActive=true` for one location, or a `completedAtStartDate` window, with a small `limit`).
 </Warning>
 
 ## Reassign a supplier
@@ -184,7 +273,7 @@ When your integration receives this `409`, wait for the technician to check out 
 | `WorkUnsatisfactory` | Buyer | You rejected the completed work. |
 | `CancelledWithReason` | Buyer | Cancelled. |
 
-The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps. Your side observes them through [webhooks](/buyer-api/webhooks) or by polling (`statusChangedAt`, `statusChanges`) and acts on the buyer-owned ones.
+The supplier-owned transitions arrive through the supplier's own integration or the OpenWrench apps. Your side observes them through [webhooks](/buyer-api/webhooks) or by fetching the work order (`statusChanges` carries the full history) and acts on the buyer-owned ones.
 
 ## Notes
 
@@ -288,6 +377,6 @@ A typical dispatch integration:
 
 1. Cache `me`, problem types, and locations at startup.
 2. Create the work order with `supplierFacilityId` set (or create unassigned, then rank suppliers and `PATCH` the assignment).
-3. Track supplier progress through [webhooks](/buyer-api/webhooks) (`workorder.status_update`), fetching each work order by id when an event arrives. Keep `GET /work_orders?statusChangedAt=...` as an infrequent reconciliation pass, not the primary signal.
+3. Track supplier progress through [webhooks](/buyer-api/webhooks) (`workorder.status_update`), fetching each work order by id when an event arrives. Keep a narrowly filtered list call (`GET /work_orders?isActive=true&locationId=...`) as an infrequent reconciliation pass, not the primary signal.
 4. When the supplier reaches `WaitingForReview`, verify the work (see [Service calls](/buyer-api/service-calls) for visit evidence) and post `work_reviewed_and_completed`, or `work_unsatisfactory` with a note.
 5. Reconcile the money side through [Quotes and proposals](/buyer-api/quotes-and-proposals) and [Invoices](/buyer-api/invoices).

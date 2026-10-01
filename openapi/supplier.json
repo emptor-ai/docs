@@ -1534,7 +1534,7 @@
       "get": {
         "operationId": "listWorkOrders",
         "summary": "List work orders",
-        "description": "Lists work orders visible to the supplier key. The page and total are resolved in the search index, then the matching records are loaded from the read replica; a just-created or just-assigned work order can be briefly absent while the index and replica catch up. For third-party suppliers each work order is masked (buyer-private fields blanked); internal-service-team keys receive full records. Every query parameter other than the pagination parameters is matched against the work order's indexed search-document fields (multi-value filters are comma-separated strings). `assetId`/`assetIds` also match sub-assets. Filters not present in the search document (`updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`) are ignored. `offset + limit` cannot exceed the 10,000-result search window. Tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists work orders visible to the supplier key. The page and total are resolved in the search index, then the matching records are loaded from the read replica; a just-created or just-assigned work order can be briefly absent while the index and replica catch up. For third-party suppliers each work order is masked (buyer-private fields blanked); internal-service-team keys receive full records. Filtering: the supported filters are listed as parameters below. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list; `not…` keys exclude. If a parameter is repeated, only the first value is used. A query parameter that is not a supported filter (for example `statusChangedAt`, `updatedAtStartDate`, `updatedAtEndDate`, `buyerFacilityId`, `walkthroughId`, `assignedAt`, or a misspelled key) is ignored rather than rejected. A non-numeric id or a boolean other than `true`/`false` can fail the request with a 500. `offset + limit` cannot exceed the 10,000-result search window. Tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
         "tags": [
           "Work Orders"
         ],
@@ -1630,6 +1630,204 @@
               "type": "string"
             },
             "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_id"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_ids"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isActive"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notLocationIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notAssetIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notAssetTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isAssetDown"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notProblemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notWoPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_spendCategoryId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_spendCategoryIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notSpendCategoryIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_resolutionTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_resolutionTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notResolutionTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_labelIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notLabelIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isPM"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isCapex"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isWarranty"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmail"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmails"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_currentlyCheckedInTechEmail"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastDue"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastEstimatedCompletion"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_unscheduledOrPastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_noteStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_noteStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notNoteStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notNoteStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_hasSupplierArchived"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_serviceCallServiceScheduledAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_serviceCallServiceScheduledAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_serviceCallServiceLeadTechnicianEmail"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isSubContracted"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_subContractorFacilityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notSubContractorFacilityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_subContractedStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_subContractedDisplayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_contractorClientId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notContractorClientId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_contractorTenantId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_contractorLocationId"
           }
         ]
       }
@@ -1638,7 +1836,7 @@
       "get": {
         "operationId": "countWorkOrders",
         "summary": "Count work orders",
-        "description": "Counts work orders visible to the supplier key. Accepts the same query-string filters as the list endpoint and runs the same search-index query, so the count always agrees with the list results, including the ignored unindexed filters and the brief lag before a just-created work order is counted. Tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Counts work orders visible to the supplier key. Accepts the same filters as the list endpoint (listed as parameters below) and runs the same search-index query, so the count always agrees with the list results, including the same ignored unsupported parameters and the brief lag before a just-created work order is counted. Tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
         "tags": [
           "Work Orders"
         ],
@@ -1693,6 +1891,204 @@
               "type": "string"
             },
             "description": "Full-text search. Matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in/check-out notes, problem type name, and reference numbers (work order number, PO number, asset serial number). Wrap the value in double quotes to require the exact phrase."
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_id"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_ids"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_displayStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isActive"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notLocationIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notAssetIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_assetTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notAssetTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isAssetDown"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_problemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notProblemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_woPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notWoPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_spendCategoryId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_spendCategoryIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notSpendCategoryIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_resolutionTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_resolutionTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notResolutionTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_labelIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notLabelIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isPM"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isCapex"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isWarranty"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmail"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmails"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_currentlyCheckedInTechEmail"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_completedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_lastServiceCallServiceScheduledAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastDue"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_pastEstimatedCompletion"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_unscheduledOrPastSchedule"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_noteStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_noteStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notNoteStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notNoteStatuses"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_hasSupplierArchived"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_serviceCallServiceScheduledAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_serviceCallServiceScheduledAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_serviceCallServiceLeadTechnicianEmail"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_isSubContracted"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_subContractorFacilityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notSubContractorFacilityIds"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_subContractedStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_subContractedDisplayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_contractorClientId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_notContractorClientId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_contractorTenantId"
+          },
+          {
+            "$ref": "#/components/parameters/woFilter_contractorLocationId"
           }
         ]
       }
@@ -17058,6 +17454,648 @@
           "status"
         ],
         "description": "count_by response: data is the integer count of matching records."
+      }
+    },
+    "parameters": {
+      "woFilter_id": {
+        "name": "id",
+        "in": "query",
+        "required": false,
+        "description": "Work order id.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_ids": {
+        "name": "ids",
+        "in": "query",
+        "required": false,
+        "description": "Work order ids. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "9001,9002"
+      },
+      "woFilter_status": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Machine status (one value; a comma in the value is not a list separator — use `statuses`). Exact machine status names, e.g. `Unassigned`, `WaitingForReview`.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_statuses": {
+        "name": "statuses",
+        "in": "query",
+        "required": false,
+        "description": "Machine statuses: matches any. Comma-separated list. Exact machine status names, e.g. `Unassigned`, `WaitingForReview`.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "Unassigned,PendingApproval"
+      },
+      "woFilter_notStatuses": {
+        "name": "notStatuses",
+        "in": "query",
+        "required": false,
+        "description": "Excludes these machine statuses. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_displayStatus": {
+        "name": "displayStatus",
+        "in": "query",
+        "required": false,
+        "description": "Display status (one value): `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, `Cancelled`.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_displayStatuses": {
+        "name": "displayStatuses",
+        "in": "query",
+        "required": false,
+        "description": "Display statuses: matches any. Comma-separated list. Values: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, `Cancelled`.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isActive": {
+        "name": "isActive",
+        "in": "query",
+        "required": false,
+        "description": "`true`: display status `Pending`, `Open`, `InProgress` or `OnHold`. `false`: `Completed` or `Cancelled`. `Deferred` matches neither.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Location id (one value).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Location id: matches any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notLocationIds": {
+        "name": "notLocationIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose location id is any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_assetId": {
+        "name": "assetId",
+        "in": "query",
+        "required": false,
+        "description": "Asset id (one value). Matches the main asset or any sub-asset.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_assetIds": {
+        "name": "assetIds",
+        "in": "query",
+        "required": false,
+        "description": "Asset id: matches any of the values. Comma-separated list. Matches the main asset or any sub-asset.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notAssetIds": {
+        "name": "notAssetIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose asset id is any of the values. Comma-separated list. Matches the main asset or any sub-asset.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_assetTypeId": {
+        "name": "assetTypeId",
+        "in": "query",
+        "required": false,
+        "description": "Asset type id (one value).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_assetTypeIds": {
+        "name": "assetTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Asset type id: matches any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notAssetTypeIds": {
+        "name": "notAssetTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose asset type id is any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isAssetDown": {
+        "name": "isAssetDown",
+        "in": "query",
+        "required": false,
+        "description": "Whether the asset is down.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_problemTypeId": {
+        "name": "problemTypeId",
+        "in": "query",
+        "required": false,
+        "description": "Problem type id (one value).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_problemTypeIds": {
+        "name": "problemTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Problem type id: matches any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notProblemTypeIds": {
+        "name": "notProblemTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose problem type id is any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_woPriorityId": {
+        "name": "woPriorityId",
+        "in": "query",
+        "required": false,
+        "description": "Priority id (one value).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_woPriorityIds": {
+        "name": "woPriorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Priority id: matches any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notWoPriorityIds": {
+        "name": "notWoPriorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose priority id is any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_spendCategoryId": {
+        "name": "spendCategoryId",
+        "in": "query",
+        "required": false,
+        "description": "Spend category id (one value).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_spendCategoryIds": {
+        "name": "spendCategoryIds",
+        "in": "query",
+        "required": false,
+        "description": "Spend category id: matches any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notSpendCategoryIds": {
+        "name": "notSpendCategoryIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose spend category id is any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_resolutionTypeId": {
+        "name": "resolutionTypeId",
+        "in": "query",
+        "required": false,
+        "description": "Resolution type id (one value).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_resolutionTypeIds": {
+        "name": "resolutionTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Resolution type id: matches any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notResolutionTypeIds": {
+        "name": "notResolutionTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders whose resolution type id is any of the values. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_labelIds": {
+        "name": "labelIds",
+        "in": "query",
+        "required": false,
+        "description": "Work orders carrying any of these labels. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notLabelIds": {
+        "name": "notLabelIds",
+        "in": "query",
+        "required": false,
+        "description": "Work orders carrying none of these labels. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isPM": {
+        "name": "isPM",
+        "in": "query",
+        "required": false,
+        "description": "Generated from a planned maintenance schedule.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_isCapex": {
+        "name": "isCapex",
+        "in": "query",
+        "required": false,
+        "description": "Capital expenditure work order.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_isWarranty": {
+        "name": "isWarranty",
+        "in": "query",
+        "required": false,
+        "description": "Warranty work order.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_fieldTechnicianEmail": {
+        "name": "fieldTechnicianEmail",
+        "in": "query",
+        "required": false,
+        "description": "Work orders assigned to this technician as primary tech, or restricted to this technician.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_fieldTechnicianEmails": {
+        "name": "fieldTechnicianEmails",
+        "in": "query",
+        "required": false,
+        "description": "As `fieldTechnicianEmail`, matching any of the emails. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_currentlyCheckedInTechEmail": {
+        "name": "currentlyCheckedInTechEmail",
+        "in": "query",
+        "required": false,
+        "description": "Work orders where this technician is checked in on the latest visit and has not checked out, excluding `Completed` and `Cancelled` work orders. Includes sub-contracted visits.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_createdAtStartDate": {
+        "name": "createdAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Created at or after. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_createdAtEndDate": {
+        "name": "createdAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Created at or before. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_completedAtStartDate": {
+        "name": "completedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Completed at or after. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_completedAtEndDate": {
+        "name": "completedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Completed at or before. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_lastServiceCallServiceScheduledAtStartDate": {
+        "name": "lastServiceCallServiceScheduledAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest visit scheduled at or after. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_lastServiceCallServiceScheduledAtEndDate": {
+        "name": "lastServiceCallServiceScheduledAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest visit scheduled at or before. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_pastDue": {
+        "name": "pastDue",
+        "in": "query",
+        "required": false,
+        "description": "`true`: due date has passed. `false`: due date is ahead. Both exclude `Completed`/`Cancelled`; work orders without a due date match neither.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_pastSchedule": {
+        "name": "pastSchedule",
+        "in": "query",
+        "required": false,
+        "description": "As `pastDue`, on the scheduled date.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_pastEstimatedCompletion": {
+        "name": "pastEstimatedCompletion",
+        "in": "query",
+        "required": false,
+        "description": "As `pastDue`, on the estimated completion date (falling back to the due date when unset).",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_unscheduledOrPastSchedule": {
+        "name": "unscheduledOrPastSchedule",
+        "in": "query",
+        "required": false,
+        "description": "`true`: no scheduled date, or a scheduled date that has passed (completed work orders included). Only `true` has an effect.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_noteStatus": {
+        "name": "noteStatus",
+        "in": "query",
+        "required": false,
+        "description": "State of the last note (one value): `unread` (the API key's contact has not read the last note), `awaitingResponse`, `awaitingResponseStale` (awaiting a response for more than 7 days), `awaitingMyResponse` (awaiting a response and tags the API key's contact).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_noteStatuses": {
+        "name": "noteStatuses",
+        "in": "query",
+        "required": false,
+        "description": "Note states: matches any. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notNoteStatus": {
+        "name": "notNoteStatus",
+        "in": "query",
+        "required": false,
+        "description": "Excludes one note state.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notNoteStatuses": {
+        "name": "notNoteStatuses",
+        "in": "query",
+        "required": false,
+        "description": "Excludes these note states. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_hasSupplierArchived": {
+        "name": "hasSupplierArchived",
+        "in": "query",
+        "required": false,
+        "description": "Whether your team archived the work order.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Work orders from one buyer (client) company. No effect for internal service teams.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_serviceCallServiceScheduledAtStartDate": {
+        "name": "serviceCallServiceScheduledAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "With `serviceCallServiceScheduledAtEndDate` and `serviceCallServiceLeadTechnicianEmail` (all three required): work orders with any visit scheduled in the window and led by the technician. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_serviceCallServiceScheduledAtEndDate": {
+        "name": "serviceCallServiceScheduledAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "See `serviceCallServiceScheduledAtStartDate`. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_serviceCallServiceLeadTechnicianEmail": {
+        "name": "serviceCallServiceLeadTechnicianEmail",
+        "in": "query",
+        "required": false,
+        "description": "See `serviceCallServiceScheduledAtStartDate`.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_isSubContracted": {
+        "name": "isSubContracted",
+        "in": "query",
+        "required": false,
+        "description": "`true`: work orders you sub-contracted out. `false`: work orders you did not.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "woFilter_subContractorFacilityIds": {
+        "name": "subContractorFacilityIds",
+        "in": "query",
+        "required": false,
+        "description": "Work orders you sub-contracted to any of these supplier facilities. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_notSubContractorFacilityIds": {
+        "name": "notSubContractorFacilityIds",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work orders you sub-contracted to any of these supplier facilities. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_subContractedStatus": {
+        "name": "subContractedStatus",
+        "in": "query",
+        "required": false,
+        "description": "Status of your sub-contract: matches any. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_subContractedDisplayStatus": {
+        "name": "subContractedDisplayStatus",
+        "in": "query",
+        "required": false,
+        "description": "Display status of your sub-contract: matches any. Comma-separated list.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "woFilter_contractorClientId": {
+        "name": "contractorClientId",
+        "in": "query",
+        "required": false,
+        "description": "Work for one of your contractor clients.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_notContractorClientId": {
+        "name": "notContractorClientId",
+        "in": "query",
+        "required": false,
+        "description": "Excludes work for one of your contractor clients.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_contractorTenantId": {
+        "name": "contractorTenantId",
+        "in": "query",
+        "required": false,
+        "description": "Work for one of your contractor tenants.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "woFilter_contractorLocationId": {
+        "name": "contractorLocationId",
+        "in": "query",
+        "required": false,
+        "description": "Work for one of your contractor locations.",
+        "schema": {
+          "type": "integer"
+        }
       }
     }
   }
