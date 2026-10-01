@@ -103,11 +103,11 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asse
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
 ```
 
-`asset_lite` är det billiga sättet att synka en tillgångsväljare: när du inte skickar några pagineringsparametrar returnerar den den **opaginerade fulla mängden**, med `count` lika med antalet returnerade poster. Den enskilda tillgångsläsningen hydratiserar mätare (höljets `type` läser `ApiAssetWithMeter`).
+`asset_lite` är det billiga sättet att synka en tillgångsväljare. När du inte skickar några pagineringsparametrar returnerar den den **opaginerade fulla mängden**, med `count` lika med antalet returnerade poster. Den enskilda tillgångsläsningen hydratiserar mätare (höljets `type` läser `ApiAssetWithMeter`).
 
 ## Tillgångsetiketter
 
-Tillgångsetiketter är lätta taggar som ditt team definierar i OpenWrench-appen (ett namn plus en valfri färg), användbara för att dela upp tillgångslistan på sätt som de inbyggda fälten inte täcker. Via API:et kan du läsa katalogen och ersätta etiketterna som är applicerade på en tillgång. Att skapa eller redigera själva etiketterna sker fortfarande i appen.
+Tillgångsetiketter är lätta taggar som ditt team definierar i OpenWrench-appen (ett namn plus en valfri färg). De är användbara för att dela upp tillgångslistan på sätt som de inbyggda fälten inte täcker. Via API:et kan du läsa katalogen och ersätta etiketterna som är applicerade på en tillgång. Att skapa eller redigera själva etiketterna sker fortfarande i appen.
 
 **Bläddra i katalogen** med `GET /v1/buyer/asset/asset_labels`, eller hämta en med `GET /v1/buyer/asset/asset_labels/{id}`. Listan är avgränsad till ditt företags etiketter och pagineras med 10 per sida som standard. Den accepterar `search`- och `label`-filter på etikettexten. Skicka `no_pagination=true` för att hämta hela katalogen i ett anrop (sorteringen gäller fortfarande).
 
@@ -127,7 +127,7 @@ curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
 
 Beteende att känna till:
 
-- Ett saknat `ids` eller ett `ids` som inte är en array, eller ett id som inte är ett heltal, avvisas med `400`.
+- OpenWrench avvisar ett saknat `ids` eller ett `ids` som inte är en array, eller ett id som inte är ett heltal, med `400`.
 - Varje id måste vara en levande etikett från ditt företags katalog. Okända eller tenantöverskridande id:n svarar `400` med de felande id:na listade.
 - Skrivningen kräver skrivbehörighet för tillgångar. Ett okänt, raderat eller främmande tillgångs-id svarar med samma `400` som en nekad skrivning, inte en `404`.
 
@@ -184,10 +184,10 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/meter_readi
 
 Anteckningar:
 
-- `valueType`, `valueUnit` och `locationId` läses **inte** från kroppen vid skapande av mätare. De härleds på serversidan från den refererade tillgången och mätartypen, så att skicka dem har ingen effekt.
+- `valueType`, `valueUnit` och `locationId` läses **inte** från kroppen vid skapande av mätare. Servern härleder dem från den refererade tillgången och mätartypen, så att skicka dem har ingen effekt.
 - `readingMode` (omdöpt från `seriesType`) är antingen `direct_reading`, `change_from_baseline` eller `compare_to_target`; standardvärdet är `direct_reading` om det utelämnas.
 - Listnings- och räkningsslutpunkterna för avläsningar är inte begränsade till en enda mätare. De omfattar alla avläsningar för hela ditt köparföretag om du inte filtrerar med `meterId`.
-- När en mätares `readingMode` är `change_from_baseline` beräknas en hämtad avläsnings `lastBaselineValue` från den senaste tidigare avläsningen markerad `isBaseline` på den mätaren, per `recordedAt`; för övriga lägen är det `null`.
+- När en mätares `readingMode` är `change_from_baseline` beräknas en hämtad avläsnings `lastBaselineValue` från den senaste tidigare avläsningen markerad `isBaseline` på den mätaren, per `recordedAt`. För övriga lägen är det `null`.
 
 ## Synkroniseringsstrategi
 
