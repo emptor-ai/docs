@@ -36,7 +36,7 @@ Algunos detalles de cada uno:
 
 Dos cosas por las que **no** recibes evento:
 
-- **Reasignación fuera de ti.** Si el comprador mueve una orden de trabajo a otro proveedor, simplemente desaparece de tu cola. Concilia contra `GET /v1/supplier/work_order/work_orders` si eso te importa.
+- **Reasignación fuera de ti.** Si el comprador mueve una orden de trabajo a otro proveedor, desaparece de tu cola. Concilia contra `GET /v1/supplier/work_order/work_orders` si eso te importa.
 - **Órdenes de trabajo que solo puedes ver.** Si tu instalación está en la lista de visibilidad de una orden de trabajo en lugar de asignada a ella, recibes sus eventos solo si OpenWrench ha habilitado los webhooks de visibilidad para tu empresa. Pregunta a soporte si lo necesitas.
 
 Recibes eventos por los cambios que hace tu propia integración. Lleva un registro de las escrituras que hiciste y omite los eventos correspondientes, o trata cada evento como una señal para volver a obtener y comparar.
@@ -112,7 +112,7 @@ Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la
 - **Las entregas fallidas se reintentan** desde la pasarela con un esquema de espera creciente. Haz que tu manejador sea idempotente para que un reintento tras un éxito parcial no cause daño.
 - **Las entregas son al menos una vez.** El mismo evento puede llegar más de una vez incluso sin un fallo de tu lado. Deduplica con `event_type` más `workOrderId` más `changedAt` (o `addedAt` para las notas).
 - **El orden no está garantizado.** Dos eventos de la misma orden de trabajo pueden llegar desordenados. No derives el estado de la secuencia de eventos; obtén la orden de trabajo y confía en su `status`.
-- **Los eventos antiguos se descartan, no se entregan tarde.** Un evento que no se haya pasado a la pasarela dentro de las tres horas siguientes al cambio se descarta. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia con `GET /v1/supplier/work_order/work_orders`: lista las órdenes de trabajo creadas (`createdAtStartDate`) o completadas (`completedAtStartDate`) desde que empezó la interrupción, además de tus órdenes abiertas (`isActive=true`), y compáralas con tus registros.
+- **Los eventos antiguos se descartan, no se entregan tarde.** OpenWrench descarta cualquier evento que no haya llegado a la pasarela dentro de las tres horas siguientes al cambio. Tras una interrupción del lado de OpenWrench, o si tu endpoint estuvo caído más tiempo que la ventana de reintentos, concilia con `GET /v1/supplier/work_order/work_orders`. Lista las órdenes de trabajo creadas (`createdAtStartDate`) o completadas (`completedAtStartDate`) desde que empezó la interrupción, además de tus órdenes abiertas (`isActive=true`). Luego compáralas con tus registros.
 
 {/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 

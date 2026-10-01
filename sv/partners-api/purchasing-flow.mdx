@@ -94,7 +94,7 @@ Varje listad PR-rad flyttas till `orderInProgress` med sitt `associatedPurchaseO
 `POST /v1/partners/inventory/purchase_order_line_items/bulk` tar en **JSON-array** av rader, alla refererande till samma `supplierPurchaseOrderId`, och har ersättningssemantik:
 
 <Warning>
-Alla befintliga **ej mottagna** rader på PO:n raderas först, sedan skapas de skickade. Skicka den fullständiga avsedda uppsättningen öppna rader varje gång. Radstatus kan inte sättas här: nya rader börjar som `new`, och en rad som skickas igen med sitt `id` behåller sin status.
+OpenWrench raderar först alla befintliga **ej mottagna** rader på PO:n och skapar sedan de skickade. Skicka den fullständiga avsedda uppsättningen öppna rader varje gång. Radstatus kan inte sättas här: nya rader börjar som `new`, och en rad som skickas igen med sitt `id` behåller sin status.
 </Warning>
 
 PO:s del-/utrustnings-/inköpsförfrågan-id-listor räknas om och inköpsorder-aviseringen skickas igen. `supplierFacilityId`/`supplierCompanyId` per post kommer från din nyckel; poster utan skrivbehörighet hoppas tyst över.

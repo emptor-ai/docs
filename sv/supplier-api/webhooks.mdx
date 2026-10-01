@@ -36,7 +36,7 @@ Lite mer om var och en:
 
 Två saker du **inte** får någon händelse för:
 
-- **Omtilldelning bort från dig.** Om köparen flyttar en arbetsorder till en annan leverantör försvinner den helt enkelt ur din kö. Stäm av mot `GET /v1/supplier/work_order/work_orders` om det spelar roll för dig.
+- **Omtilldelning bort från dig.** Om köparen flyttar en arbetsorder till en annan leverantör försvinner den ur din kö. Stäm av mot `GET /v1/supplier/work_order/work_orders` om det spelar roll för dig.
 - **Arbetsordrar du bara kan se.** Om din anläggning finns på en arbetsorders synlighetslista i stället för att vara tilldelad den får du dess händelser bara om OpenWrench har aktiverat synlighets-webhooks för ditt företag. Fråga supporten om du behöver det.
 
 Du får händelser för ändringar som din egen integration gör. Håll reda på de skrivningar du gjort och hoppa över de matchande händelserna, eller behandla varje händelse som en signal att hämta om och jämföra.
@@ -112,7 +112,7 @@ Varje leverans är signerad. Gatewayen beräknar en HMAC över den råa förfrå
 - **Misslyckade leveranser görs om** av gatewayen enligt ett schema med ökande väntetid. Gör din hanterare idempotent så att ett omförsök efter en delvis lyckad körning inte gör skada.
 - **Leveranser sker minst en gång.** Samma händelse kan komma mer än en gång även utan något fel på din sida. Deduplicera på `event_type` plus `workOrderId` plus `changedAt` (eller `addedAt` för anteckningar).
 - **Ordningen garanteras inte.** Två händelser för samma arbetsorder kan komma i fel ordning. Härled inte tillståndet ur händelsesekvensen; hämta arbetsordern och lita på dess `status`.
-- **Gamla händelser kastas, de levereras inte sent.** En händelse som inte har lämnats över till gatewayen inom tre timmar från ändringen kastas. Efter ett avbrott på OpenWrenchs sida, eller om din slutpunkt var nere längre än omförsöksfönstret, stäm av med `GET /v1/supplier/work_order/work_orders`: lista arbetsordrar som skapats (`createdAtStartDate`) eller slutförts (`completedAtStartDate`) sedan avbrottet började, plus dina öppna (`isActive=true`), och jämför dem med dina poster.
+- **Gamla händelser kastas, de levereras inte sent.** OpenWrench kastar alla händelser som inte har nått gatewayen inom tre timmar från ändringen. Efter ett avbrott på OpenWrenchs sida, eller om din slutpunkt var nere längre än omförsöksfönstret, stäm av med `GET /v1/supplier/work_order/work_orders`. Lista arbetsordrar som skapats (`createdAtStartDate`) eller slutförts (`completedAtStartDate`) sedan avbrottet började, plus dina öppna (`isActive=true`). Jämför dem sedan med dina poster.
 
 {/* Reviewer: confirm the Convoy retry strategy (linear or exponential), interval, and retry count, and whether Convoy disables an endpoint after repeated failures. */}
 

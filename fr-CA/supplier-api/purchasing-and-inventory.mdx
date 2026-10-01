@@ -4,7 +4,7 @@ sidebarTitle: "Achats et inventaire"
 description: "Gérez demandes d'achat, bons de commande, réceptions et retours, catalogues, niveaux de stock et le webhook Order.co avec l'API Fournisseur."
 ---
 
-Les endpoints d'inventaire sous `/v1/supplier/inventory/` couvrent tout le cycle de vie des achats : les techniciens émettent des **demandes d'achat** (DA), les acheteurs les transforment en **bons de commande** (BC) auprès de vendeurs, les marchandises arrivent comme **réceptions**, et les niveaux de stock sont mis à jour par **emplacement de stock**. La même surface est reflétée pour les équipes internes des acheteurs dans l'[API Équipes internes](/fr-CA/partners-api/introduction).
+Les endpoints d'inventaire sous `/v1/supplier/inventory/` couvrent tout le cycle de vie des achats. Les techniciens émettent des **demandes d'achat** (DA), les acheteurs les transforment en **bons de commande** (BC) auprès de vendeurs, les marchandises arrivent comme **réceptions**, et les niveaux de stock sont mis à jour par **emplacement de stock**. La même surface est reflétée pour les équipes internes des acheteurs dans l'[API Équipes internes](/fr-CA/partners-api/introduction).
 
 Tous les exemples supposent :
 
@@ -94,7 +94,7 @@ Les postes distinguent les lignes de pièces des lignes d'équipement via `isEqu
 `POST /v1/supplier/inventory/purchase_order_line_items/bulk` prend un **tableau JSON** de charges utiles de postes et a une sémantique de remplacement :
 
 <Warning>
-Tous les postes **non reçus** du bon de commande cible sont d'abord supprimés, puis les postes soumis sont créés. Envoyez toujours l'ensemble complet des lignes ouvertes prévues, jamais seulement le delta. Les éléments pour lesquels vous n'avez pas de permission d'écriture sont silencieusement ignorés.
+OpenWrench supprime d'abord tous les postes **non reçus** du bon de commande cible, puis crée les postes soumis. Envoyez toujours l'ensemble complet des lignes ouvertes prévues, jamais seulement le delta. Les éléments pour lesquels vous n'avez pas de permission d'écriture sont silencieusement ignorés.
 </Warning>
 
 `supplierFacilityId` et `supplierCompanyId` sur chaque poste sont écrasés à partir de votre clé, les listes d'ids de pièces/équipements/DA du BC sont recalculées, et la notification de bon de commande est renvoyée. Non limité en débit.
