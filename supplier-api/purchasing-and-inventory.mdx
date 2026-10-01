@@ -4,7 +4,7 @@ sidebarTitle: "Purchasing & inventory"
 description: "Run the full purchasing lifecycle: purchase requests, purchase orders and line items, receipts and returns, catalogs, stock levels, and the Order.co webhook."
 ---
 
-The inventory endpoints under `/v1/supplier/inventory/` cover the whole purchasing lifecycle: technicians raise **purchase requests** (PRs), purchasing turns them into **purchase orders** (POs) against vendors, goods arrive as **receipts**, and stock levels update per **stock location**. The same surface is mirrored for buyers' in-house teams in the [Internal Teams API](/partners-api/introduction).
+The inventory endpoints under `/v1/supplier/inventory/` cover the whole purchasing lifecycle. Technicians raise **purchase requests** (PRs), purchasing turns them into **purchase orders** (POs) against vendors, goods arrive as **receipts**, and stock levels update per **stock location**. The same surface is mirrored for buyers' in-house teams in the [Internal Teams API](/partners-api/introduction).
 
 All examples assume:
 
@@ -94,7 +94,7 @@ Line items distinguish part lines from equipment lines via `isEquipmentLine`; pa
 `POST /v1/supplier/inventory/purchase_order_line_items/bulk` takes a **JSON array** of line-item payloads and has replace semantics:
 
 <Warning>
-All **non-received** line items on the target purchase order are deleted first, then the submitted items are created. Always send the complete intended set of open lines, never just the delta. Items you lack write permission for are silently skipped.
+OpenWrench first deletes all **non-received** line items on the target purchase order, then creates the submitted items. Always send the complete intended set of open lines, never just the delta. Items you lack write permission for are silently skipped.
 </Warning>
 
 `supplierFacilityId` and `supplierCompanyId` on each item are overwritten from your key, the PO's part/equipment/PR id lists are recomputed, and the purchase-order notification is re-sent. Not rate limited.
