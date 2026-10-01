@@ -86,7 +86,7 @@ Beteende att känna till:
 
 - `buyerFacilityId` och `buyerCompanyId` **härleds från platsen**, aldrig från kroppen.
 - **Köldmedieöverstyrningar kan rensas.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` och `refrigerantRequiresProcessShutdown` är per-enhet-överstyrningar av tillgångstypens standardvärden. Att utelämna nyckeln behåller det lagrade värdet; ett explicit `null` (eller tom sträng) rensar tillbaka till att ärva från typen. `isRefrigerantTracked` beter sig liknande: utelämnat eller `null` behåller det lagrade värdet, och inskrivningen stängs endast av med ett explicit `false`.
-- `fullChargeLb` på en tillgång följer samma regler för positivt värde och precision som på en tillgångstyp.
+- `fullChargeLb` på en tillgång följer samma regler för positivt värde och precision som på en [tillgångstyp](#tillgångstyper).
 - **Underliggande tillgångar.** `parentId` gör detta till en underliggande tillgång. Det kräver att underliggande tillgångar är aktiverade för ditt företag, och barnet måste vara på samma plats som föräldern.
 - Att skicka ett `id` uppdaterar en befintlig tillgång.
 
