@@ -43,17 +43,80 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`), et tout autre paramètre de requête agit comme un filtre de champ. Tout est restreint à votre établissement.
+La pagination standard s'applique (`offset`, `limit` par défaut 10 max 25, `sort_by`, `order`). Tout autre paramètre de requête est lu comme un filtre de la [référence des filtres](#référence-des-filtres) ci-dessous. Les filtres se combinent avec ET, et tout est restreint à votre établissement.
 
 La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. L'endpoint de comptage exécute la même requête que la liste, alors les deux concordent toujours. Comportement à connaître :
 
 - **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, et le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Encadrez la valeur de guillemets doubles pour exiger la phrase exacte.
-- **Les filtres d'actif incluent les sous-actifs.** `assetId=` et `assetIds=` correspondent aux bons de travail dont l'actif principal *ou* n'importe quel sous-actif est l'id donné.
 - **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
-- **Les filtres non reconnus sont ignorés.** Un paramètre de requête qui n'est pas un filtre pris en charge ne restreint pas les résultats, et la requête aboutit quand même. Cela inclut les clés mal orthographiées ainsi que `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, `assignedAt` et `walkthroughId`, qui ne figurent pas dans l'index de recherche. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui. La liste des filtres pris en charge figure dans la [référence des filtres](/supplier-api/work-orders#filter-reference) (en anglais).
+- **Les filtres non reconnus sont ignorés.** Seules les clés de la référence des filtres ci-dessous sont prises en charge. Tout autre paramètre de requête est ignoré plutôt que rejeté, et la requête aboutit quand même. Cela inclut les clés mal orthographiées ainsi que `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `assignedAt`, `buyerFacilityId` et `walkthroughId`, qui ne figurent pas dans l'index de recherche. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui.
 - **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures. Votre propre changement fraîchement écrit, ou un bon de travail assigné il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
 - **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
 - **Masquage de données.** Si vous êtes un fournisseur tiers (pas l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, les emplacements et les factures avant que la réponse soit retournée. Les champs manquants sont généralement du masquage, pas des bogues. Voir [Données de référence](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les détails.
+
+### Référence des filtres
+
+Les clés sont sensibles à la casse. Une clé au singulier (`status`) prend une seule valeur; la clé au pluriel (`statuses`) prend une liste séparée par des virgules et correspond à l'une ou l'autre des valeurs; `notStatuses` exclut chaque statut listé. Les filtres de date sont expliqués sous [règles des valeurs de filtre](#règles-des-valeurs-de-filtre).
+
+**Statut**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `id`, `ids` | Un bon de travail par id, ou plusieurs en un seul appel (`ids=9001,9002`). Utile pour rafraîchir un lot connu. |
+| `status`, `statuses`, `notStatuses` | Le statut détaillé du flux de travail, par exemple `statuses=PendingConfirmationByServiceProvider` pour trouver le travail qui attend votre acceptation. Les valeurs sont listées dans [le modèle de statut](/fr-CA/buyer-api/work-orders#le-modèle-de-statut). Il s'agit du statut propre du bon de travail, même pour le travail qui vous est sous-traité. Les fournisseurs tiers ne voient jamais les bons de travail `PendingApproval`. |
+| `displayStatus`, `displayStatuses` | Le statut simplifié affiché dans l'application OpenWrench : `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` ou `Cancelled`. Chaque statut détaillé correspond à l'un de ceux-ci. |
+| `isActive` | `true` retourne le travail encore en cours (statut d'affichage `Pending`, `Open`, `InProgress` ou `OnHold`). `false` retourne le travail clôturé (`Completed` ou `Cancelled`). Les bons de travail `Deferred` ne correspondent à aucune des deux valeurs. Les bons de travail archivés sont inclus dans les deux cas; ajoutez `hasSupplierArchived=false` pour les exclure. |
+| `hasSupplierArchived` | `false` exclut les bons de travail que votre équipe a archivés; `true` retourne uniquement les bons archivés. L'archivage est distinct du statut, alors du travail ouvert peut aussi être archivé. |
+
+**Quoi et où**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `buyerCompanyId` | Le travail d'un client. Obtenez les ids d'entreprise acheteuse avec [`GET /v1/supplier/buyer_company/buyer_companies`](/fr-CA/supplier-api/reference-data#entreprises-acheteuses). N'a aucun effet pour les équipes de service internes, qui ne voient jamais que le travail de leur propre entreprise. |
+| `locationId`, `locationIds` | Le travail à ces emplacements. Obtenez les ids d'emplacement avec [`GET /v1/supplier/location/locations`](/fr-CA/supplier-api/reference-data#emplacements-et-régions). |
+| `assetId`, `assetIds` | Le travail sur ces actifs, que ce soit comme actif principal ou comme sous-actif. Obtenez les ids d'actif avec [`GET /v1/supplier/asset/assets`](/fr-CA/supplier-api/reference-data#actifs-et-types-d-actifs). |
+| `problemTypeId`, `problemTypeIds` | Le travail de ces types de problèmes. Obtenez les ids avec [`GET /v1/supplier/work_order/problem_types`](/fr-CA/supplier-api/work-orders#types-de-problèmes). |
+| `woPriorityId`, `woPriorityIds` | Le travail à ces priorités. Les ids de priorité appartiennent à chaque client; chaque bon de travail indique sa priorité dans `woPriorityId`. |
+| `labelIds` | Le travail portant au moins une de ces étiquettes. Obtenez les ids d'étiquette dans le [catalogue d'étiquettes](/fr-CA/supplier-api/work-orders#étiquettes). |
+| `isPM` | `true` retourne uniquement le travail d'entretien préventif généré à partir du calendrier d'entretien préventif d'un client; `false` l'exclut. |
+
+**Qui**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `fieldTechnicianEmail`, `fieldTechnicianEmails` | Le travail affecté à ces techniciens comme technicien principal, ou restreint à eux, par adresse courriel. |
+
+**Dates et échéances**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Le travail créé dans la fenêtre. |
+| `completedAtStartDate`, `completedAtEndDate` | Le travail complété dans la fenêtre. Utile pour produire des rapports sur le travail terminé et pour repérer les clôtures récentes. |
+| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | Le travail dont la visite la plus récente est planifiée dans la fenêtre. Combinez avec `sort_by=lastServiceCallServiceScheduledAt` pour une vue d'horaire. |
+| `pastDue` | `true` retourne le travail ouvert dont la date d'échéance est passée; `false` retourne le travail ouvert qui n'est pas encore échu. Le travail clôturé (`Completed` ou `Cancelled`) et le travail sans date d'échéance ne correspondent à aucune des deux valeurs. |
+| `pastSchedule` | Comme `pastDue`, sur la date de visite planifiée : `true` retourne le travail ouvert dont la date planifiée est passée. |
+| `pastEstimatedCompletion` | Comme `pastDue`, sur la date d'achèvement estimée que vous avez définie pour le bon de travail. Si vous n'en avez pas défini, la date d'échéance est utilisée. |
+| `unscheduledOrPastSchedule` | `true` retourne le travail sans date planifiée, ou dont la date planifiée est passée : le travail qui demande une attention à la planification. Le travail clôturé est inclus, alors ajoutez `isActive=true` pour ne voir que le travail ouvert. |
+
+### Règles des valeurs de filtre
+
+- **Utilisez la clé au pluriel pour plusieurs valeurs.** `statuses=TechScheduled,TechRescheduled` correspond à l'un ou l'autre statut. `status=TechScheduled,TechRescheduled` cherche un unique statut portant ce nom littéral et ne renvoie rien.
+- **Une valeur par clé.** Si vous répétez un paramètre (`statuses=TechScheduled&statuses=TechRescheduled`), seul le premier est utilisé. Séparez plutôt les valeurs par des virgules.
+- **Les dates utilisent `MM/dd/yyyy HH:mm:ss` en UTC**, par exemple `08/01/2026 00:00:00`. L'heure est obligatoire, et les deux bornes d'une fenêtre sont incluses. Encodez la valeur pour l'URL (`curl -G --data-urlencode` le fait pour vous). Une date qui ne peut pas être analysée n'est pas rejetée. Elle est lue comme le 1er janvier 1970, alors une date de début invalide correspond à tout et une date de fin invalide ne correspond à rien.
+- **Les booléens sont `true` ou `false`.** `unscheduledOrPastSchedule` n'agit que sur `true`.
+- **Les valeurs doivent être bien formées.** Un id non numérique, ou un booléen autre que `true` ou `false`, peut faire échouer la requête avec un `500` plutôt qu'un `400`.
+- **La portée de locataire ne peut pas être contournée.** La visibilité d'établissement appliquée à partir de votre clé d'API s'applique toujours, quels que soient les filtres que vous passez.
+
+```bash
+# Travail ouvert d'un technicien avec une visite planifiée cette semaine
+curl -G "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "fieldTechnicianEmail=tech@supplier.com" \
+  --data-urlencode "isActive=true" \
+  --data-urlencode "lastServiceCallServiceScheduledAtStartDate=09/07/2026 00:00:00" \
+  --data-urlencode "lastServiceCallServiceScheduledAtEndDate=09/13/2026 23:59:59" \
+  -d limit=25 -d sort_by=lastServiceCallServiceScheduledAt -d order=asc
+```
 
 ## Accepter ou refuser
 

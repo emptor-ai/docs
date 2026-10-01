@@ -79,20 +79,85 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 # Cuántas coinciden, sin traerlas
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
+
+# Órdenes de trabajo abiertas en dos ubicaciones con id de prioridad 1 o 2, creadas en agosto
+curl -G "$BASE/v1/buyer/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "locationIds=1204,1310" \
+  --data-urlencode "woPriorityIds=1,2" \
+  --data-urlencode "isActive=true" \
+  --data-urlencode "createdAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "createdAtEndDate=08/31/2026 23:59:59" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
 ```
 
-Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`. Cualquier otro parámetro de consulta se trata como un filtro. Para coincidir con cualquiera de varios valores, usa la clave en plural con los valores separados por comas (`statuses=Unassigned,PendingApproval`); `status=Unassigned,PendingApproval` busca un único estado con ese nombre literal y no devuelve nada. Los filtros siempre se combinan con el alcance por inquilino derivado de tu clave, así que solo verás las órdenes de trabajo de tu empresa.
+Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`. Cualquier otro parámetro de consulta se lee como un filtro de la [referencia de filtros](#referencia-de-filtros) que aparece más abajo. Los filtros se combinan con AND, y siempre se combinan con el alcance por inquilino derivado de tu clave, así que solo verás las órdenes de trabajo de tu empresa.
 
 El listado y el conteo resuelven qué órdenes de trabajo coinciden en el índice de búsqueda de OpenWrench y luego cargan los registros completos desde la base de datos. Eso cambia algunos comportamientos:
 
 - **Búsqueda de texto completo.** `search=` coincide con palabras (con coincidencia por prefijo y por raíz) en el título, la descripción, el nombre de la ubicación, las notas, las notas de check-in y check-out de las llamadas de servicio, y el nombre del tipo de problema. También coincide con números de referencia como el número de orden de trabajo, el número de PO y el número de serie del activo. Pon el valor entre comillas (`search="walk-in cooler"`) para exigir la frase exacta.
-- **Los filtros de activo incluyen los subactivos.** `assetId=` y `assetIds=` coinciden con órdenes de trabajo cuyo activo principal *o* cualquiera de sus subactivos es el id dado.
 - **Ordenamiento.** `sort_by` admite `createdAt`, `locationName`, `woPriority` (por el tiempo de resolución esperado de la prioridad) y `lastServiceCallServiceScheduledAt`. Cualquier otro valor, o la ausencia de `sort_by`, ordena por `createdAt` descendente.
-- **Los filtros no reconocidos se ignoran.** Un parámetro de consulta que no es un filtro admitido no estrecha los resultados, y la petición igualmente tiene éxito. Esto incluye las claves mal escritas y `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` y `walkthroughId`, que no están en el índice de búsqueda. Antes de depender de un filtro nuevo, compara `count_by` con y sin él. La lista de filtros admitidos está en la [referencia de filtros](/buyer-api/work-orders#filter-reference) (en inglés).
+- **Los filtros no reconocidos se ignoran.** Solo se admiten las claves de la referencia de filtros que aparece más abajo. Cualquier otro parámetro de consulta se ignora en lugar de rechazarse, y la petición igualmente tiene éxito. Esto incluye las claves mal escritas y `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` y `walkthroughId`, que no están en el índice de búsqueda. Antes de depender de un filtro nuevo, compara `count_by` con y sin él.
 - **Frescura.** Las actualizaciones del índice de búsqueda y de la réplica van un momento por detrás de las escrituras, así que una orden de trabajo creada hace milisegundos puede estar brevemente ausente de los resultados de listado y de los conteos.
 - **Profundidad de paginación.** `offset + limit` no puede exceder la ventana de resultados de búsqueda de 10.000. Estrecha el filtro en lugar de paginar tan profundo.
 
 El endpoint de conteo ejecuta la misma consulta del índice de búsqueda que el listado, así que un conteo siempre concuerda con el listado que describe.
+
+### Referencia de filtros
+
+Las claves distinguen entre mayúsculas y minúsculas. Una clave en singular (`status`) toma un valor; la clave en plural (`statuses`) toma una lista separada por comas y coincide con cualquiera de los valores; `notStatuses` excluye todos los estados listados. Los filtros de fecha se explican en las [reglas de valores de filtro](#reglas-de-valores-de-filtro).
+
+**Estado**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `id`, `ids` | Una orden de trabajo por id, o varias en una sola llamada (`ids=9001,9002`). Útil para refrescar un lote conocido. |
+| `status`, `statuses`, `notStatuses` | El estado detallado del flujo de trabajo, por ejemplo `statuses=WaitingForReview` para encontrar trabajo listo para tu revisión. Los valores se listan en [el modelo de estados](/es/buyer-api/work-orders#el-modelo-de-estados). |
+| `displayStatus`, `displayStatuses` | El estado simplificado que se muestra en la app de OpenWrench: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` o `Cancelled`. Cada estado detallado corresponde a uno de estos. |
+| `isActive` | `true` devuelve el trabajo aún en curso (display status `Pending`, `Open`, `InProgress` u `OnHold`). `false` devuelve el trabajo cerrado (`Completed` o `Cancelled`). Las órdenes de trabajo `Deferred` no coinciden con ninguno de los dos valores. Las órdenes de trabajo archivadas se incluyen en ambos casos; añade `hasBuyerArchived=false` para dejarlas fuera. |
+| `hasBuyerArchived` | `false` deja fuera las órdenes de trabajo que tu equipo ha archivado; `true` devuelve solo las archivadas. El archivado es independiente del estado, así que el trabajo abierto también puede estar archivado. |
+
+**Qué y dónde**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `locationId`, `locationIds` | Trabajo en estas ubicaciones. Obtén los ids de ubicación con [`GET /v1/buyer/location/locations`](/es/buyer-api/assets-and-locations#ubicaciones). |
+| `assetId`, `assetIds` | Trabajo sobre estos activos, ya sea como activo principal o como subactivo. Obtén los ids de activo con [`GET /v1/buyer/asset/assets`](/es/buyer-api/assets-and-locations#activos). |
+| `problemTypeId`, `problemTypeIds` | Trabajo de estos tipos de problema. Obtén los ids con [`GET /v1/buyer/work_order/problem_types`](/es/buyer-api/work-orders#tipos-de-problema). |
+| `woPriorityId`, `woPriorityIds` | Trabajo con estas prioridades. Los ids de prioridad son propios de tu empresa; cada orden de trabajo muestra su prioridad en `woPriorityId`. |
+| `labelIds` | Trabajo que lleva al menos una de estas etiquetas. Obtén los ids de etiqueta del [catálogo de etiquetas](/es/buyer-api/work-orders#etiquetas). |
+| `isPM` | `true` devuelve solo el trabajo de mantenimiento preventivo generado desde un [cronograma de PM](/es/buyer-api/planned-maintenance); `false` lo deja fuera. |
+| `buyerProjectId` | Trabajo de un proyecto. Una orden de trabajo lista sus proyectos en `buyerProjectIds`. |
+| `siteSurveyTaskTitleId` | Trabajo de seguimiento creado a partir de una tarea de recorrido: el `siteSurveyTaskTitleId` que enviaste al [crear la orden de trabajo](/es/buyer-api/site-survey-walkthroughs#crear-órdenes-de-trabajo-de-seguimiento). |
+
+**Quién**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds` | Trabajo asignado a estos proveedores. Obtén los ids de instalación de proveedor con [`GET /v1/buyer/supplier_facilities`](/es/buyer-api/supplier-network#tu-red-de-proveedores). |
+| `createdByEmails` | Trabajo creado por estas personas, por correo electrónico: `createdByEmails=ops@example.com,manager@example.com`. |
+
+**Fechas y plazos**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Trabajo creado dentro de la ventana. |
+| `completedAtStartDate`, `completedAtEndDate` | Trabajo completado dentro de la ventana. Útil para generar informes sobre el trabajo terminado y para detectar cierres recientes. |
+| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | Trabajo cuya visita más reciente está programada dentro de la ventana. Combínalo con `sort_by=lastServiceCallServiceScheduledAt` para una vista de agenda. |
+| `pastDue` | `true` devuelve el trabajo abierto cuya fecha de vencimiento ya pasó; `false` devuelve el trabajo abierto que aún no ha vencido. El trabajo cerrado (`Completed` o `Cancelled`) y el trabajo sin fecha de vencimiento no coinciden con ninguno de los dos valores. |
+| `pastSchedule` | Como `pastDue`, sobre la fecha de visita programada: `true` devuelve el trabajo abierto cuya fecha programada ya pasó. |
+| `pastEstimatedCompletion` | Como `pastDue`, sobre la fecha estimada de finalización del proveedor. Cuando no se ha dado una estimación, se usa la fecha de vencimiento. |
+| `unscheduledOrPastSchedule` | `true` devuelve el trabajo sin fecha programada, o cuya fecha programada ya pasó: trabajo que necesita atención de programación. El trabajo cerrado se incluye, así que añade `isActive=true` para ver solo el trabajo abierto. |
+| `isStale` | `true` devuelve el trabajo abierto que ha permanecido vencido durante un periodo determinado sin avances del proveedor, y que tu equipo no ha archivado. El periodo se configura para tu empresa (14 días por defecto). La actividad del proveedor sobre el trabajo vencido, como aceptarlo o enviarlo a revisión, reinicia el periodo. Si tu empresa ha desactivado el seguimiento de trabajo estancado, las órdenes de trabajo nuevas no se marcan como estancadas. |
+
+### Reglas de valores de filtro
+
+- **Usa la clave en plural para varios valores.** `statuses=Unassigned,PendingApproval` coincide con cualquiera de los dos estados. `status=Unassigned,PendingApproval` busca un único estado con ese nombre literal y no devuelve nada.
+- **Un valor por clave.** Si repites un parámetro (`statuses=Unassigned&statuses=PendingApproval`), solo se usa el primero. Separa los valores con comas en su lugar.
+- **Las fechas usan `MM/dd/yyyy HH:mm:ss` en UTC**, por ejemplo `08/01/2026 00:00:00`. La hora es obligatoria, y ambos extremos de una ventana son inclusivos. Codifica el valor para URL (`curl -G --data-urlencode` lo hace por ti). Una fecha que no se puede interpretar no se rechaza. Se lee como 1 de enero de 1970, así que una fecha de inicio errónea coincide con todo y una fecha de fin errónea no coincide con nada.
+- **Los booleanos son `true` o `false`.** `isStale` y `unscheduledOrPastSchedule` solo actúan con `true`.
+- **Los valores deben estar bien formados.** Un id no numérico, o un booleano distinto de `true` o `false`, puede hacer fallar la petición con un `500` en lugar de un `400`.
+- **El alcance por inquilino no se puede anular.** `buyerCompanyId` siempre se establece a partir de tu clave de API, así que pasarlo no tiene efecto.
 
 Obtén una orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.
 

@@ -66,13 +66,13 @@ Fel:
 
 ## Paginering och filtrering
 
-List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som filter. Varje slutpunkt stöder sin egen uppsättning filternycklar, och nycklar den inte känner igen ignoreras i stället för att avvisas. Filter med flera värden använder en pluralnyckel med kommaseparerade värden (`statuses=TechScheduled,TechRescheduled`). För arbetsordrar, se [filterreferensen](/supplier-api/work-orders#filter-reference) (på engelska).
+List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som filter. Varje slutpunkt stöder sin egen uppsättning filternycklar, och nycklar den inte känner igen ignoreras i stället för att avvisas. Filter med flera värden använder en pluralnyckel med kommaseparerade värden (`statuses=TechScheduled,TechRescheduled`). För arbetsordrar, se [filterreferensen](/sv/supplier-api/work-orders#filterreferens).
 
 ## Datumformat
 
 De flesta tidsstämplar är ISO 8601-strängar med offset (t.ex. `2026-08-14T13:05:22.000-07:00`); vissa databastidsstämpelfält serialiseras som `yyyy-MM-dd HH:mm:ss.S`. Rena datum är `yyyy-MM-dd`.
 
-När du skickar datum-tider, använd ISO 8601 med ett `T` mellan datum och tid och en explicit offset. Ett mellanslagsseparerat värde som `2026-09-10 10:43:00+00:00` är inte ISO 8601 och avvisas; skicka `2026-09-10T10:43:00.000+00:00` i stället. UTC kan skrivas som `+00:00` eller `Z`.
+När du skickar datum-tider, använd ISO 8601 med ett `T` mellan datum och tid och en explicit offset. Ett mellanslagsseparerat värde som `2026-09-10 10:43:00+00:00` är inte ISO 8601 och avvisas; skicka `2026-09-10T10:43:00.000+00:00` i stället. UTC kan skrivas som `+00:00` eller `Z`. Datumfilter i arbetsorderlistan är undantaget: de tar `MM/dd/yyyy HH:mm:ss` i UTC (se [regler för filtervärden](/sv/supplier-api/work-orders#regler-för-filtervärden)).
 
 ## Teknikertid
 

@@ -70,11 +70,11 @@ Erreurs :
 
 ## Pagination et filtrage
 
-Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order` (`asc` | `desc`). Les paramètres de requête supplémentaires sont traités comme des filtres. Chaque endpoint prend en charge son propre ensemble de clés de filtre, et les clés qu'il ne reconnaît pas sont ignorées plutôt que rejetées. Les filtres à plusieurs valeurs utilisent une clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`). Pour les bons de travail, consultez la [référence des filtres](/buyer-api/work-orders#filter-reference) (en anglais).
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, maximum 25), `sort_by` et `order` (`asc` | `desc`). Les paramètres de requête supplémentaires sont traités comme des filtres. Chaque endpoint prend en charge son propre ensemble de clés de filtre, et les clés qu'il ne reconnaît pas sont ignorées plutôt que rejetées. Les filtres à plusieurs valeurs utilisent une clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`). Pour les bons de travail, consultez la [référence des filtres](/fr-CA/buyer-api/work-orders#référence-des-filtres).
 
 ## Formats de date
 
-La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601.
+La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601. Les filtres de date de la liste des bons de travail font exception : ils prennent `MM/dd/yyyy HH:mm:ss` en UTC (voir les [règles des valeurs de filtre](/fr-CA/buyer-api/work-orders#règles-des-valeurs-de-filtre)).
 
 ## Guides détaillés
 
