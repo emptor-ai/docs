@@ -107,7 +107,7 @@ Each precondition failing returns `400`: your facility must own the invoice, the
 
 ### Read and reconcile
 
-`GET /v1/supplier/invoice/invoices` (filterable, e.g. `?status=pending`) and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your AR ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
+`GET /v1/supplier/invoice/invoices` (filterable, for example `?status=pending`) and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your AR ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
 
 ## End-to-end billing flow
 
