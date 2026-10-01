@@ -89,7 +89,7 @@ curl -X POST "$BASE/v1/buyer/invoice/status/paid/by_work_order_id" \
   -d '{ "workOrderId": "9001" }'
 ```
 
-Lookup tries `workOrderId` first and falls back to `externalWorkOrderId`, always within your company. Already-`paid` invoices are returned unchanged (safe to retry); `approved` or `processing` invoices are marked paid; an invoice in any other status returns `400` with "Invoice not found".
+Lookup tries `workOrderId` first and falls back to `externalWorkOrderId`, always within your company. Already-`paid` invoices are returned unchanged (safe to retry), and `approved` or `processing` invoices are marked paid. An invoice in any other status returns `400` with "Invoice not found".
 
 ## Project invoices
 
