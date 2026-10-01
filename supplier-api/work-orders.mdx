@@ -264,5 +264,5 @@ Defaults when omitted: `problemTypeId` falls back to the first leaf problem type
 
 1. Register a [webhook](/supplier-api/webhooks) endpoint for `workorder.create` and `workorder.status_update`. On each delivery, fetch the work order by id. Do the one-time initial load from the list endpoint, and keep it out of the steady-state loop except as an infrequent, narrowly filtered safety-net poll.
 2. `confirm` or `decline` within your SLA.
-3. Schedule the visit via [service calls](/supplier-api/service-calls); post parts statuses and an ECD as things develop.
+3. Schedule the visit via [service calls](/supplier-api/service-calls); post parts statuses and an estimated completion date (ECD) as things develop.
 4. Complete via check-out, then bill via [quotes and invoicing](/supplier-api/quotes-and-invoicing).
