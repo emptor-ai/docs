@@ -129,4 +129,4 @@ En dispatch-integration driven av webhooks:
 1. Registrera en slutpunkt för `workorder.create` och `workorder.status_update` (lägg till `workorder.new_note` om du speglar konversationen).
 2. Vid `workorder.create`, hämta arbetsordern och skapa motsvarande post i ditt system. Om du tilldelar från din sida, gör en `PATCH` av `supplierFacilityId` enligt [Arbetsordrar](/sv/buyer-api/work-orders#tilldela-om-en-leverantör).
 3. Vid `workorder.status_update`, hämta arbetsordern. När `newStatus` är `WaitingForReview`, kör ditt granskningsflöde och posta `work_reviewed_and_completed` eller `work_unsatisfactory`.
-4. Kör en tillfällig avstämning som skyddsnät för allt som webhook-vägen kan ha missat: lista öppna arbetsordrar (`isActive=true`) och nyligen slutförda (ett `completedAtStartDate`-fönster), och jämför dem med dina poster.
+4. Kör en tillfällig avstämning som skyddsnät för allt som webhook-vägen kan ha missat: lista öppna arbetsordrar (`isActive=true`) och nyligen slutförda (ett `completedAtStartDate`-fönster), och jämför dem med dina poster. Se [filterreferensen](/sv/buyer-api/work-orders#filterreferens).

@@ -43,17 +43,80 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/count_by?status=ConfirmedByServiceProvider"
 ```
 
-Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`), och varje annan frågeparameter fungerar som ett fältfilter. Allt är tenant-avgränsat till din anläggning.
+Standardpaginering gäller (`offset`, `limit` standard 10 max 25, `sort_by`, `order`). Varje annan frågeparameter läses som ett filter från [filterreferensen](#filterreferens) nedan. Filter kombineras med AND, och allt är tenant-avgränsat till din anläggning.
 
 Listan och räkningen avgör vilka arbetsordrar som matchar i OpenWrenchs sökindex och laddar sedan de fullständiga posterna från databasen. Räkningsslutpunkten kör samma fråga som listan, så de två stämmer alltid överens. Beteende att känna till:
 
 - **Fulltextsökning.** `search=` matchar ord (med prefix- och stamformsmatchning) i titeln, beskrivningen, platsnamnet, anteckningarna, servicebesökens in- och utcheckningsanteckningar och problemtypens namn. Den matchar också referensnummer som arbetsordernumret, PO-numret och tillgångens serienummer. Sätt värdet inom dubbla citattecken för att kräva den exakta frasen.
-- **Tillgångsfilter inkluderar underliggande tillgångar.** `assetId=` och `assetIds=` matchar arbetsordrar vars huvudtillgång *eller* någon underliggande tillgång är det angivna id:t.
 - **Sortering.** `sort_by` stöder `createdAt`, `locationName`, `woPriority` (efter prioritetens förväntade lösningstid) och `lastServiceCallServiceScheduledAt`. Varje annat värde, eller inget `sort_by`, sorterar fallande efter `createdAt`.
-- **Okända filter ignoreras.** En frågeparameter som inte är ett filter som stöds smalnar inte av resultaten, och anropet lyckas ändå. Det gäller felstavade nycklar och `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, `assignedAt` och `walkthroughId`, som inte finns i sökindexet. Innan du förlitar dig på ett nytt filter, jämför `count_by` med och utan det. Listan över filter som stöds finns i [filterreferensen](/supplier-api/work-orders#filter-reference) (på engelska).
+- **Okända filter ignoreras.** Endast nycklarna i filterreferensen nedan stöds. Varje annan frågeparameter ignoreras istället för att avvisas, och anropet lyckas ändå. Det gäller felstavade nycklar och `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `assignedAt`, `buyerFacilityId` och `walkthroughId`, som inte finns i sökindexet. Innan du förlitar dig på ett nytt filter, jämför `count_by` med och utan det.
 - **Färskhet.** Uppdateringar av sökindexet och läs-replikan släpar efter skrivningar ett ögonblick. En ändring du just skrivit, eller en arbetsorder som tilldelades för några sekunder sedan, kan tillfälligt saknas i listresultat och räkningar.
 - **Pagineringsdjup.** `offset + limit` kan inte överstiga sökresultatfönstret på 10 000. Smalna av filtret istället för att paginera så djupt.
 - **Datamaskering.** Om du är en tredjepartsleverantör (inte en köpares interna serviceteam) tas köpar-privata fält bort på arbetsordrar, platser och fakturor innan svaret returneras. Saknade fält är oftast maskering, inte buggar. Se [Referensdata](/sv/supplier-api/reference-data#datamaskering) för detaljer.
+
+### Filterreferens
+
+Nycklarna är skiftlägeskänsliga. En nyckel i singular (`status`) tar ett värde; nyckeln i plural (`statuses`) tar en kommaseparerad lista och matchar något av värdena; `notStatuses` utesluter varje listad status. Datumfilter förklaras under [regler för filtervärden](#regler-för-filtervärden).
+
+**Status**
+
+| Filter | Matchar |
+| --- | --- |
+| `id`, `ids` | En arbetsorder via id, eller flera i ett anrop (`ids=9001,9002`). Användbart för att uppdatera en känd grupp. |
+| `status`, `statuses`, `notStatuses` | Den detaljerade arbetsflödesstatusen, till exempel `statuses=PendingConfirmationByServiceProvider` för att hitta arbete som väntar på att du accepterar det. Värdena listas i [statusmodellen](/sv/buyer-api/work-orders#statusmodellen). Det här är arbetsorderns egen status, även för arbete som lagts ut på underentreprenad till dig. Tredjepartsleverantörer ser aldrig arbetsordrar med `PendingApproval`. |
+| `displayStatus`, `displayStatuses` | Den förenklade statusen som visas i OpenWrench-appen: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` eller `Cancelled`. Varje detaljerad status motsvarar en av dessa. |
+| `isActive` | `true` returnerar arbete som fortfarande pågår (visningsstatus `Pending`, `Open`, `InProgress` eller `OnHold`). `false` returnerar stängt arbete (`Completed` eller `Cancelled`). Arbetsordrar med `Deferred` matchar inget av värdena. Arkiverade arbetsordrar ingår i båda fallen; lägg till `hasSupplierArchived=false` för att utesluta dem. |
+| `hasSupplierArchived` | `false` utesluter arbetsordrar som ditt team har arkiverat; `true` returnerar endast arkiverade. Arkivering är skild från status, så även öppet arbete kan arkiveras. |
+
+**Vad och var**
+
+| Filter | Matchar |
+| --- | --- |
+| `buyerCompanyId` | Arbete från en kund. Hämta köparföretags-id:n från [`GET /v1/supplier/buyer_company/buyer_companies`](/sv/supplier-api/reference-data#köparföretag). Har ingen effekt för interna serviceteam, som bara ser sitt eget företags arbete. |
+| `locationId`, `locationIds` | Arbete på dessa platser. Hämta plats-id:n från [`GET /v1/supplier/location/locations`](/sv/supplier-api/reference-data#platser-och-regioner). |
+| `assetId`, `assetIds` | Arbete på dessa tillgångar, oavsett om det är huvudtillgången eller en underliggande tillgång. Hämta tillgångs-id:n från [`GET /v1/supplier/asset/assets`](/sv/supplier-api/reference-data#tillgångar-och-tillgångstyper). |
+| `problemTypeId`, `problemTypeIds` | Arbete av dessa problemtyper. Hämta id:n från [`GET /v1/supplier/work_order/problem_types`](/sv/supplier-api/work-orders#problemtyper). |
+| `woPriorityId`, `woPriorityIds` | Arbete med dessa prioriteter. Prioritets-id:n tillhör respektive kund; varje arbetsorder visar sin prioritet i `woPriorityId`. |
+| `labelIds` | Arbete som har minst en av dessa etiketter. Hämta etikett-id:n från [etikettkatalogen](/sv/supplier-api/work-orders#etiketter). |
+| `isPM` | `true` returnerar endast förebyggande underhåll som genererats från en kunds PM-schema; `false` utesluter det. |
+
+**Vem**
+
+| Filter | Matchar |
+| --- | --- |
+| `fieldTechnicianEmail`, `fieldTechnicianEmails` | Arbete tilldelat dessa tekniker som primär tekniker, eller begränsat till dem, via e-postadress. |
+
+**Datum och tidsfrister**
+
+| Filter | Matchar |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Arbete skapat inom fönstret. |
+| `completedAtStartDate`, `completedAtEndDate` | Arbete slutfört inom fönstret. Användbart för rapportering om avslutat arbete och för att fånga nyligen stängda arbetsordrar. |
+| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | Arbete vars senaste besök är schemalagt inom fönstret. Kombinera med `sort_by=lastServiceCallServiceScheduledAt` för en schemavy. |
+| `pastDue` | `true` returnerar öppet arbete vars förfallodatum har passerat; `false` returnerar öppet arbete som ännu inte har förfallit. Stängt arbete (`Completed` eller `Cancelled`) och arbete utan förfallodatum matchar inget av värdena. |
+| `pastSchedule` | Som `pastDue`, men för det schemalagda besöksdatumet: `true` returnerar öppet arbete vars schemalagda datum har passerat. |
+| `pastEstimatedCompletion` | Som `pastDue`, men för det uppskattade slutförandedatum du har angett för arbetsordern. När du inte har angett något används förfallodatumet. |
+| `unscheduledOrPastSchedule` | `true` returnerar arbete utan schemalagt datum, eller vars schemalagda datum har passerat: arbete som behöver schemaläggas. Stängt arbete ingår, så lägg till `isActive=true` för att bara se öppet arbete. |
+
+### Regler för filtervärden
+
+- **Använd pluralnyckeln för flera värden.** `statuses=TechScheduled,TechRescheduled` matchar någon av statusarna. `status=TechScheduled,TechRescheduled` letar efter en enda status med just det namnet och returnerar ingenting.
+- **Ett värde per nyckel.** Om du upprepar en parameter (`statuses=TechScheduled&statuses=TechRescheduled`) används bara den första. Kommaseparera värdena istället.
+- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk, och båda ändarna av ett fönster är inkluderande. URL-koda värdet (`curl -G --data-urlencode` gör det åt dig). Ett datum som inte kan tolkas avvisas inte. Det läses som 1 januari 1970, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Booleska värden är `true` eller `false`.** `unscheduledOrPastSchedule` agerar bara på `true`.
+- **Värden måste vara välformade.** Ett icke-numeriskt id, eller ett booleskt värde annat än `true` eller `false`, kan få anropet att misslyckas med `500` istället för `400`.
+- **Tenant-avgränsningen kan inte åsidosättas.** Anläggningssynligheten som tillämpas från din API-nyckel gäller alltid, oavsett vilka filter du skickar.
+
+```bash
+# One technician's open work with a visit scheduled this week
+curl -G "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "fieldTechnicianEmail=tech@supplier.com" \
+  --data-urlencode "isActive=true" \
+  --data-urlencode "lastServiceCallServiceScheduledAtStartDate=09/07/2026 00:00:00" \
+  --data-urlencode "lastServiceCallServiceScheduledAtEndDate=09/13/2026 23:59:59" \
+  -d limit=25 -d sort_by=lastServiceCallServiceScheduledAt -d order=asc
+```
 
 ## Acceptera eller avvisa
 
