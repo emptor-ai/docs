@@ -2978,28 +2978,10 @@
             "$ref": "#/components/parameters/woFilter_locationIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notLocationIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_assetId"
           },
           {
             "$ref": "#/components/parameters/woFilter_assetIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notAssetIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_assetTypeId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_assetTypeIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notAssetTypeIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isAssetDown"
           },
           {
             "$ref": "#/components/parameters/woFilter_problemTypeId"
@@ -3008,58 +2990,16 @@
             "$ref": "#/components/parameters/woFilter_problemTypeIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notProblemTypeIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_woPriorityId"
           },
           {
             "$ref": "#/components/parameters/woFilter_woPriorityIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notWoPriorityIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_spendCategoryId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_spendCategoryIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notSpendCategoryIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_resolutionTypeId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_resolutionTypeIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notResolutionTypeIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_labelIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notLabelIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_isPM"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isCapex"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isWarranty"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmail"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmails"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_currentlyCheckedInTechEmail"
           },
           {
             "$ref": "#/components/parameters/woFilter_createdAtStartDate"
@@ -3092,52 +3032,10 @@
             "$ref": "#/components/parameters/woFilter_unscheduledOrPastSchedule"
           },
           {
-            "$ref": "#/components/parameters/woFilter_noteStatus"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_noteStatuses"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notNoteStatus"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notNoteStatuses"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_hasBuyerArchived"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_regionId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_areaId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_areas"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_brandIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notBrandIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_hasRefrigerantEvents"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isPrivate"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_plannedMaintenanceScheduleId"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_buyerProjectId"
           },
           {
             "$ref": "#/components/parameters/woFilter_siteSurveyTaskTitleId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_baseLinkedWorkOrderId"
           },
           {
             "$ref": "#/components/parameters/woFilter_supplierFacilityId"
@@ -3146,19 +3044,10 @@
             "$ref": "#/components/parameters/woFilter_supplierFacilityIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notSupplierFacilityId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notSupplierFacilityIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_isStale"
           },
           {
             "$ref": "#/components/parameters/woFilter_createdByEmails"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notCreatedByEmails"
           }
         ],
         "responses": {
@@ -3296,28 +3185,10 @@
             "$ref": "#/components/parameters/woFilter_locationIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notLocationIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_assetId"
           },
           {
             "$ref": "#/components/parameters/woFilter_assetIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notAssetIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_assetTypeId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_assetTypeIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notAssetTypeIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isAssetDown"
           },
           {
             "$ref": "#/components/parameters/woFilter_problemTypeId"
@@ -3326,58 +3197,16 @@
             "$ref": "#/components/parameters/woFilter_problemTypeIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notProblemTypeIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_woPriorityId"
           },
           {
             "$ref": "#/components/parameters/woFilter_woPriorityIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notWoPriorityIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_spendCategoryId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_spendCategoryIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notSpendCategoryIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_resolutionTypeId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_resolutionTypeIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notResolutionTypeIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_labelIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notLabelIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_isPM"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isCapex"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isWarranty"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmail"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_fieldTechnicianEmails"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_currentlyCheckedInTechEmail"
           },
           {
             "$ref": "#/components/parameters/woFilter_createdAtStartDate"
@@ -3410,52 +3239,10 @@
             "$ref": "#/components/parameters/woFilter_unscheduledOrPastSchedule"
           },
           {
-            "$ref": "#/components/parameters/woFilter_noteStatus"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_noteStatuses"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notNoteStatus"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notNoteStatuses"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_hasBuyerArchived"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_regionId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_areaId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_areas"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_brandIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notBrandIds"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_hasRefrigerantEvents"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_isPrivate"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_plannedMaintenanceScheduleId"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_buyerProjectId"
           },
           {
             "$ref": "#/components/parameters/woFilter_siteSurveyTaskTitleId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_baseLinkedWorkOrderId"
           },
           {
             "$ref": "#/components/parameters/woFilter_supplierFacilityId"
@@ -3464,19 +3251,10 @@
             "$ref": "#/components/parameters/woFilter_supplierFacilityIds"
           },
           {
-            "$ref": "#/components/parameters/woFilter_notSupplierFacilityId"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notSupplierFacilityIds"
-          },
-          {
             "$ref": "#/components/parameters/woFilter_isStale"
           },
           {
             "$ref": "#/components/parameters/woFilter_createdByEmails"
-          },
-          {
-            "$ref": "#/components/parameters/woFilter_notCreatedByEmails"
           }
         ]
       }
@@ -7250,7 +7028,7 @@
         "name": "id",
         "in": "query",
         "required": false,
-        "description": "Work order id.",
+        "description": "One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. One value. To match several, use the plural key.",
         "schema": {
           "type": "integer"
         }
@@ -7259,7 +7037,7 @@
         "name": "ids",
         "in": "query",
         "required": false,
-        "description": "Work order ids. Comma-separated list.",
+        "description": "One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         },
@@ -7269,7 +7047,7 @@
         "name": "status",
         "in": "query",
         "required": false,
-        "description": "Machine status (one value; a comma in the value is not a list separator — use `statuses`). Exact machine status names, e.g. `Unassigned`, `WaitingForReview`.",
+        "description": "The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). One value. To match several, use the plural key.",
         "schema": {
           "type": "string"
         }
@@ -7278,17 +7056,17 @@
         "name": "statuses",
         "in": "query",
         "required": false,
-        "description": "Machine statuses: matches any. Comma-separated list. Exact machine status names, e.g. `Unassigned`, `WaitingForReview`.",
+        "description": "The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         },
-        "example": "Unassigned,PendingApproval"
+        "example": "WaitingForReview"
       },
       "woFilter_notStatuses": {
         "name": "notStatuses",
         "in": "query",
         "required": false,
-        "description": "Excludes these machine statuses. Comma-separated list.",
+        "description": "The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). Comma-separated list; excludes every value listed.",
         "schema": {
           "type": "string"
         }
@@ -7297,7 +7075,7 @@
         "name": "displayStatus",
         "in": "query",
         "required": false,
-        "description": "Display status (one value): `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, `Cancelled`.",
+        "description": "The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. One value. To match several, use the plural key.",
         "schema": {
           "type": "string"
         }
@@ -7306,7 +7084,7 @@
         "name": "displayStatuses",
         "in": "query",
         "required": false,
-        "description": "Display statuses: matches any. Comma-separated list. Values: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, `Cancelled`.",
+        "description": "The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         }
@@ -7315,7 +7093,7 @@
         "name": "isActive",
         "in": "query",
         "required": false,
-        "description": "`true`: display status `Pending`, `Open`, `InProgress` or `OnHold`. `false`: `Completed` or `Cancelled`. `Deferred` matches neither.",
+        "description": "`true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value.",
         "schema": {
           "type": "string",
           "enum": [
@@ -7328,7 +7106,7 @@
         "name": "locationId",
         "in": "query",
         "required": false,
-        "description": "Location id (one value).",
+        "description": "Work at these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). One value. To match several, use the plural key.",
         "schema": {
           "type": "integer"
         }
@@ -7337,16 +7115,7 @@
         "name": "locationIds",
         "in": "query",
         "required": false,
-        "description": "Location id: matches any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notLocationIds": {
-        "name": "notLocationIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose location id is any of the values. Comma-separated list.",
+        "description": "Work at these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         }
@@ -7355,7 +7124,7 @@
         "name": "assetId",
         "in": "query",
         "required": false,
-        "description": "Asset id (one value). Matches the main asset or any sub-asset.",
+        "description": "Work on these assets, whether as the main asset or a sub-asset. Get asset ids from [`GET /v1/buyer/asset/assets`](/buyer-api/assets-and-locations#assets). One value. To match several, use the plural key.",
         "schema": {
           "type": "integer"
         }
@@ -7364,65 +7133,16 @@
         "name": "assetIds",
         "in": "query",
         "required": false,
-        "description": "Asset id: matches any of the values. Comma-separated list. Matches the main asset or any sub-asset.",
+        "description": "Work on these assets, whether as the main asset or a sub-asset. Get asset ids from [`GET /v1/buyer/asset/assets`](/buyer-api/assets-and-locations#assets). Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
-        }
-      },
-      "woFilter_notAssetIds": {
-        "name": "notAssetIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose asset id is any of the values. Comma-separated list. Matches the main asset or any sub-asset.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_assetTypeId": {
-        "name": "assetTypeId",
-        "in": "query",
-        "required": false,
-        "description": "Asset type id (one value).",
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "woFilter_assetTypeIds": {
-        "name": "assetTypeIds",
-        "in": "query",
-        "required": false,
-        "description": "Asset type id: matches any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notAssetTypeIds": {
-        "name": "notAssetTypeIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose asset type id is any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_isAssetDown": {
-        "name": "isAssetDown",
-        "in": "query",
-        "required": false,
-        "description": "Whether the asset is down.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
         }
       },
       "woFilter_problemTypeId": {
         "name": "problemTypeId",
         "in": "query",
         "required": false,
-        "description": "Problem type id (one value).",
+        "description": "Work of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). One value. To match several, use the plural key.",
         "schema": {
           "type": "integer"
         }
@@ -7431,16 +7151,7 @@
         "name": "problemTypeIds",
         "in": "query",
         "required": false,
-        "description": "Problem type id: matches any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notProblemTypeIds": {
-        "name": "notProblemTypeIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose problem type id is any of the values. Comma-separated list.",
+        "description": "Work of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         }
@@ -7449,7 +7160,7 @@
         "name": "woPriorityId",
         "in": "query",
         "required": false,
-        "description": "Priority id (one value).",
+        "description": "Work at these priorities. Priority ids are your company's own; each work order shows its priority in `woPriorityId`. One value. To match several, use the plural key.",
         "schema": {
           "type": "integer"
         }
@@ -7458,70 +7169,7 @@
         "name": "woPriorityIds",
         "in": "query",
         "required": false,
-        "description": "Priority id: matches any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notWoPriorityIds": {
-        "name": "notWoPriorityIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose priority id is any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_spendCategoryId": {
-        "name": "spendCategoryId",
-        "in": "query",
-        "required": false,
-        "description": "Spend category id (one value).",
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "woFilter_spendCategoryIds": {
-        "name": "spendCategoryIds",
-        "in": "query",
-        "required": false,
-        "description": "Spend category id: matches any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notSpendCategoryIds": {
-        "name": "notSpendCategoryIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose spend category id is any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_resolutionTypeId": {
-        "name": "resolutionTypeId",
-        "in": "query",
-        "required": false,
-        "description": "Resolution type id (one value).",
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "woFilter_resolutionTypeIds": {
-        "name": "resolutionTypeIds",
-        "in": "query",
-        "required": false,
-        "description": "Resolution type id: matches any of the values. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notResolutionTypeIds": {
-        "name": "notResolutionTypeIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes work orders whose resolution type id is any of the values. Comma-separated list.",
+        "description": "Work at these priorities. Priority ids are your company's own; each work order shows its priority in `woPriorityId`. Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         }
@@ -7530,16 +7178,7 @@
         "name": "labelIds",
         "in": "query",
         "required": false,
-        "description": "Work orders carrying any of these labels. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notLabelIds": {
-        "name": "notLabelIds",
-        "in": "query",
-        "required": false,
-        "description": "Work orders carrying none of these labels. Comma-separated list.",
+        "description": "Work carrying at least one of these labels. Get label ids from the [label catalog](/buyer-api/work-orders#labels). Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         }
@@ -7548,127 +7187,80 @@
         "name": "isPM",
         "in": "query",
         "required": false,
-        "description": "Generated from a planned maintenance schedule.",
+        "description": "`true` returns only preventive maintenance work generated from a [PM schedule](/buyer-api/planned-maintenance); `false` leaves it out.",
         "schema": {
           "type": "string",
           "enum": [
             "true",
             "false"
           ]
-        }
-      },
-      "woFilter_isCapex": {
-        "name": "isCapex",
-        "in": "query",
-        "required": false,
-        "description": "Capital expenditure work order.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      "woFilter_isWarranty": {
-        "name": "isWarranty",
-        "in": "query",
-        "required": false,
-        "description": "Warranty work order.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      "woFilter_fieldTechnicianEmail": {
-        "name": "fieldTechnicianEmail",
-        "in": "query",
-        "required": false,
-        "description": "Work orders assigned to this technician as primary tech, or restricted to this technician.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_fieldTechnicianEmails": {
-        "name": "fieldTechnicianEmails",
-        "in": "query",
-        "required": false,
-        "description": "As `fieldTechnicianEmail`, matching any of the emails. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_currentlyCheckedInTechEmail": {
-        "name": "currentlyCheckedInTechEmail",
-        "in": "query",
-        "required": false,
-        "description": "Work orders where this technician is checked in on the latest visit and has not checked out, excluding `Completed` and `Cancelled` work orders. Includes sub-contracted visits.",
-        "schema": {
-          "type": "string"
         }
       },
       "woFilter_createdAtStartDate": {
         "name": "createdAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Created at or after. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "description": "Earliest creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
         "schema": {
           "type": "string"
-        }
+        },
+        "example": "08/01/2026 00:00:00"
       },
       "woFilter_createdAtEndDate": {
         "name": "createdAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Created at or before. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "description": "Latest creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
         "schema": {
           "type": "string"
-        }
+        },
+        "example": "08/31/2026 23:59:59"
       },
       "woFilter_completedAtStartDate": {
         "name": "completedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Completed at or after. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "description": "Earliest completion time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
         "schema": {
           "type": "string"
-        }
+        },
+        "example": "08/01/2026 00:00:00"
       },
       "woFilter_completedAtEndDate": {
         "name": "completedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Completed at or before. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "description": "Latest completion time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
         "schema": {
           "type": "string"
-        }
+        },
+        "example": "08/31/2026 23:59:59"
       },
       "woFilter_lastServiceCallServiceScheduledAtStartDate": {
         "name": "lastServiceCallServiceScheduledAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Latest visit scheduled at or after. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "description": "Earliest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
         "schema": {
           "type": "string"
-        }
+        },
+        "example": "08/01/2026 00:00:00"
       },
       "woFilter_lastServiceCallServiceScheduledAtEndDate": {
         "name": "lastServiceCallServiceScheduledAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest visit scheduled at or before. Format `MM/dd/yyyy HH:mm:ss`, UTC, inclusive (e.g. `08/01/2026 00:00:00`). An unparseable value is not rejected; it is read as 1970-01-01.",
+        "description": "Latest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
         "schema": {
           "type": "string"
-        }
+        },
+        "example": "08/31/2026 23:59:59"
       },
       "woFilter_pastDue": {
         "name": "pastDue",
         "in": "query",
         "required": false,
-        "description": "`true`: due date has passed. `false`: due date is ahead. Both exclude `Completed`/`Cancelled`; work orders without a due date match neither.",
+        "description": "`true` returns open work whose due date has passed; `false` returns open work that is not yet due. Closed work (`Completed` or `Cancelled`) and work with no due date match neither value.",
         "schema": {
           "type": "string",
           "enum": [
@@ -7681,7 +7273,7 @@
         "name": "pastSchedule",
         "in": "query",
         "required": false,
-        "description": "As `pastDue`, on the scheduled date.",
+        "description": "Like `pastDue`, on the scheduled visit date: `true` returns open work whose scheduled date has passed.",
         "schema": {
           "type": "string",
           "enum": [
@@ -7694,7 +7286,7 @@
         "name": "pastEstimatedCompletion",
         "in": "query",
         "required": false,
-        "description": "As `pastDue`, on the estimated completion date (falling back to the due date when unset).",
+        "description": "Like `pastDue`, on the supplier's estimated completion date. When no estimate has been given, the due date is used.",
         "schema": {
           "type": "string",
           "enum": [
@@ -7707,149 +7299,20 @@
         "name": "unscheduledOrPastSchedule",
         "in": "query",
         "required": false,
-        "description": "`true`: no scheduled date, or a scheduled date that has passed (completed work orders included). Only `true` has an effect.",
+        "description": "`true` returns work with no scheduled date, or whose scheduled date has passed: work that needs scheduling attention. Closed work is included, so add `isActive=true` to see only open work.",
         "schema": {
           "type": "string",
           "enum": [
             "true",
             "false"
           ]
-        }
-      },
-      "woFilter_noteStatus": {
-        "name": "noteStatus",
-        "in": "query",
-        "required": false,
-        "description": "State of the last note (one value): `unread` (the API key's contact has not read the last note), `awaitingResponse`, `awaitingResponseStale` (awaiting a response for more than 7 days), `awaitingMyResponse` (awaiting a response and tags the API key's contact).",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_noteStatuses": {
-        "name": "noteStatuses",
-        "in": "query",
-        "required": false,
-        "description": "Note states: matches any. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notNoteStatus": {
-        "name": "notNoteStatus",
-        "in": "query",
-        "required": false,
-        "description": "Excludes one note state.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notNoteStatuses": {
-        "name": "notNoteStatuses",
-        "in": "query",
-        "required": false,
-        "description": "Excludes these note states. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_hasBuyerArchived": {
-        "name": "hasBuyerArchived",
-        "in": "query",
-        "required": false,
-        "description": "Whether your team archived the work order.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      "woFilter_regionId": {
-        "name": "regionId",
-        "in": "query",
-        "required": false,
-        "description": "Work orders at any location in the region.",
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "woFilter_areaId": {
-        "name": "areaId",
-        "in": "query",
-        "required": false,
-        "description": "Area id (one value).",
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "woFilter_areas": {
-        "name": "areas",
-        "in": "query",
-        "required": false,
-        "description": "Area names, matched exactly. Separate names with `$$` (not commas), e.g. `Kitchen$$Dining Room`.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_brandIds": {
-        "name": "brandIds",
-        "in": "query",
-        "required": false,
-        "description": "Brand ids. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notBrandIds": {
-        "name": "notBrandIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes these brand ids. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_hasRefrigerantEvents": {
-        "name": "hasRefrigerantEvents",
-        "in": "query",
-        "required": false,
-        "description": "Whether refrigerant servicing events are recorded against the work order.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      "woFilter_isPrivate": {
-        "name": "isPrivate",
-        "in": "query",
-        "required": false,
-        "description": "Private work order.",
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ]
-        }
-      },
-      "woFilter_plannedMaintenanceScheduleId": {
-        "name": "plannedMaintenanceScheduleId",
-        "in": "query",
-        "required": false,
-        "description": "Work orders generated from this PM schedule.",
-        "schema": {
-          "type": "integer"
         }
       },
       "woFilter_buyerProjectId": {
         "name": "buyerProjectId",
         "in": "query",
         "required": false,
-        "description": "Work orders in this project.",
+        "description": "Work in one project. A work order lists its projects in `buyerProjectIds`. One value.",
         "schema": {
           "type": "integer"
         }
@@ -7858,25 +7321,16 @@
         "name": "siteSurveyTaskTitleId",
         "in": "query",
         "required": false,
-        "description": "Work orders created from this walkthrough task.",
+        "description": "Follow-up work created from one walkthrough task: the `siteSurveyTaskTitleId` you sent when [creating the work order](/buyer-api/site-survey-walkthroughs#creating-follow-up-work-orders). One value.",
         "schema": {
           "type": "string"
-        }
-      },
-      "woFilter_baseLinkedWorkOrderId": {
-        "name": "baseLinkedWorkOrderId",
-        "in": "query",
-        "required": false,
-        "description": "Work orders linked to this work order id.",
-        "schema": {
-          "type": "integer"
         }
       },
       "woFilter_supplierFacilityId": {
         "name": "supplierFacilityId",
         "in": "query",
         "required": false,
-        "description": "Assigned supplier facility (one value).",
+        "description": "Work assigned to these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). One value. To match several, use the plural key.",
         "schema": {
           "type": "integer"
         }
@@ -7885,25 +7339,7 @@
         "name": "supplierFacilityIds",
         "in": "query",
         "required": false,
-        "description": "Assigned supplier facilities: matches any. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "woFilter_notSupplierFacilityId": {
-        "name": "notSupplierFacilityId",
-        "in": "query",
-        "required": false,
-        "description": "Excludes one assigned supplier facility.",
-        "schema": {
-          "type": "integer"
-        }
-      },
-      "woFilter_notSupplierFacilityIds": {
-        "name": "notSupplierFacilityIds",
-        "in": "query",
-        "required": false,
-        "description": "Excludes these assigned supplier facilities. Comma-separated list.",
+        "description": "Work assigned to these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
         }
@@ -7912,7 +7348,7 @@
         "name": "isStale",
         "in": "query",
         "required": false,
-        "description": "`true`: open work orders past their staleness time that your team has not archived. Only `true` has an effect.",
+        "description": "`true` returns open work that has stayed overdue for a set period without supplier progress, and that your team hasn't archived. The period is set for your company (14 days by default). Supplier activity on overdue work, such as accepting it or submitting it for review, restarts the period. If your company has turned stale tracking off, new work orders are not marked stale.",
         "schema": {
           "type": "string",
           "enum": [
@@ -7925,19 +7361,11 @@
         "name": "createdByEmails",
         "in": "query",
         "required": false,
-        "description": "Creator emails. Comma-separated list.",
+        "description": "Work created by these people, by email address: `createdByEmails=ops@example.com,manager@example.com`. Comma-separated list; matches any value listed.",
         "schema": {
           "type": "string"
-        }
-      },
-      "woFilter_notCreatedByEmails": {
-        "name": "notCreatedByEmails",
-        "in": "query",
-        "required": false,
-        "description": "Excludes these creator emails. Comma-separated list.",
-        "schema": {
-          "type": "string"
-        }
+        },
+        "example": "ops@example.com,manager@example.com"
       }
     },
     "schemas": {

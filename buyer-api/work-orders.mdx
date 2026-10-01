@@ -97,7 +97,7 @@ The list and count resolve which work orders match in OpenWrench's search index,
 
 - **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, and problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Quote the value (`search="walk-in cooler"`) to require the exact phrase.
 - **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
-- **Unrecognized filters are ignored.** A query parameter that is not in the filter reference doesn't narrow the results, and the request still succeeds. That includes misspelled keys and `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, and `walkthroughId`, which are not in the search index. Before relying on a new filter, compare `count_by` with and without it.
+- **Unrecognized filters are ignored.** Only the keys in the filter reference below are supported. Any other query parameter is ignored rather than rejected, and the request still succeeds. That includes misspelled keys and `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId`, and `walkthroughId`, which are not in the search index. Before relying on a new filter, compare `count_by` with and without it.
 - **Freshness.** Search index and replica updates lag writes by a moment, so a work order created milliseconds ago may be briefly absent from list results and counts.
 - **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
 
@@ -105,74 +105,49 @@ The count endpoint runs the same search-index query as the list, so a count alwa
 
 ### Filter reference
 
-Keys are case-sensitive. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values; a `not` key (`notStatuses`) excludes every listed value.
+Keys are case-sensitive. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values; `notStatuses` excludes every listed status. Date filters are explained under [filter value rules](#filter-value-rules).
 
 **Status**
 
 | Filter | Matches |
 | --- | --- |
-| `id`, `ids` | Work order id, or a comma-separated list of ids. |
-| `status`, `statuses`, `notStatuses` | Machine status, for example `Unassigned` or `WaitingForReview`. See [the status model](#the-status-model). |
-| `displayStatus`, `displayStatuses` | Display status: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. |
-| `isActive` | `true`: display status `Pending`, `Open`, `InProgress`, or `OnHold`. `false`: `Completed` or `Cancelled`. `Deferred` work orders match neither. |
-| `hasBuyerArchived` | `true` or `false`: whether your team archived the work order. |
+| `id`, `ids` | One work order by id, or several in one call (`ids=9001,9002`). Useful for refreshing a known batch. |
+| `status`, `statuses`, `notStatuses` | The detailed workflow status, for example `statuses=WaitingForReview` to find work ready for your review. Values are listed in [the status model](/buyer-api/work-orders#the-status-model). |
+| `displayStatus`, `displayStatuses` | The simplified status shown in the OpenWrench app: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. Every detailed status maps to one of these. |
+| `isActive` | `true` returns work still in progress (display status `Pending`, `Open`, `InProgress`, or `OnHold`). `false` returns closed work (`Completed` or `Cancelled`). `Deferred` work orders match neither value. |
 
-**Location and asset**
-
-| Filter | Matches |
-| --- | --- |
-| `locationId`, `locationIds`, `notLocationIds` | Location ids. |
-| `regionId` | Work orders at any location in the region. |
-| `areaId` | One area id. |
-| `areas` | Area names, matched exactly. Separate several names with `$$`, not commas, because area names can contain commas: `areas=Kitchen$$Dining Room`. |
-| `assetId`, `assetIds`, `notAssetIds` | The main asset *or* any sub-asset. |
-| `assetTypeId`, `assetTypeIds`, `notAssetTypeIds` | Asset type ids. |
-| `isAssetDown` | `true` or `false`. |
-| `brandIds`, `notBrandIds` | Brand ids. |
-
-**Classification**
+**What and where**
 
 | Filter | Matches |
 | --- | --- |
-| `problemTypeId`, `problemTypeIds`, `notProblemTypeIds` | Problem type ids. See [Problem types](#problem-types). |
-| `woPriorityId`, `woPriorityIds`, `notWoPriorityIds` | Priority ids. |
-| `spendCategoryId`, `spendCategoryIds`, `notSpendCategoryIds` | Spend category ids. |
-| `resolutionTypeId`, `resolutionTypeIds`, `notResolutionTypeIds` | Resolution type ids. |
-| `labelIds`, `notLabelIds` | Work orders carrying any of the labels, or none of them. Ids come from your [label catalog](#labels). |
-| `isPM`, `isCapex`, `isWarranty`, `isPrivate` | `true` or `false`. |
-| `hasRefrigerantEvents` | `true` or `false`: whether refrigerant servicing events are recorded against the work order. |
-| `plannedMaintenanceScheduleId` | Work orders generated from one PM schedule. See [Planned maintenance](/buyer-api/planned-maintenance). |
-| `buyerProjectId` | Work orders in one project. |
-| `siteSurveyTaskTitleId` | Work orders created from one walkthrough task. See [Site survey walkthroughs](/buyer-api/site-survey-walkthroughs). |
-| `baseLinkedWorkOrderId` | Work orders linked to the given work order id. |
+| `locationId`, `locationIds` | Work at these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
+| `assetId`, `assetIds` | Work on these assets, whether as the main asset or a sub-asset. Get asset ids from [`GET /v1/buyer/asset/assets`](/buyer-api/assets-and-locations#assets). |
+| `problemTypeId`, `problemTypeIds` | Work of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). |
+| `woPriorityId`, `woPriorityIds` | Work at these priorities. Priority ids are your company's own; each work order shows its priority in `woPriorityId`. |
+| `labelIds` | Work carrying at least one of these labels. Get label ids from the [label catalog](/buyer-api/work-orders#labels). |
+| `isPM` | `true` returns only preventive maintenance work generated from a [PM schedule](/buyer-api/planned-maintenance); `false` leaves it out. |
+| `buyerProjectId` | Work in one project. A work order lists its projects in `buyerProjectIds`. |
+| `siteSurveyTaskTitleId` | Follow-up work created from one walkthrough task: the `siteSurveyTaskTitleId` you sent when [creating the work order](/buyer-api/site-survey-walkthroughs#creating-follow-up-work-orders). |
 
-**Supplier and technician**
+**Who**
 
 | Filter | Matches |
 | --- | --- |
-| `supplierFacilityId`, `supplierFacilityIds`, `notSupplierFacilityId`, `notSupplierFacilityIds` | The assigned supplier facility. |
-| `fieldTechnicianEmail`, `fieldTechnicianEmails` | Work orders assigned to the technician as primary tech, or restricted to that technician. |
-| `currentlyCheckedInTechEmail` | Work orders where the technician is checked in on the latest visit and has not checked out, excluding `Completed` and `Cancelled` work orders. Includes visits on sub-contracted work. |
+| `supplierFacilityId`, `supplierFacilityIds` | Work assigned to these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). |
+| `createdByEmails` | Work created by these people, by email address: `createdByEmails=ops@example.com,manager@example.com`. |
 
 **Dates and deadlines**
 
 | Filter | Matches |
 | --- | --- |
-| `createdAtStartDate`, `createdAtEndDate` | Creation time within the window. |
-| `completedAtStartDate`, `completedAtEndDate` | Completion time within the window. |
-| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | The latest visit is scheduled within the window. |
-| `pastDue` | `true`: the due date has passed. `false`: the due date is still ahead. Both exclude `Completed` and `Cancelled` work orders, and work orders without a due date match neither. |
-| `pastSchedule` | The same as `pastDue`, on the scheduled date. |
-| `pastEstimatedCompletion` | The same as `pastDue`, on the estimated completion date, falling back to the due date when no estimate is set. |
-| `unscheduledOrPastSchedule` | `true`: no scheduled date, or a scheduled date that has passed. Completed work orders are included. |
-| `isStale` | `true`: open work orders past their staleness time that your team has not archived. |
-
-**People and notes**
-
-| Filter | Matches |
-| --- | --- |
-| `createdByEmails`, `notCreatedByEmails` | The email of the contact who created the work order. |
-| `noteStatus`, `noteStatuses`, `notNoteStatus`, `notNoteStatuses` | The state of the last note in the buyer–supplier thread: `unread` (your API key's contact has not read it), `awaitingResponse`, `awaitingResponseStale` (awaiting a response for more than 7 days), or `awaitingMyResponse` (awaiting a response and tags your API key's contact). |
+| `createdAtStartDate`, `createdAtEndDate` | Work created within the window. |
+| `completedAtStartDate`, `completedAtEndDate` | Work completed within the window. Useful for reporting on finished work and for catching recent closures. |
+| `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | Work whose most recent visit is scheduled within the window. Pair with `sort_by=lastServiceCallServiceScheduledAt` for a schedule view. |
+| `pastDue` | `true` returns open work whose due date has passed; `false` returns open work that is not yet due. Closed work (`Completed` or `Cancelled`) and work with no due date match neither value. |
+| `pastSchedule` | Like `pastDue`, on the scheduled visit date: `true` returns open work whose scheduled date has passed. |
+| `pastEstimatedCompletion` | Like `pastDue`, on the supplier's estimated completion date. When no estimate has been given, the due date is used. |
+| `unscheduledOrPastSchedule` | `true` returns work with no scheduled date, or whose scheduled date has passed: work that needs scheduling attention. Closed work is included, so add `isActive=true` to see only open work. |
+| `isStale` | `true` returns open work that has stayed overdue for a set period without supplier progress, and that your team hasn't archived. The period is set for your company (14 days by default). Supplier activity on overdue work, such as accepting it or submitting it for review, restarts the period. If your company has turned stale tracking off, new work orders are not marked stale. |
 
 ### Filter value rules
 
