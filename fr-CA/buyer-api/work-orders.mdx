@@ -190,7 +190,7 @@ Quatre endpoints dédiés font progresser un bon de travail à travers les parti
 | Endpoint | Statut résultant | Effets secondaires |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | Peut publier le brouillon de facture du fournisseur (selon les paramètres du fournisseur) et remplir les demandes d'achat liées. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejetée avec `409` pendant qu'un technicien est sur place, si votre entreprise active le [verrou d'annulation](#verrou-dannulation-pendant-quun-technicien-est-sur-place). |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejetée avec `409` pendant qu'un technicien est sur place, si votre entreprise active le [verrou d'annulation](#verrou-d-annulation-pendant-qu-un-technicien-est-sur-place). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Envoie la note jointe au fournisseur. |
 | `POST .../status_update/reopen` | Rouvert | Envoie la note jointe. |
 
