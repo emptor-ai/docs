@@ -79,7 +79,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders/count_by?locationId=1204"
 ```
 
-Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre. Pour correspondre à l'une de plusieurs valeurs, utilisez la clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`) ; `status=Unassigned,PendingApproval` cherche un unique statut portant ce nom littéral et ne renvoie rien. Les filtres se combinent toujours avec la restriction locataire dérivée de votre clé. Vous ne voyez donc jamais que les bons de travail de votre entreprise.
+Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`. Tout autre paramètre de requête est traité comme un filtre. Pour correspondre à l'une de plusieurs valeurs, utilisez la clé au pluriel avec des valeurs séparées par des virgules (`statuses=Unassigned,PendingApproval`) ; `status=Unassigned,PendingApproval` cherche un unique statut portant ce nom littéral et ne retourne rien. Les filtres se combinent toujours avec la restriction locataire dérivée de votre clé. Vous ne voyez donc jamais que les bons de travail de votre entreprise.
 
 La liste et le comptage déterminent quels bons de travail correspondent dans l'index de recherche d'OpenWrench, puis chargent les enregistrements complets depuis la base de données. Cela change quelques comportements :
 
@@ -108,7 +108,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
 Deux points à surveiller :
 
 - `supplierPrimaryContactEmail` ne s'applique que dans le cadre d'une réaffectation. L'envoyer sans changement d'établissement fournisseur rend le PATCH entier sans effet : rien n'est persisté et le bon de travail actuel est retourné.
-- Un identifiant inexistant et un refus de permission renvoient tous deux la même réponse non autorisée `400`, donc n'utilisez pas cet endpoint pour tester si un bon de travail existe.
+- Un identifiant inexistant et un refus de permission retournent tous deux la même réponse non autorisée `400`, donc n'utilisez pas cet endpoint pour tester si un bon de travail existe.
 
 Pour choisir le bon fournisseur par programmation, voir [Réseau de fournisseurs](/buyer-api/supplier-network), qui couvre l'endpoint classé du réseau privé.
 

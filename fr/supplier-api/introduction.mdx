@@ -17,7 +17,7 @@ Tous les endpoints fournisseur se trouvent sous `/v1/supplier/`.
 
 ## Authentification
 
-Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (votre clé d'API, émise par contact fournisseur) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête à votre établissement. Vous ne voyez jamais que les bons de travail, factures et données qui vous appartiennent. Les requêtes auxquelles il manque l'un des deux en-têtes renvoient `401`.
+Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (votre clé d'API, émise par contact fournisseur) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête à votre établissement. Vous ne voyez jamais que les bons de travail, factures et données qui vous appartiennent. Les requêtes auxquelles il manque l'un des deux en-têtes retournent `401`.
 
 ```bash
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
@@ -68,7 +68,7 @@ Les endpoints WrenchMode exposent le temps de travail et de conduite par technic
 
 ## Guides détaillés
 
-Les guides de cet onglet parcourent chaque partie de l'API en profondeur, avec les payloads, la sémantique des statuts et les schémas d'intégration :
+Les guides de cet onglet parcourent chaque partie de l'API en profondeur, avec les charges utiles, la sémantique des statuts et les schémas d'intégration :
 
 <CardGroup cols={2}>
   <Card title="Bons de travail" href="/supplier-api/work-orders" icon="clipboard-list">

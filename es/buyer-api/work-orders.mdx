@@ -29,9 +29,9 @@ Una orden de trabajo devuelta por la API lleva, entre otros campos:
 | `nte`, `price`, `currencyId` | Monto not-to-exceed y precios. |
 | `scheduledAt`, `estimatedCompletionDate`, `dueDate`, `completedAt` | Fechas clave. |
 | `notes`, `lastNote`, `lastNoteAddedBy`, `lastNoteAddedAt` | El hilo de notas comprador-proveedor. `lastNoteAddedAt` está en milisegundos desde epoch. |
-| `associatedServiceCalls`, `lastServiceCall` | Visitas registradas por el proveedor. Ver [Llamadas de servicio](/es/buyer-api/service-calls). |
+| `associatedServiceCalls`, `lastServiceCall` | Visitas registradas por el proveedor. Consulta [Llamadas de servicio](/es/buyer-api/service-calls). |
 | `statusChanges` | Historial completo de estados. |
-| `buyerAttachments`, `supplierAttachments` | Referencias a archivos. Ver [Archivos y adjuntos](/es/buyer-api/files-and-attachments). |
+| `buyerAttachments`, `supplierAttachments` | Referencias a archivos. Consulta [Archivos y adjuntos](/es/buyer-api/files-and-attachments). |
 | `isPM`, `plannedMaintenanceScheduleId` | Se establecen cuando la orden de trabajo fue generada desde un cronograma de PM. |
 | `walkThroughId` | Se establece cuando la orden de trabajo salió de un recorrido de encuesta de sitio. |
 
@@ -66,7 +66,7 @@ Comportamiento a conocer:
 - **Despachar al crear.** Pasar `supplierFacilityId` asigna el proveedor de inmediato. Un `supplierFacilityId`, `assetId` o `problemTypeId` desconocido se rechaza con `400`.
 - **Subactivos.** `subAssetIds` es un arreglo opcional de ids de subactivos que se adjuntan junto al `assetId` principal. Los subactivos son activos creados con un `parentId`; ver [Activos](/es/buyer-api/assets-and-locations#activos).
 - **Flag de aprobación.** El campo es `needApproval`, no `needsApproval`. El objeto de respuesta usa `needsApproval`; la solicitud de creación no.
-- **Enlace a recorrido.** `walkThroughId` y `siteSurveyTaskTitleId` deben suministrarse juntos o no suministrarse. Ver [Recorridos de encuesta de sitio](/es/buyer-api/site-survey-walkthroughs).
+- **Enlace a recorrido.** `walkThroughId` y `siteSurveyTaskTitleId` deben suministrarse juntos o no suministrarse. Consulta [Recorridos de encuesta de sitio](/es/buyer-api/site-survey-walkthroughs).
 - **Upserts.** Pasar un `id` actualiza esa orden de trabajo existente en lugar de crear una nueva.
 
 ## Listar, filtrar y contar
@@ -97,8 +97,8 @@ El listado y el conteo resuelven qué órdenes de trabajo coinciden en el índic
 
 - **Búsqueda de texto completo.** `search=` coincide con palabras (con coincidencia por prefijo y por raíz) en el título, la descripción, el nombre de la ubicación, las notas, las notas de check-in y check-out de las llamadas de servicio, y el nombre del tipo de problema. También coincide con números de referencia como el número de orden de trabajo, el número de PO y el número de serie del activo. Pon el valor entre comillas (`search="walk-in cooler"`) para exigir la frase exacta.
 - **Ordenamiento.** `sort_by` admite `createdAt`, `locationName`, `woPriority` (por el tiempo de resolución esperado de la prioridad) y `lastServiceCallServiceScheduledAt`. Cualquier otro valor, o la ausencia de `sort_by`, ordena por `createdAt` descendente.
-- **Los filtros no reconocidos se ignoran.** Solo se admiten las claves de la referencia de filtros que aparece más abajo. Cualquier otro parámetro de consulta se ignora en lugar de rechazarse, y la petición igualmente tiene éxito. Esto incluye las claves mal escritas y `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` y `walkthroughId`, que no están en el índice de búsqueda. Antes de depender de un filtro nuevo, compara `count_by` con y sin él.
-- **Frescura.** Las actualizaciones del índice de búsqueda y de la réplica van un momento por detrás de las escrituras, así que una orden de trabajo creada hace milisegundos puede estar brevemente ausente de los resultados de listado y de los conteos.
+- **Los filtros no reconocidos se ignoran.** Solo se admiten las claves de la referencia de filtros que aparece más abajo. Cualquier otro parámetro de consulta se ignora en lugar de rechazarse, y la solicitud igualmente tiene éxito. Esto incluye las claves mal escritas y `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `buyerFacilityId` y `walkthroughId`, que no están en el índice de búsqueda. Antes de depender de un filtro nuevo, compara `count_by` con y sin él.
+- **Frescura.** Las actualizaciones del índice de búsqueda y de la réplica van un momento por detrás de las escrituras. Por eso, una orden de trabajo creada hace milisegundos puede estar brevemente ausente de los resultados de listado y de los conteos.
 - **Profundidad de paginación.** `offset + limit` no puede exceder la ventana de resultados de búsqueda de 10.000. Estrecha el filtro en lugar de paginar tan profundo.
 
 El endpoint de conteo ejecuta la misma consulta del índice de búsqueda que el listado, así que un conteo siempre concuerda con el listado que describe.
@@ -156,7 +156,7 @@ Las claves distinguen entre mayúsculas y minúsculas. Una clave en singular (`s
 - **Un valor por clave.** Si repites un parámetro (`statuses=Unassigned&statuses=PendingApproval`), solo se usa el primero. Separa los valores con comas en su lugar.
 - **Las fechas usan `MM/dd/yyyy HH:mm:ss` en UTC**, por ejemplo `08/01/2026 00:00:00`. La hora es obligatoria, y ambos extremos de una ventana son inclusivos. Codifica el valor para URL (`curl -G --data-urlencode` lo hace por ti). Una fecha que no se puede interpretar no se rechaza. Se lee como 1 de enero de 1970, así que una fecha de inicio errónea coincide con todo y una fecha de fin errónea no coincide con nada.
 - **Los booleanos son `true` o `false`.** `isStale` y `unscheduledOrPastSchedule` solo actúan con `true`.
-- **Los valores deben estar bien formados.** Un id no numérico, o un booleano distinto de `true` o `false`, puede hacer fallar la petición con un `500` en lugar de un `400`.
+- **Los valores deben estar bien formados.** Un id no numérico, o un booleano distinto de `true` o `false`, puede hacer fallar la solicitud con un `500` en lugar de un `400`.
 - **El alcance por inquilino no se puede anular.** `buyerCompanyId` siempre se establece a partir de tu clave de API, así que pasarlo no tiene efecto.
 
 Obtén una orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.

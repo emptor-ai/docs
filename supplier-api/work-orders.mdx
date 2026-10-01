@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Reading your queue
 
 <Warning>
-  **Do not build your integration on the list endpoint.** `GET /v1/supplier/work_order/work_orders` is the most expensive read in the Supplier API, and polling it to discover new or changed work orders is the wrong pattern. It is slow on large queues, it burns your [rate limit](/supplier-api/introduction#rate-limits), and it still misses changes between polls. Use [webhooks](/supplier-api/webhooks) to learn that a work order was assigned to you, changed status, or received a note. Then fetch that one work order by id. Reserve the list for a one-time initial load and occasional reconciliation, with a narrow filter and a small page.
+  **Do not build your integration on the list endpoint.** `GET /v1/supplier/work_order/work_orders` is the most expensive read in the Supplier API. Polling it to discover new or changed work orders is the wrong pattern. It is slow on large queues, it burns your [rate limit](/supplier-api/introduction#rate-limits), and it still misses changes between polls. Use [webhooks](/supplier-api/webhooks) to learn that a work order was assigned to you, changed status, or received a note. Then fetch that one work order by id. Reserve the list for a one-time initial load and occasional reconciliation, with a narrow filter and a small page.
 </Warning>
 
 The pattern that scales is push, then fetch by id:
@@ -218,7 +218,7 @@ curl -X PATCH "$BASE/v1/supplier/work_order/work_orders/append_notes/bulk" \
 
 Work order labels are lightweight tags (a name plus an optional color) used to slice the queue. Through the API you can read the label catalog and replace the labels applied to a work order. Creating or editing the labels themselves stays in the OpenWrench app.
 
-Which catalog you see depends on your key: a key belonging to a buyer's internal service team sees that buyer company's catalog, and a third-party supplier's key sees its own facility's catalog.
+Which catalog you see depends on your key. A key belonging to a buyer's internal service team sees that buyer company's catalog. A third-party supplier's key sees its own facility's catalog.
 
 **Browse the catalog** with `GET /v1/supplier/work_order/work_order_labels`, or fetch one with `GET /v1/supplier/work_order/work_order_labels/{id}`. The list is paginated 10 per page by default and accepts `search` and `label` filters on the label text. Pass `no_pagination=true` to pull the whole catalog in one call.
 

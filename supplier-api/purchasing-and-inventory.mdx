@@ -155,10 +155,10 @@ Read-only reference data, all with standard pagination and field filters:
 
 `POST /v1/supplier/inventory/webhook/purchase_order` is an **inbound** webhook for third-party purchasing systems, currently Order.co. It is only available to supplier companies registered for it (others receive `400`). The payload carries `order_id` (the third-party id), `purchase_order_number` (the OpenWrench PO id as a string), a `status`, and a status-specific `message` object. Effects by status:
 
-- `approved` / `error` — append a note to the PO.
-- `rejected` — cancel the PO.
-- `completed` — mark the PO ordered.
-- `shipping_update` — append a shipping note; when `message.shipment_delivery_date` is present, auto-create receipts for all non-received line items.
+- `approved` / `error`: append a note to the PO.
+- `rejected`: cancel the PO.
+- `completed`: mark the PO ordered.
+- `shipping_update`: append a shipping note; when `message.shipment_delivery_date` is present, auto-create receipts for all non-received line items.
 
 Every request and response is audited, and the response shape varies by branch.
 

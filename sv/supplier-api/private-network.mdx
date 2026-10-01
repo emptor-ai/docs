@@ -34,7 +34,7 @@ curl -X DELETE "$BASE/v1/supplier/private_network/supplier_supplier_relationship
   -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET"
 ```
 
-Relationens post bär de dirigeringsdetaljer som invite-mejlet senare använder: `workOrdersRoutedTo` (mejladresser dit underleverantören får utsänt arbete) och `supplierAccountEmails` (kontaktadresser på kontonivå för underleverantören).
+Relationens post bär de dirigeringsdetaljer som invite-mejlet senare använder: `workOrdersRoutedTo` (e-postadresser dit underleverantören får utsänt arbete) och `supplierAccountEmails` (kontaktadresser på kontonivå för underleverantören).
 
 ## Bjud in en underleverantör
 
@@ -76,7 +76,7 @@ Mottagaren på `toEmail` får ett mejl med:
 - **Ämne:** `<hänvisarens förnamn> from <din anläggnings namn> has added <underleverantörsanläggningens namn> as a sub-contractor on OpenWrench`. `Your client` och `you` sätts in när hänvisaren eller underleverantörsanläggningen inte kan resolvas.
 - **From-alias:** hänvisarens fullständiga namn, så meddelandet ser ut att komma från en person i ditt team.
 - **CC:** den hänvisande kontakten på `fromEmail`.
-- **Brödtext:** en hälsning till den inbjudna kontakten, `note` (om det finns) och en rad "you'll get notified at ..." som listar de mejladresser dit OpenWrench skickar utsänt arbete.
+- **Brödtext:** en hälsning till den inbjudna kontakten, `note` (om det finns) och en rad "you'll get notified at ..." som listar de e-postadresser dit OpenWrench skickar utsänt arbete.
 - **CTA-länk:** för en helt ny leverantörskontakt, `https://partners.useopenwrench.com/supplier/signup?email=<toEmail>` så att de kan slutföra registreringen; annars den vanliga portallänken `https://partners.useopenwrench.com`.
 
 Listan notified-at i mejltexten följer en prioritetskedja på relationen: `workOrdersRoutedTo` om den inte är tom, annars `supplierAccountEmails` om det inte är tomt, annars den inbjudna `toEmail` själv. Sätt dirigeringsfälten på relationen innan du bjuder in om du vill att invite-mejlet ska förhandsvisa de riktiga dispatch-destinationerna.

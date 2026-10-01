@@ -47,10 +47,10 @@ Règles imposées par l'endpoint :
 
 - `email`, `nameGiven`, `nameFamily` et `roles` sont obligatoires. **Les rôles d'administrateur et de super-administrateur sont refusés avec `403`.** Le provisionnement par API est réservé aux rôles ordinaires.
 - L'établissement cible est par défaut celui de la clé d'API. Un `facilityId` fourni doit appartenir à la même entreprise acheteur (`403` sinon).
-- Un compte ou contact existant déjà pour l'adresse courriel renvoie `400` avec un message de conflit.
+- Un compte ou contact existant déjà pour l'adresse courriel retourne `400` avec un message de conflit.
 - Avec un `password`, la connexion est créée immédiatement et le courriel d'invitation indique « invited you to OpenWrench » ; sans mot de passe, l'invitation demande à l'utilisateur de s'inscrire. `passwordResetRequired` force un changement à la première connexion.
 - Restriction par emplacement : `hasAccessToAllLocations`, ou `locationIds`/`brandIds` explicites.
-- Les qualifications EPA 608 des techniciens peuvent être jointes avec `epaCertificationType` (validées par rapport aux classes reconnues ; les valeurs non reconnues renvoient `400`) et `epaCertificationNumber` (texte libre, 64 caractères max).
+- Les qualifications EPA 608 des techniciens peuvent être jointes avec `epaCertificationType` (validées par rapport aux classes reconnues ; les valeurs non reconnues retournent `400`) et `epaCertificationNumber` (texte libre, 64 caractères max).
 
 Le contact créé est retourné dans l'enveloppe standard.
 

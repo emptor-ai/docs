@@ -79,7 +79,7 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
   }'
 ```
 
-`checkInTime` defaults to the server's current time when you set a `checkInStatus` without a time, so live integrations can omit it; backfills should pass it explicitly. `checkInImages` takes photo references, and geo coordinates give the buyer on-site proof.
+`checkInTime` defaults to the server's current time when you set a `checkInStatus` without a time, so you can omit it in live integrations. Pass it explicitly when you backfill. `checkInImages` takes photo references, and geo coordinates give the buyer on-site proof.
 
 ## 3. Check out and set the outcome
 

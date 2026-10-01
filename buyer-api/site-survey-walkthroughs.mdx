@@ -52,8 +52,8 @@ Each walkthrough response embeds the hydrated site survey it was run against, un
 
 Each entry has two fields:
 
-- `color` — the color to render for the band, typically a hex code.
-- `lowerRange` — the lowest score that falls into the band. A band runs from its `lowerRange` up to the next band's `lowerRange`.
+- `color`: the color to render for the band, typically a hex code.
+- `lowerRange`: the lowest score that falls into the band. A band runs from its `lowerRange` up to the next band's `lowerRange`.
 
 To color a score from the walkthrough's `scores` array, pick the band with the highest `lowerRange` that is less than or equal to the score.
 
@@ -63,9 +63,9 @@ You configure ranges on the site survey or on its template. If a survey has no r
 
 When a survey finding needs remediation, create the work order with the linkage fields set:
 
-- `walkThroughId` — the walkthrough the finding came from.
-- `siteSurveyTaskTitleId` — the specific task within it.
-- `includeWalkthroughTaskList` — optionally copy the walkthrough's task list onto the work order.
+- `walkThroughId`: the walkthrough the finding came from.
+- `siteSurveyTaskTitleId`: the specific task within it.
+- `includeWalkthroughTaskList`: optionally copy the walkthrough's task list onto the work order.
 
 `walkThroughId` and `siteSurveyTaskTitleId` **must be provided together or not at all**; the create is rejected otherwise. See [Create a work order](/buyer-api/work-orders#create-a-work-order) for the rest of the payload.
 

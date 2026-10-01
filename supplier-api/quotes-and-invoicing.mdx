@@ -20,7 +20,7 @@ export SECRET="<shared-secret>"
 
 ## Money is strings, in sections
 
-Proposals and invoices share a line-item structure. Amounts are **strings that must parse as numbers** ("450.00", not 450.00 as a float; you should format with two decimals and parse as decimals). The sections are labor, material, travel, freight, and misc (proposals add incurred cost). Each section carries its own line items, tax rate, and `...TotalBeforeTax`, and the sections roll up to before-tax, tax, and after-tax totals. Travel, freight, and misc lines are simple `{ "description", "amount" }` objects.
+Proposals and invoices share a line-item structure. Amounts are **strings that must parse as numbers** ("450.00", not 450.00 as a float; format with two decimals and parse as decimals). The sections are labor, material, travel, freight, and misc (proposals add incurred cost). Each section carries its own line items, tax rate, and `...TotalBeforeTax`, and the sections roll up to before-tax, tax, and after-tax totals. Travel, freight, and misc lines are simple `{ "description", "amount" }` objects.
 
 ## Proposals (quotes)
 

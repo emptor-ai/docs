@@ -16,7 +16,7 @@ Les endpoints des équipes internes sont servis sous le préfixe `/v1/partners/`
 
 Ces endpoints nécessitent une **clé d'API partenaire**, un identifiant distinct des clés d'API acheteur et fournisseur. Une clé d'API acheteur ne fonctionnera pas avec les endpoints `/v1/partners/`, même si cette section se trouve sous la documentation de l'API Acheteur.
 
-Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (la clé partenaire) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête aux données de votre entreprise. Les requêtes auxquelles il manque l'un des deux en-têtes renvoient `401`.
+Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (la clé partenaire) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête aux données de votre entreprise. Les requêtes auxquelles il manque l'un des deux en-têtes retournent `401`.
 
 ```bash
 curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
@@ -57,7 +57,7 @@ Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `so
 
 ## Le flux d'achats
 
-Une intégration typique suit le cycle de vie des achats : lisez les **demandes d'achat** approuvées et leurs postes, créez un **bon de commande** auprès d'un fournisseur, associez les postes de PR aux postes de PO, marquez le PO comme **commandé** et enregistrez les **réceptions** au fur et à mesure de l'arrivée des articles (les quantités reçues négatives enregistrent des retours). Les pièces, types d'équipement, fournisseurs et emplacements de stock complètent les données de référence.
+Une intégration typique suit le cycle de vie des achats : lisez les **demandes d'achat** approuvées et leurs postes, créez un **bon de commande** auprès d'un fournisseur. Associez ensuite les postes de PR aux postes de PO, marquez le PO comme **commandé** et enregistrez les **réceptions** au fur et à mesure de l'arrivée des articles (les quantités reçues négatives enregistrent des retours). Les pièces, types d'équipement, fournisseurs et emplacements de stock complètent les données de référence.
 
 ## Guides détaillés
 

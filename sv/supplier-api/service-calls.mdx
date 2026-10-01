@@ -16,7 +16,7 @@ export SECRET="<shared-secret>"
 
 ## Hur statusuppdateringsslutpunkterna fungerar
 
-Alla fem delar samma förfrågan-form (en servicebesök-payload) och ett avgörande beteende:
+Alla fem delar samma förfrågan-form (en servicebesöksnyttolast) och ett avgörande beteende:
 
 <Warning>
 **Svaret är den associerade arbetsordern, inte servicebesöket.** Varje anrop skapar eller uppdaterar ett servicebesök, flyttar arbetsorderns status och returnerar den uppdaterade arbetsordern i höljet. Läs det nya servicebesökets tillstånd från arbetsorderns `associatedServiceCalls` / `lastServiceCall`.
@@ -111,7 +111,7 @@ Vanliga värden för `checkOutStatus`:
 
 **Slutför en arbetsorder genom att checka ut med `WaitingForReview`.** `WorkReviewedAndCompleted` är en status som ägs av köparen. Köparen sätter den efter att ha granskat ditt arbete, eller så sätter OpenWrench den automatiskt när automatiskt godkännande gäller (se nedan). Köparen kan också avvisa arbetet med `WorkUnsatisfactory`. Du får veta köparens beslut via [webhooken](/sv/supplier-api/webhooks) `workorder.status_update`.
 
-Registrera delar och lager som förbrukas vid besöket via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma payload. Id:na kommer från din [lagerkatalog](/sv/supplier-api/purchasing-and-inventory#katalog-delar-utrustning-leverantörer-och-lager).
+Registrera delar och lager som förbrukas vid besöket via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma nyttolast. Id:na kommer från din [lagerkatalog](/sv/supplier-api/purchasing-and-inventory#katalog-delar-utrustning-leverantörer-och-lager).
 
 Två automationsbeteenden utlöses vid denna punkt:
 

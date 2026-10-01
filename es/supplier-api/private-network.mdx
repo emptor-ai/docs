@@ -14,7 +14,7 @@ export KEY="<your-api-key>"
 export SECRET="<shared-secret>"
 ```
 
-## Gestiona relaciones de subcontratistas
+## Gestionar relaciones de subcontratistas
 
 La instalación de proveedor del llamante (derivada del contacto de la API key) es el lado origen de cada relación que crea o lista.
 
@@ -36,13 +36,13 @@ curl -X DELETE "$BASE/v1/supplier/private_network/supplier_supplier_relationship
 
 El registro de la relación contiene los detalles de enrutamiento que utiliza más tarde el correo de invitación: `workOrdersRoutedTo` (correos donde el subcontratista recibe el trabajo despachado) y `supplierAccountEmails` (contactos a nivel de cuenta para ese subcontratista).
 
-## Invita a un subcontratista
+## Invitar a un subcontratista
 
 `POST /v1/supplier/private_network/supplier_supplier_relationships/{sfId}/invite/{fromEmail}/{toEmail}/name/{fN}/{lN}` envía un correo de referencia invitando al subcontratista a OpenWrench.
 
 | Parámetro de ruta | Significado |
 | --- | --- |
-| `sfId` | Id de la instalación de proveedor del subcontratista — debe ser el `supplierFacilityId` de una relación existente cuyo origen sea la instalación del llamante. |
+| `sfId` | Id de la instalación de proveedor del subcontratista. Debe ser el `supplierFacilityId` de una relación existente cuyo origen sea la instalación del llamante. |
 | `fromEmail` | Correo del contacto referente en tu instalación. Se usa para buscar el nombre del referente y para incluirlo en copia en el correo saliente. |
 | `toEmail` | Correo de la persona a invitar en la instalación del subcontratista. |
 | `fN`, `lN` | Nombre y apellido a usar cuando el invitado aún no es un contacto conocido. |

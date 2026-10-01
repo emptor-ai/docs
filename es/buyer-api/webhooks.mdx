@@ -96,7 +96,7 @@ El payload no incluye el resto del hilo. Léelo con `GET /v1/buyer/work_order/wo
 
 ## Verificar las entregas
 
-Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la petición con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
+Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la solicitud con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
 
 {/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
 
