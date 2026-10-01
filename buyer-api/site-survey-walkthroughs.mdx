@@ -30,7 +30,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/site_survey/walkthroughs/230"
 ```
 
-Standard pagination and field filters apply, plus your role's location and brand scoping. Work orders referenced from a walkthrough's task answers are filtered by your read permission, so different keys may see different linked work orders on the same walkthrough.
+Standard pagination and field filters apply, plus your role's location and brand scoping. Your read permission filters the work orders referenced from a walkthrough's task answers. Different keys may see different linked work orders on the same walkthrough.
 
 ## Rendering scores with heat map ranges
 

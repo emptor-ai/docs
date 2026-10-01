@@ -41,7 +41,7 @@ The `{id}` is the service call id, which you read off the work order's `associat
 
 ## Technician details and rate visibility
 
-`with_tech_details` returns the technicians on the call as contact records. **`hourlyRate` is populated only when the call was performed by your own internal service team.** Third-party supplier rates are never exposed to buyers, so expect `hourlyRate` to be absent on contractor visits.
+`with_tech_details` returns the technicians on the call as contact records. **OpenWrench populates `hourlyRate` only when your own internal service team performed the call.** OpenWrench never exposes third-party supplier rates to buyers, so expect `hourlyRate` to be absent on contractor visits.
 
 ## Verification pattern
 
