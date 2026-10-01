@@ -4,7 +4,7 @@ sidebarTitle: "Compras e inventario"
 description: "Gestiona solicitudes y órdenes de compra, recibos y devoluciones, catálogos, niveles de stock por ubicación y el webhook de Order.co con la Supplier API."
 ---
 
-Los endpoints de inventario bajo `/v1/supplier/inventory/` cubren todo el ciclo de compras: los técnicos levantan **solicitudes de compra** (PR), compras las convierte en **órdenes de compra** (PO) contra proveedores, las mercancías llegan como **recibos** y los niveles de stock se actualizan por **ubicación de stock**. La misma superficie está reflejada para los equipos internos del comprador en la [Internal Teams API](/es/partners-api/introduction).
+Los endpoints de inventario bajo `/v1/supplier/inventory/` cubren todo el ciclo de compras. Los técnicos levantan **solicitudes de compra** (PR), compras las convierte en **órdenes de compra** (PO) contra proveedores, las mercancías llegan como **recibos** y los niveles de stock se actualizan por **ubicación de stock**. La misma superficie está reflejada para los equipos internos del comprador en la [Internal Teams API](/es/partners-api/introduction).
 
 Todos los ejemplos asumen:
 
@@ -94,7 +94,7 @@ Las líneas distinguen líneas de parte de líneas de equipo mediante `isEquipme
 `POST /v1/supplier/inventory/purchase_order_line_items/bulk` toma un **array JSON** de payloads de líneas y tiene semántica de reemplazo:
 
 <Warning>
-Todas las líneas **no recibidas** en la orden de compra objetivo se eliminan primero, y luego se crean las líneas enviadas. Envía siempre el conjunto completo de líneas abiertas deseadas, nunca solo el delta. Las líneas sobre las que no tienes permiso de escritura se omiten silenciosamente.
+OpenWrench primero elimina todas las líneas **no recibidas** en la orden de compra objetivo, y luego crea las líneas enviadas. Envía siempre el conjunto completo de líneas abiertas deseadas, nunca solo el delta. Las líneas sobre las que no tienes permiso de escritura se omiten silenciosamente.
 </Warning>
 
 `supplierFacilityId` y `supplierCompanyId` en cada línea se sobrescriben con los de tu clave, las listas de ids de parte/equipo/PR de la PO se recalculan y la notificación de la orden de compra se reenvía. Sin límite de tasa.

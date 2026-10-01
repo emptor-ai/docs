@@ -94,7 +94,7 @@ Cada línea de PR listada pasa a `orderInProgress` con su `associatedPurchaseOrd
 `POST /v1/partners/inventory/purchase_order_line_items/bulk` toma un **array JSON** de líneas, todas referenciando el mismo `supplierPurchaseOrderId`, y tiene semántica de reemplazo:
 
 <Warning>
-Todas las líneas **no recibidas** existentes en la PO se eliminan primero, y luego se crean las enviadas. Envía el conjunto completo de líneas abiertas deseadas cada vez. El estado de línea no es establecible aquí: las líneas nuevas empiezan como `new`, y una línea reenviada con su `id` mantiene su estado.
+OpenWrench primero elimina todas las líneas **no recibidas** existentes en la PO, y luego crea las enviadas. Envía el conjunto completo de líneas abiertas deseadas cada vez. El estado de línea no es establecible aquí: las líneas nuevas empiezan como `new`, y una línea reenviada con su `id` mantiene su estado.
 </Warning>
 
 Las listas de ids de parte/equipo/solicitud-de-compra de la PO se recalculan y se reenvía la notificación de la orden de compra. `supplierFacilityId`/`supplierCompanyId` por línea vienen de tu clave; los ítems sin permiso de escritura se omiten silenciosamente.

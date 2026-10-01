@@ -94,7 +94,7 @@ Chaque poste de DA listé passe à `orderInProgress` avec son `associatedPurchas
 `POST /v1/partners/inventory/purchase_order_line_items/bulk` prend un **tableau JSON** de postes, tous référençant le même `supplierPurchaseOrderId`, et a une sémantique de remplacement :
 
 <Warning>
-Tous les postes existants **non reçus** du BC sont d'abord supprimés, puis les postes soumis sont créés. Envoyez à chaque fois l'ensemble complet des lignes ouvertes prévues. Le statut de la ligne n'est pas modifiable ici : les nouvelles lignes commencent comme `new`, et une ligne resoumise avec son `id` conserve son statut.
+OpenWrench supprime d'abord tous les postes existants **non reçus** du BC, puis crée les postes soumis. Envoyez à chaque fois l'ensemble complet des lignes ouvertes prévues. Le statut de la ligne n'est pas modifiable ici : les nouvelles lignes commencent comme `new`, et une ligne resoumise avec son `id` conserve son statut.
 </Warning>
 
 Les listes d'ids de pièces/équipement/demandes d'achat du BC sont recalculées et la notification de bon de commande est renvoyée. `supplierFacilityId`/`supplierCompanyId` par poste proviennent de votre clé; les éléments sans permission d'écriture sont silencieusement ignorés.

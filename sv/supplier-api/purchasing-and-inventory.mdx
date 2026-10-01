@@ -4,7 +4,7 @@ sidebarTitle: "Inköp och lager"
 description: "Kör hela inköpscykeln i Supplier API: inköpsförfrågningar, inköpsordrar, mottagningar och returer, kataloger, lagernivåer och Order.co-webhooken."
 ---
 
-Lagerslutpunkterna under `/v1/supplier/inventory/` täcker hela inköpscykeln: tekniker skapar **inköpsförfrågningar** (PR:er), inköp omvandlar dem till **inköpsordrar** (PO:er) mot leverantörer, varor kommer in som **mottagningar**, och lagernivåer uppdateras per **lagerplats**. Samma yta speglas för köparnas interna team i [Internal Teams API](/sv/partners-api/introduction).
+Lagerslutpunkterna under `/v1/supplier/inventory/` täcker hela inköpscykeln. Tekniker skapar **inköpsförfrågningar** (PR:er), inköp omvandlar dem till **inköpsordrar** (PO:er) mot leverantörer, varor kommer in som **mottagningar**, och lagernivåer uppdateras per **lagerplats**. Samma yta speglas för köparnas interna team i [Internal Teams API](/sv/partners-api/introduction).
 
 Alla exempel förutsätter:
 
@@ -94,7 +94,7 @@ Rader skiljer del-rader från utrustnings-rader via `isEquipmentLine`; del-rader
 `POST /v1/supplier/inventory/purchase_order_line_items/bulk` tar en **JSON-array** av rad-payloads och har ersättningssemantik:
 
 <Warning>
-Alla **ej mottagna** rader på mål-inköpsordern raderas först, sedan skapas de skickade posterna. Skicka alltid den fullständiga avsedda uppsättningen öppna rader, aldrig bara skillnaden. Poster du saknar skrivbehörighet för hoppas över tyst.
+OpenWrench raderar först alla **ej mottagna** rader på mål-inköpsordern och skapar sedan de skickade posterna. Skicka alltid den fullständiga avsedda uppsättningen öppna rader, aldrig bara skillnaden. Poster du saknar skrivbehörighet för hoppas över tyst.
 </Warning>
 
 `supplierFacilityId` och `supplierCompanyId` på varje post skrivs över från din nyckel, PO:s del-/utrustnings-/PR-id-listor räknas om och inköpsorder-aviseringen skickas igen. Inte hastighetsbegränsad.
