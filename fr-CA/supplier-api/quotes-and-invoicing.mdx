@@ -107,7 +107,7 @@ Chaque précondition non satisfaite renvoie `400` : votre établissement doit po
 
 ### Lire et réconcilier
 
-`GET /v1/supplier/invoice/invoices` (filtrable, p. ex. `?status=pending`) et `GET /v1/supplier/invoice/invoices/{id}`. Les fournisseurs tiers voient des fiches masquées, les champs privés à l'acheteur étant vidés. Sondez le statut pour piloter votre grand livre des comptes clients : `approvedAt`, `processedAt` et `markedPaidAt` horodatent la progression de l'acheteur.
+`GET /v1/supplier/invoice/invoices` (filtrable, par exemple `?status=pending`) et `GET /v1/supplier/invoice/invoices/{id}`. Les fournisseurs tiers voient des fiches masquées, les champs privés à l'acheteur étant vidés. Sondez le statut pour piloter votre grand livre des comptes clients : `approvedAt`, `processedAt` et `markedPaidAt` horodatent la progression de l'acheteur.
 
 ## Flux de facturation de bout en bout
 
