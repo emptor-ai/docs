@@ -85,7 +85,7 @@ curl -X POST "$BASE/v1/buyer/asset/assets" \
 Comportamiento a conocer:
 
 - `buyerFacilityId` y `buyerCompanyId` se **derivan de la ubicación**, nunca se leen del cuerpo.
-- **Los overrides de refrigerante se pueden borrar.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` y `refrigerantRequiresProcessShutdown` son overrides por unidad de los valores por defecto del tipo de activo. Omitir la clave mantiene el valor almacenado; un `null` explícito (o cadena vacía) lo borra y vuelve a heredar del tipo. `isRefrigerantTracked` se comporta de forma similar: omitido o `null` mantiene el valor almacenado, y la inscripción solo se desactiva con un `false` explícito.
+- **Los overrides de refrigerante se pueden borrar.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` y `refrigerantRequiresProcessShutdown` son overrides por unidad de los valores por defecto del tipo de activo. Omitir la clave mantiene el valor almacenado; un `null` explícito (o cadena vacía) lo borra y vuelve a heredar del tipo. `isRefrigerantTracked` se comporta de forma similar: omitido o `null` mantiene el valor almacenado, y solo un `false` explícito desactiva la inscripción.
 - `fullChargeLb` en un activo sigue las mismas reglas de positividad y precisión que en un [tipo de activo](#tipos-de-activos).
 - **Subactivos.** `parentId` convierte esto en un subactivo. Requiere que los subactivos estén habilitados para tu empresa, y el hijo debe estar en la misma ubicación que el padre.
 - Pasar un `id` hace upsert sobre un activo existente.
@@ -127,7 +127,7 @@ curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
 
 Comportamiento a conocer:
 
-- Un `ids` ausente o que no sea un array, o un id que no sea un número entero, se rechaza con `400`.
+- OpenWrench rechaza con `400` un `ids` ausente o que no sea un array, o un id que no sea un número entero.
 - Cada id debe ser una etiqueta viva del catálogo de tu empresa. Los ids desconocidos o de otro inquilino responden `400` con los ids problemáticos listados.
 - La escritura requiere permiso de escritura de activos. Un id de activo desconocido, eliminado o ajeno responde el mismo `400` que una escritura denegada, no un `404`.
 
