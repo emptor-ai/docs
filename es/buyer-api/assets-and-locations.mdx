@@ -86,7 +86,7 @@ Comportamiento a conocer:
 
 - `buyerFacilityId` y `buyerCompanyId` se **derivan de la ubicación**, nunca se leen del cuerpo.
 - **Los overrides de refrigerante se pueden borrar.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` y `refrigerantRequiresProcessShutdown` son overrides por unidad de los valores por defecto del tipo de activo. Omitir la clave mantiene el valor almacenado; un `null` explícito (o cadena vacía) lo borra y vuelve a heredar del tipo. `isRefrigerantTracked` se comporta de forma similar: omitido o `null` mantiene el valor almacenado, y la inscripción solo se desactiva con un `false` explícito.
-- `fullChargeLb` en un activo sigue las mismas reglas de positividad y precisión que en un tipo de activo.
+- `fullChargeLb` en un activo sigue las mismas reglas de positividad y precisión que en un [tipo de activo](#tipos-de-activos).
 - **Subactivos.** `parentId` convierte esto en un subactivo. Requiere que los subactivos estén habilitados para tu empresa, y el hijo debe estar en la misma ubicación que el padre.
 - Pasar un `id` hace upsert sobre un activo existente.
 
