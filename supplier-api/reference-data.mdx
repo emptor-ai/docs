@@ -21,7 +21,7 @@ How much you see depends on what kind of supplier your key belongs to:
 - **Internal service team keys** (your supplier company is the buyer's own in-house team) receive full records.
 - **Third-party supplier keys** receive masked records on work orders, locations, and invoices: buyer-private fields are blanked before the response returns.
 
-If a field you expect is consistently empty, masking is the first thing to check. The scoping itself cannot be widened by filters; tenant-security filters derived from your key always apply.
+If a field you expect is consistently empty, masking is the first thing to check. Filters cannot widen the scoping itself; tenant-security filters derived from your key always apply.
 
 ## Buyer companies
 
