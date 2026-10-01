@@ -26,7 +26,7 @@ La réponse (type d'enveloppe `FileManager`) est un enregistrement `FileDetails`
 
 Utilisez l'objet retourné tel quel dans les champs de pièces jointes : [pièces jointes fournisseur](/supplier-api/work-orders#keep-the-buyer-informed) sur les bons de travail, `attachments` sur les propositions et factures, et images de pointage d'entrée/sortie. Les PDF de factures disposent de leur propre [endpoint de téléversement et publication](/supplier-api/quotes-and-invoicing#upload-the-pdf-and-publish).
 
-**Téléchargez** avec `GET /v1/supplier/file/download/{id}/{name}`, qui diffuse les octets stockés en pièce jointe. `{id}` est le `fileId` ; `{name}` est le nom sous lequel le servir. Utilisez-le pour extraire les documents fournis par l'acheteur depuis `buyerAttachments`. Les échecs de téléchargement renvoient `400`.
+**Téléchargez** avec `GET /v1/supplier/file/download/{id}/{name}`, qui diffuse les octets stockés en pièce jointe. `{id}` est le `fileId` ; `{name}` est le nom sous lequel le servir. Utilisez-le pour extraire les documents fournis par l'acheteur depuis `buyerAttachments`. Les échecs de téléchargement retournent `400`.
 
 ## Provisionner des utilisateurs fournisseurs
 

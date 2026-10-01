@@ -17,7 +17,7 @@ Tous les endpoints acheteur se trouvent sous `/v1/buyer/`.
 
 ## Authentification
 
-Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (votre clé d'API, émise par contact acheteur) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête à votre entreprise. Vous ne voyez jamais que vos propres données. Les requêtes auxquelles il manque l'un des deux en-têtes renvoient `401`.
+Chaque requête doit contenir **deux en-têtes** : `X-API-KEY` (votre clé d'API, émise par contact acheteur) et `OW-KEY` (le secret partagé OpenWrench émis en même temps). La clé restreint automatiquement chaque requête à votre entreprise. Vous ne voyez jamais que vos propres données. Les requêtes auxquelles il manque l'un des deux en-têtes retournent `401`.
 
 ```bash
 curl -H "X-API-KEY: <your-key>" -H "OW-KEY: <shared-secret>" \
@@ -68,7 +68,7 @@ La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exempl
 
 ## Guides détaillés
 
-Les guides de cet onglet parcourent chaque partie de l'API en profondeur, avec les payloads, les modèles de statut et les schémas d'intégration :
+Les guides de cet onglet parcourent chaque partie de l'API en profondeur, avec les charges utiles, les modèles de statut et les schémas d'intégration :
 
 <CardGroup cols={2}>
   <Card title="Bons de travail" href="/buyer-api/work-orders" icon="clipboard-list">

@@ -102,7 +102,7 @@ El payload no incluye el resto del hilo. Léelo con `GET /v1/supplier/work_order
 
 ## Verificar las entregas
 
-Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la petición con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
+Cada entrega va firmada. La pasarela calcula un HMAC sobre el cuerpo crudo de la solicitud con el secreto de firma de tu endpoint y lo envía en una cabecera de firma. Cuando soporte registra tu endpoint te entrega el secreto, el nombre de la cabecera y el algoritmo de hash. Verifica la firma contra los bytes crudos del cuerpo antes de parsearlo, y rechaza cualquier cosa que no coincida. Como el secreto es por endpoint, rotarlo es una solicitud a soporte: pide un secreto nuevo, despliégalo y luego pide a soporte que cambie el endpoint.
 
 {/* Reviewer: fill in the concrete values from the Convoy project config: header name (Convoy default X-Convoy-Signature), hash (default SHA256), encoding (default hex), and whether the project uses the simple or the advanced "t=...,v1=..." signature format. Add a verification snippet once known. */}
 
@@ -126,7 +126,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders/9001"
 ```
 
-Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo asignada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/es/supplier-api/introduction#límites-de-tasa), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención. Recuerda que los campos privados del comprador están [enmascarados](/es/supplier-api/reference-data#enmascaramiento-de-datos) para los proveedores externos.
+Las lecturas de la API externa se sirven desde una réplica de lectura, así que una orden de trabajo asignada hace un instante puede volver vacía brevemente. Reintenta la obtención tras un segundo antes de darla por inexistente. La obtención cuenta contra el [límite de tasa](/es/supplier-api/introduction#límites-de-tasa), así que agrupa las ráfagas de eventos de la misma orden de trabajo en una sola obtención. Recuerda que los campos privados del comprador están [enmascarados](/es/supplier-api/reference-data#enmascaramiento-de-datos) para los proveedores terceros.
 
 ## Juntándolo todo
 

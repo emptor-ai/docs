@@ -91,7 +91,7 @@ Rader skiljer del-rader från utrustnings-rader via `isEquipmentLine`; del-rader
 
 ### Ersätt rader i massa
 
-`POST /v1/supplier/inventory/purchase_order_line_items/bulk` tar en **JSON-array** av rad-payloads och har ersättningssemantik:
+`POST /v1/supplier/inventory/purchase_order_line_items/bulk` tar en **JSON-array** av radnyttolaster och har ersättningssemantik:
 
 <Warning>
 OpenWrench raderar först alla **ej mottagna** rader på mål-inköpsordern och skapar sedan de skickade posterna. Skicka alltid den fullständiga avsedda uppsättningen öppna rader, aldrig bara skillnaden. Poster du saknar skrivbehörighet för hoppas över tyst.
@@ -153,7 +153,7 @@ Skrivskyddad referensdata, alla med standardpaginering och fältfilter:
 
 ## Order.co-webhook
 
-`POST /v1/supplier/inventory/webhook/purchase_order` är en **inkommande** webhook för tredjeparts inköpssystem, för närvarande Order.co, och endast för leverantörsföretag som är registrerade för den (andra får `400`). Payloaden bär `order_id` (tredjepartsid), `purchase_order_number` (OpenWrench-PO:s id som en sträng), en `status` och ett statusspecifikt `message`-objekt. Effekter per status:
+`POST /v1/supplier/inventory/webhook/purchase_order` är en **inkommande** webhook för tredjeparts inköpssystem, för närvarande Order.co, och endast för leverantörsföretag som är registrerade för den (andra får `400`). Nyttolasten bär `order_id` (tredjepartsid), `purchase_order_number` (OpenWrench-PO:s id som en sträng), en `status` och ett statusspecifikt `message`-objekt. Effekter per status:
 
 - `approved` / `error` — lägg till en anteckning på PO:n.
 - `rejected` — avbryt PO:n.

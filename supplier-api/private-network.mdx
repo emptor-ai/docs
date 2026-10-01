@@ -16,7 +16,7 @@ export SECRET="<shared-secret>"
 
 ## Manage sub-contractor relationships
 
-The caller's supplier facility (derived from the API key's contact) is the source side of every relationship it creates or lists.
+Your supplier facility (derived from your API key's contact) is the source side of every relationship you create or list.
 
 ```bash
 # Create a relationship to sub-contractor supplier facility 5511
@@ -42,12 +42,12 @@ The relationship record carries the routing details used later by the invite ema
 
 | Path parameter | Meaning |
 | --- | --- |
-| `sfId` | Sub-contractor's supplier facility id. Must be the `supplierFacilityId` of an existing relationship whose source is the caller's facility. |
+| `sfId` | Sub-contractor's supplier facility id. Must be the `supplierFacilityId` of an existing relationship whose source is your facility. |
 | `fromEmail` | Email of the referring contact at your facility. Used to look up the referrer's name and to CC the referrer on the outbound email. |
 | `toEmail` | Email of the person to invite at the sub-contractor facility. |
 | `fN`, `lN` | First and last name to use when the invitee is not yet a known contact. |
 
-You must create the `SupplierSupplierRelationship` first (see above). If no relationship exists for `(your facility, sfId)` the endpoint returns `404` with `could not find supplier supplier relationship...`. This mirrors the buyer-side private-network invite flow. The endpoint returns `400` when the caller's contact has no facility.
+You must create the `SupplierSupplierRelationship` first (see above). If no relationship exists for `(your facility, sfId)` the endpoint returns `404` with `could not find supplier supplier relationship...`. This mirrors the buyer-side private-network invite flow. The endpoint returns `400` when your API key's contact has no facility.
 
 The optional JSON body may include a `note`; when present, its text appears in the email body under the greeting.
 

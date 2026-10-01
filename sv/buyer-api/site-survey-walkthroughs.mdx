@@ -67,6 +67,6 @@ När ett besiktningsfynd behöver åtgärdas, skapa arbetsordern med länkfälte
 - `siteSurveyTaskTitleId`: den specifika uppgiften inom den.
 - `includeWalkthroughTaskList`: kopierar valfritt genomgångens uppgiftslista till arbetsordern.
 
-`walkThroughId` och `siteSurveyTaskTitleId` **måste anges tillsammans eller inte alls**; annars avvisas skapandet. Se [Skapa en arbetsorder](/sv/buyer-api/work-orders#skapa-en-arbetsorder) för resten av payloaden.
+`walkThroughId` och `siteSurveyTaskTitleId` **måste anges tillsammans eller inte alls**; annars avvisas skapandet. Se [Skapa en arbetsorder](/sv/buyer-api/work-orders#skapa-en-arbetsorder) för resten av nyttolasten.
 
 Länken är synlig åt båda hållen: arbetsordern bär `walkThroughId`, och genomgångens uppgiftssvar refererar till de arbetsordrar som skapats från dem. Det gör "alla öppna fynd från förra kvartalets besiktningar, med åtgärdsstatus" till en tvåfrågerapport.

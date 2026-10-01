@@ -28,7 +28,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 Deux écritures de statut :
 
-- `PATCH /v1/supplier/inventory/purchase_requests/{id}/cancelled` annule, et ne fonctionne que depuis un statut annulable (`requested` ou `approved`) ; tout autre statut renvoie `400`.
+- `PATCH /v1/supplier/inventory/purchase_requests/{id}/cancelled` annule, et ne fonctionne que depuis un statut annulable (`requested` ou `approved`) ; tout autre statut retourne `400`.
 - `PATCH /v1/supplier/inventory/purchase_requests/{id}/{status}` définit n'importe quel statut de la liste ci-dessus. Les noms inconnus sont rejetés.
 
 En fonctionnement normal, vous définissez rarement directement les statuts de PR. Ils sont **recalculés à partir des postes** au fur et à mesure que vous les associez à des PO, et la satisfaction se produit à la complétion des bons de travail.
@@ -89,7 +89,7 @@ Les postes distinguent les lignes de pièces des lignes d'équipement via `isEqu
 
 ### Remplacer les postes en masse
 
-`POST /v1/supplier/inventory/purchase_order_line_items/bulk` prend un **tableau JSON** de payloads de postes et a des sémantiques de remplacement :
+`POST /v1/supplier/inventory/purchase_order_line_items/bulk` prend un **tableau JSON** de charges utiles de postes et a des sémantiques de remplacement :
 
 <Warning>
 Tous les postes **non reçus** du bon de commande cible sont d'abord supprimés, puis les articles soumis sont créés. Envoyez toujours l'ensemble complet des lignes ouvertes prévues, jamais seulement le delta. Les articles pour lesquels vous n'avez pas la permission d'écriture sont silencieusement ignorés.

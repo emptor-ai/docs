@@ -101,7 +101,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asse
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
 ```
 
-`asset_lite` is the cheap way to sync an asset picker: when you pass no pagination parameters it returns the **unpaginated full set**, with `count` equal to the number of items returned. The single-asset read hydrates meters (the envelope `type` reads `ApiAssetWithMeter`).
+`asset_lite` is the cheap way to sync an asset picker. When you pass no pagination parameters, it returns the **unpaginated full set**, with `count` equal to the number of items returned. The single-asset read hydrates meters (the envelope `type` reads `ApiAssetWithMeter`).
 
 ## Asset labels
 

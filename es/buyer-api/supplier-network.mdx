@@ -4,7 +4,7 @@ sidebarTitle: "Red de proveedores"
 description: "Consulta tu red de proveedores y jerarquiza proveedores de red privada por ubicación y tipo de problema para automatizar el despacho con la Buyer API."
 ---
 
-Dos familias de endpoints responden a "¿quién puede hacer este trabajo?": el listado de **facilities de proveedor** (toda tu red) y el endpoint **de red privada jerarquizado** (la lista corta ordenada para una ubicación y tipo de problema). Junto con el [parche de reasignación](/es/buyer-api/work-orders#reasignar-un-proveedor) de la orden de trabajo, te permiten automatizar el despacho.
+Dos familias de endpoints responden a "¿quién puede hacer este trabajo?": el listado de **instalaciones de proveedor** (toda tu red) y el endpoint **de red privada jerarquizado** (la lista corta ordenada para una ubicación y tipo de problema). Junto con el [parche de reasignación](/es/buyer-api/work-orders#reasignar-un-proveedor) de la orden de trabajo, te permiten automatizar el despacho.
 
 Todos los ejemplos asumen:
 
@@ -20,8 +20,8 @@ export SECRET="<shared-secret>"
 
 | Filtro | Coincide con |
 | --- | --- |
-| `search` | Nombre de la facility, nombre para mostrar o tu alias para la facility. |
-| `name` | Nombre de la facility. |
+| `search` | Nombre de la instalación, nombre para mostrar o tu alias para la instalación. |
+| `name` | Nombre de la instalación. |
 | `status` | Estado de la relación. |
 | `problemTypeId` | Proveedores que cubren un tipo de problema. |
 | `spendCategoryId` | Proveedores que cubren una categoría de gasto. |
@@ -37,7 +37,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/supplier_facilities?search=arctic"
 ```
 
-Obtén una facility con `GET /v1/buyer/supplier_facilities/{id}`.
+Obtén una instalación con `GET /v1/buyer/supplier_facilities/{id}`.
 
 ## Proveedores de red privada jerarquizados
 
@@ -58,7 +58,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 1. Llega una orden de trabajo (o se crea sin asignar).
 2. Llama al endpoint jerarquizado con el `locationId` y `problemTypeId` de la orden de trabajo.
-3. Toma la facility de proveedor de la primera relación y asígnala, ya sea al crear (`supplierFacilityId` en el cuerpo de creación) o después con `PATCH /v1/buyer/work_order/work_orders/{id}`.
+3. Toma la instalación de proveedor de la primera relación y asígnala, ya sea al crear (`supplierFacilityId` en el cuerpo de creación) o después con `PATCH /v1/buyer/work_order/work_orders/{id}`.
 4. Si el proveedor rechaza, la orden de trabajo vuelve a `PendingApproval` (o OpenWrench puede seleccionar automáticamente un proveedor de red privada, según tu configuración). Al rechazar, vuelve a ejecutar la jerarquización y asigna el siguiente candidato.
 
 Las escaleras de escalamiento, los SLA de tiempo de respuesta y los conteos de rechazos pueden apilarse sobre este ciclo. El endpoint de jerarquización te da los candidatos ordenados, y `statusChanges` de la orden de trabajo te dice cómo fue cada intento.
