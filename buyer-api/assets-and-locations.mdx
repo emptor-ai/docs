@@ -56,6 +56,7 @@ curl -X POST "$BASE/v1/buyer/asset/asset_types" \
 
 - `name` is the only required field. `buyerCompanyId` is derived from your key and cannot be set.
 - `applianceCategory`, `refrigerantTypeCode`, and `fullChargeLb` accept an **explicit `null` to clear** the class-level default. `fullChargeLb` must be positive when supplied.
+- `fullChargeLb` accepts at most 5 decimal places and 14 total digits, so up to 9 digits before the decimal point. The extra decimals let you store ounce conversions exactly, for example `0.0625` (1 oz), `0.03125` (half an ounce), or `0.00625` (a tenth of an ounce). OpenWrench rejects values with more precision with a `400` error. It does not round them.
 - Passing an `id` upserts an existing type.
 
 Read with `GET /v1/buyer/asset/asset_types` and `GET /v1/buyer/asset/asset_types/{id}`.
@@ -85,6 +86,7 @@ Behavior to know:
 
 - `buyerFacilityId` and `buyerCompanyId` are **derived from the location**, never read from the body.
 - **Refrigerant overrides are clearable.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory`, and `refrigerantRequiresProcessShutdown` are per-unit overrides of the asset type's defaults. Omitting the key keeps the stored value; an explicit `null` (or blank string) clears it back to inheriting from the type. `isRefrigerantTracked` behaves similarly: omitted or `null` keeps the stored value, and enrollment is turned off only by an explicit `false`.
+- `fullChargeLb` on an asset follows the same positivity and precision rules as on an [asset type](#asset-types).
 - **Sub-assets.** `parentId` makes this a sub-asset. It requires sub-assets to be enabled for your company, and the child must be at the same location as the parent.
 - Passing an `id` upserts an existing asset.
 
