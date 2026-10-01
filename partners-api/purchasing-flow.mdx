@@ -94,7 +94,7 @@ Each listed PR line item moves to `orderInProgress` with its `associatedPurchase
 `POST /v1/partners/inventory/purchase_order_line_items/bulk` takes a **JSON array** of line items, all referencing the same `supplierPurchaseOrderId`, and has replace semantics:
 
 <Warning>
-All existing **non-received** line items on the PO are deleted first, then the submitted ones are created. Send the complete intended set of open lines every time. Line status is not settable here: new lines start as `new`, and a line resubmitted with its `id` keeps its status.
+OpenWrench first deletes all existing **non-received** line items on the PO, then creates the submitted ones. Send the complete intended set of open lines every time. Line status is not settable here: new lines start as `new`, and a line resubmitted with its `id` keeps its status.
 </Warning>
 
 The PO's part/equipment/purchase-request id lists are recomputed and the purchase-order notification is re-sent. `supplierFacilityId`/`supplierCompanyId` per item come from your key; items without write permission are silently skipped.
