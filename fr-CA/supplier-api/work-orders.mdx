@@ -17,7 +17,7 @@ export SECRET="<shared-secret>"    # OW-KEY header
 ## Lire votre file
 
 <Warning>
-  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle. C'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été assigné, a changé de statut ou a reçu une note. Récupérez ensuite ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
+  **Ne bâtissez pas votre intégration sur l'endpoint de liste.** `GET /v1/supplier/work_order/work_orders` est la lecture la plus coûteuse de l'API Fournisseur, et le sonder pour découvrir les bons de travail nouveaux ou modifiés est le mauvais modèle. C'est lent sur les grandes files, cela brûle votre [limite de débit](/fr-CA/supplier-api/introduction#limites-de-débit) et cela manque quand même les changements entre les sondages. Utilisez les [webhooks](/fr-CA/supplier-api/webhooks) pour apprendre qu'un bon de travail vous a été affecté, a changé de statut ou a reçu une note. Récupérez ensuite ce seul bon de travail par id. Réservez la liste au chargement initial unique et à la réconciliation occasionnelle, avec un filtre étroit et une petite page.
 </Warning>
 
 Le modèle qui passe à l'échelle est la poussée, puis la récupération par id :
@@ -50,7 +50,7 @@ La liste et le comptage déterminent quels bons de travail correspondent dans l'
 - **Recherche plein texte.** `search=` correspond aux mots (avec correspondance par préfixe et par radical) dans le titre, la description, le nom de l'emplacement, les notes, les notes d'arrivée et de départ des appels de service, et le nom du type de problème. Il correspond aussi aux numéros de référence comme le numéro de bon de travail, le numéro de bon de commande et le numéro de série d'actif. Encadrez la valeur de guillemets doubles pour exiger la phrase exacte.
 - **Tri.** `sort_by` prend en charge `createdAt`, `locationName`, `woPriority` (selon le délai de résolution attendu de la priorité) et `lastServiceCallServiceScheduledAt`. Toute autre valeur, ou l'absence de `sort_by`, trie par `createdAt` décroissant.
 - **Les filtres non reconnus sont ignorés.** Seules les clés de la référence des filtres ci-dessous sont prises en charge. Tout autre paramètre de requête est ignoré plutôt que rejeté, et la requête aboutit quand même. Cela inclut les clés mal orthographiées ainsi que `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `assignedAt`, `buyerFacilityId` et `walkthroughId`, qui ne figurent pas dans l'index de recherche. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui.
-- **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures. Votre propre changement fraîchement écrit, ou un bon de travail assigné il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
+- **Fraîcheur.** Les mises à jour de l'index de recherche et du réplica accusent un léger retard sur les écritures. Votre propre changement fraîchement écrit, ou un bon de travail affecté il y a quelques secondes, peut être brièvement absent des résultats de liste et des comptages.
 - **Profondeur de pagination.** `offset + limit` ne peut pas dépasser la fenêtre de résultats de recherche de 10 000. Resserrez le filtre plutôt que de paginer aussi profondément.
 - **Masquage de données.** Si vous êtes un fournisseur tiers (pas l'équipe de service interne d'un acheteur), les champs privés à l'acheteur sont vidés sur les bons de travail, les emplacements et les factures avant que la réponse soit retournée. Les champs manquants sont généralement du masquage, pas des bogues. Voir [Données de référence](/fr-CA/supplier-api/reference-data#masquage-de-données) pour les détails.
 
@@ -234,7 +234,7 @@ curl -X PUT "$BASE/v1/supplier/work_order/work_orders/9001/labels" \
 Comportement à connaître :
 
 - Chaque id doit être une étiquette active de votre propre catalogue; un `ids` manquant ou qui n'est pas un tableau, un id non entier, et les ids inconnus ou d'un autre locataire sont tous rejetés avec `400`.
-- L'écriture requiert la permission d'écriture sur les bons de travail : une clé qui peut seulement voir le bon de travail (un soumissionnaire, ou un établissement avec visibilité en lecture seule) obtient `400`. Sur un bon de travail non assigné, seul un établissement avec visibilité en lecture-écriture peut l'étiqueter.
+- L'écriture requiert la permission d'écriture sur les bons de travail : une clé qui peut seulement voir le bon de travail (un soumissionnaire, ou un établissement avec visibilité en lecture seule) obtient `400`. Sur un bon de travail non affecté, seul un établissement avec visibilité en lecture-écriture peut l'étiqueter.
 - Un id de bon de travail inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
 
 ## Créer un bon de travail à l'initiative du fournisseur
