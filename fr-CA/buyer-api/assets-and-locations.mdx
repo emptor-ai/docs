@@ -85,7 +85,7 @@ curl -X POST "$BASE/v1/buyer/asset/assets" \
 Comportement à connaître :
 
 - `buyerFacilityId` et `buyerCompanyId` sont **dérivés de l'emplacement**, jamais lus depuis le corps.
-- **Les remplacements de frigorigène sont effaçables.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` et `refrigerantRequiresProcessShutdown` sont des remplacements par unité des valeurs par défaut du type d'actif. Omettre la clé conserve la valeur stockée; un `null` explicite (ou une chaîne vide) l'efface pour revenir à hériter du type. `isRefrigerantTracked` se comporte de la même façon : omis ou `null` conserve la valeur stockée, et l'inscription n'est désactivée que par un `false` explicite.
+- **Les remplacements de frigorigène sont effaçables.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` et `refrigerantRequiresProcessShutdown` sont des remplacements par unité des valeurs par défaut du type d'actif. Omettre la clé conserve la valeur stockée; un `null` explicite (ou une chaîne vide) l'efface pour revenir à hériter du type. `isRefrigerantTracked` se comporte de la même façon : omis ou `null` conserve la valeur stockée, et seul un `false` explicite désactive l'inscription.
 - `fullChargeLb` sur un actif suit les mêmes règles de positivité et de précision que sur un [type d'actif](#types-d-actifs).
 - **Sous-actifs.** `parentId` en fait un sous-actif. Cela nécessite que les sous-actifs soient activés pour votre entreprise, et l'enfant doit être au même emplacement que le parent.
 - Passer un `id` met à jour un actif existant.
@@ -127,7 +127,7 @@ curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
 
 Comportement à connaître :
 
-- Un `ids` manquant ou qui n'est pas un tableau, ou un id qui n'est pas un nombre entier, est rejeté avec `400`.
+- OpenWrench rejette avec `400` un `ids` manquant ou qui n'est pas un tableau, ou un id qui n'est pas un nombre entier.
 - Chaque id doit être une étiquette active du catalogue de votre entreprise. Les ids inconnus ou d'un autre locataire répondent `400` avec la liste des ids fautifs.
 - L'écriture requiert la permission d'écriture sur les actifs. Un id d'actif inconnu, supprimé ou étranger répond le même `400` qu'une écriture refusée, pas un `404`.
 

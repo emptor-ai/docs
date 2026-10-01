@@ -85,7 +85,7 @@ curl -X POST "$BASE/v1/buyer/asset/assets" \
 Beteende att känna till:
 
 - `buyerFacilityId` och `buyerCompanyId` **härleds från platsen**, aldrig från kroppen.
-- **Köldmedieöverstyrningar kan rensas.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` och `refrigerantRequiresProcessShutdown` är per-enhet-överstyrningar av tillgångstypens standardvärden. Att utelämna nyckeln behåller det lagrade värdet; ett explicit `null` (eller tom sträng) rensar tillbaka till att ärva från typen. `isRefrigerantTracked` beter sig liknande: utelämnat eller `null` behåller det lagrade värdet, och inskrivningen stängs endast av med ett explicit `false`.
+- **Köldmedieöverstyrningar kan rensas.** `refrigerantTypeCode`, `fullChargeLb`, `applianceCategory` och `refrigerantRequiresProcessShutdown` är per-enhet-överstyrningar av tillgångstypens standardvärden. Att utelämna nyckeln behåller det lagrade värdet; ett explicit `null` (eller tom sträng) rensar tillbaka till att ärva från typen. `isRefrigerantTracked` beter sig liknande: utelämnat eller `null` behåller det lagrade värdet, och endast ett explicit `false` stänger av inskrivningen.
 - `fullChargeLb` på en tillgång följer samma regler för positivt värde och precision som på en [tillgångstyp](#tillgångstyper).
 - **Underliggande tillgångar.** `parentId` gör detta till en underliggande tillgång. Det kräver att underliggande tillgångar är aktiverade för ditt företag, och barnet måste vara på samma plats som föräldern.
 - Att skicka ett `id` uppdaterar en befintlig tillgång.
@@ -127,7 +127,7 @@ curl -X PUT "$BASE/v1/buyer/asset/assets/5511/labels" \
 
 Beteende att känna till:
 
-- Ett saknat `ids` eller ett `ids` som inte är en array, eller ett id som inte är ett heltal, avvisas med `400`.
+- OpenWrench avvisar ett saknat `ids` eller ett `ids` som inte är en array, eller ett id som inte är ett heltal, med `400`.
 - Varje id måste vara en levande etikett från ditt företags katalog. Okända eller tenantöverskridande id:n svarar `400` med de felande id:na listade.
 - Skrivningen kräver skrivbehörighet för tillgångar. Ett okänt, raderat eller främmande tillgångs-id svarar med samma `400` som en nekad skrivning, inte en `404`.
 
