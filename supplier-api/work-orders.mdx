@@ -254,7 +254,24 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
 
 Defaults when omitted: `problemTypeId` falls back to the first leaf problem type of the location's buyer company, and `woPriorityId` to a default priority for that company. An `assetId`, if given, must exist, and its area is inherited when `areaId` is not set. The field is `needApproval` (no "s") on this create body. An `id` in the body is ignored: this call always creates a new work order.
 
-**The server sets the initial status.** For a third-party supplier key, any `status` or `isSupplierInitiated` in the body is ignored. The server creates the work order as `SupplierInitiatedPendingApproval` with `isSupplierInitiated: true`. The buyer's approval configuration then decides where it lands. When the buyer auto-approves supplier-initiated work orders, OpenWrench confirms it to your facility straight away as `ConfirmedByServiceProvider`. Otherwise, it stays in `SupplierInitiatedPendingApproval` until a buyer approves it. Two kinds of keys keep the `status` they send: keys that belong to a buyer's internal service team, and paying suppliers creating a work order at a location of a client they manage. When these keys omit `status`, the initial status is derived from the buyer company's configuration; an internal team lands in `AssignedToInternalTech`.
+**The server sets the initial status.** For a third-party supplier key, any `status` or `isSupplierInitiated` in the body is ignored. The server creates the work order as `SupplierInitiatedPendingApproval` with `isSupplierInitiated: true`. The buyer's approval configuration then decides where it lands. When the buyer auto-approves supplier-initiated work orders, OpenWrench confirms it to your facility straight away as `ConfirmedByServiceProvider`. Otherwise, it stays in `SupplierInitiatedPendingApproval` until a buyer approves it. Two kinds of keys can set `status`: keys that belong to a buyer's internal service team, and paying suppliers creating a work order at a location of a client they manage. When these keys omit `status`, OpenWrench derives the initial status from the buyer company's configuration. An internal team lands in `AssignedToInternalTech`.
+
+**Internal team hand-offs.** An internal service team key can create a work order for another supplier facility by sending that facility's `supplierFacilityId`. This only works when your facility's configuration allows transferring work. OpenWrench treats the create as a hand-off, just like a transfer. If the request sends no `status`, or sends `SupplierInitiatedPendingApproval` (as the contractor mobile app always does), OpenWrench seeds `PendingConfirmationByServiceProvider`. The work order goes to the destination provider to confirm instead of the buyer's supplier-initiated approval queue. A private destination facility still maps to `AssignedToInternalTech`. OpenWrench keeps the `status` as sent in these cases:
+
+- The request sends any other explicit `status`.
+- The `supplierFacilityId` is your own facility.
+- Your facility's configuration doesn't allow transferring work.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Roof leak above stockroom, needs roofing contractor",
+    "locationId": 1204,
+    "supplierFacilityId": 3381
+  }'
+```
 
 ## Problem types
 

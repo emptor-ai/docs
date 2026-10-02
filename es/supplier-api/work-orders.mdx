@@ -254,7 +254,24 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
 
 Valores por defecto cuando se omiten: `problemTypeId` cae al primer tipo de problema hoja de la empresa compradora de la ubicación, y `woPriorityId` a una prioridad por defecto para esa empresa. Un `assetId`, si se da, debe existir, y su área se hereda cuando no se establece `areaId`. El campo es `needApproval` (sin "s") en este cuerpo de creación. Un `id` en el cuerpo se ignora: esta llamada siempre crea una orden de trabajo nueva.
 
-**El servidor fija el estado inicial.** Para una clave de proveedor tercero, cualquier `status` o `isSupplierInitiated` en el cuerpo se ignora. El servidor crea la orden de trabajo como `SupplierInitiatedPendingApproval` con `isSupplierInitiated: true`. La configuración de aprobaciones del comprador decide después dónde queda. Cuando el comprador aprueba automáticamente las órdenes de trabajo iniciadas por el proveedor, OpenWrench la confirma de inmediato a tu instalación como `ConfirmedByServiceProvider`. De lo contrario, permanece en `SupplierInitiatedPendingApproval` hasta que un comprador la apruebe. Dos tipos de claves conservan el `status` que envían: las claves que pertenecen al equipo de servicio interno de un comprador y los proveedores de pago que crean una orden de trabajo en una ubicación de un cliente que gestionan. Si estas claves omiten `status`, el estado inicial se deriva de la configuración de la empresa compradora; un equipo interno queda en `AssignedToInternalTech`.
+**El servidor fija el estado inicial.** Para una clave de proveedor tercero, cualquier `status` o `isSupplierInitiated` en el cuerpo se ignora. El servidor crea la orden de trabajo como `SupplierInitiatedPendingApproval` con `isSupplierInitiated: true`. La configuración de aprobaciones del comprador decide después dónde queda. Cuando el comprador aprueba automáticamente las órdenes de trabajo iniciadas por el proveedor, OpenWrench la confirma de inmediato a tu instalación como `ConfirmedByServiceProvider`. De lo contrario, permanece en `SupplierInitiatedPendingApproval` hasta que un comprador la apruebe. Dos tipos de claves pueden fijar `status`: las claves que pertenecen al equipo de servicio interno de un comprador y los proveedores de pago que crean una orden de trabajo en una ubicación de un cliente que gestionan. Si estas claves omiten `status`, OpenWrench deriva el estado inicial de la configuración de la empresa compradora. Un equipo interno queda en `AssignedToInternalTech`.
+
+**Traspasos del equipo interno.** Una clave del equipo de servicio interno puede crear una orden de trabajo para otra instalación de proveedor enviando el `supplierFacilityId` de esa instalación. Esto solo funciona si la configuración de tu instalación permite transferir trabajo. OpenWrench trata la creación como un traspaso, igual que una transferencia. Si la solicitud no envía `status`, o envía `SupplierInitiatedPendingApproval` (como hace siempre la app móvil de contratistas), OpenWrench fija `PendingConfirmationByServiceProvider`. La orden de trabajo va al proveedor de destino para que la confirme, en lugar de a la cola de aprobación de trabajos iniciados por el proveedor del comprador. Una instalación de destino privada sigue correspondiendo a `AssignedToInternalTech`. OpenWrench conserva el `status` tal como se envió en estos casos:
+
+- La solicitud envía cualquier otro `status` explícito.
+- El `supplierFacilityId` es tu propia instalación.
+- La configuración de tu instalación no permite transferir trabajo.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Gotera en el techo sobre el almacén, requiere techador",
+    "locationId": 1204,
+    "supplierFacilityId": 3381
+  }'
+```
 
 ## Tipos de problema
 
