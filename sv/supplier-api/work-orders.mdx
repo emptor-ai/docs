@@ -254,7 +254,24 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
 
 Standardvärden vid utelämning: `problemTypeId` faller tillbaka till den första löv-problemtypen för platsens köparföretag, och `woPriorityId` till en standardprioritet för det företaget. Ett `assetId`, om det anges, måste existera, och dess område ärvs när `areaId` inte är satt. Fältet heter `needApproval` (utan "s") i den här skapa-kroppen. Ett `id` i kroppen ignoreras: det här anropet skapar alltid en ny arbetsorder.
 
-**Servern sätter den initiala statusen.** För en tredjepartsleverantörs nyckel ignoreras `status` och `isSupplierInitiated` i kroppen. Servern skapar arbetsordern som `SupplierInitiatedPendingApproval` med `isSupplierInitiated: true`. Köparens godkännandekonfiguration avgör sedan var den hamnar. När köparen automatiskt godkänner leverantörsinitierade arbetsordrar bekräftar OpenWrench den direkt till din anläggning som `ConfirmedByServiceProvider`. Annars stannar den i `SupplierInitiatedPendingApproval` tills en köpare godkänner den. Två typer av nycklar behåller den `status` de skickar: nycklar som tillhör en köpares interna serviceteam, och betalande leverantörer som skapar en arbetsorder på en plats hos en kund de förvaltar. Om dessa nycklar utelämnar `status` härleds den initiala statusen från köparföretagets konfiguration; ett internt team hamnar i `AssignedToInternalTech`.
+**Servern sätter den initiala statusen.** För en tredjepartsleverantörs nyckel ignoreras `status` och `isSupplierInitiated` i kroppen. Servern skapar arbetsordern som `SupplierInitiatedPendingApproval` med `isSupplierInitiated: true`. Köparens godkännandekonfiguration avgör sedan var den hamnar. När köparen automatiskt godkänner leverantörsinitierade arbetsordrar bekräftar OpenWrench den direkt till din anläggning som `ConfirmedByServiceProvider`. Annars stannar den i `SupplierInitiatedPendingApproval` tills en köpare godkänner den. Två typer av nycklar kan sätta `status`: nycklar som tillhör en köpares interna serviceteam, och betalande leverantörer som skapar en arbetsorder på en plats hos en kund de förvaltar. Om dessa nycklar utelämnar `status` härleder OpenWrench den initiala statusen från köparföretagets konfiguration. Ett internt team hamnar i `AssignedToInternalTech`.
+
+**Överlämningar från internt team.** En nyckel för ett internt serviceteam kan skapa en arbetsorder för en annan leverantörsanläggning genom att skicka den anläggningens `supplierFacilityId`. Det fungerar bara när din anläggnings konfiguration tillåter överföring av arbete. OpenWrench behandlar då skapandet som en överlämning, precis som en överföring. Om begäran inte skickar någon `status`, eller skickar `SupplierInitiatedPendingApproval` (som entreprenörernas mobilapp alltid gör), sätter OpenWrench `PendingConfirmationByServiceProvider`. Arbetsordern går till mottagande leverantör för bekräftelse i stället för till köparens godkännandekö för leverantörsinitierade arbetsordrar. En privat mottagaranläggning mappas fortfarande till `AssignedToInternalTech`. OpenWrench behåller `status` som den skickades i dessa fall:
+
+- Begäran skickar någon annan uttrycklig `status`.
+- `supplierFacilityId` är din egen anläggning.
+- Din anläggnings konfiguration tillåter inte överföring av arbete.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Takläcka ovanför lagret, kräver takläggare",
+    "locationId": 1204,
+    "supplierFacilityId": 3381
+  }'
+```
 
 ## Problemtyper
 
