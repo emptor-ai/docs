@@ -176,7 +176,7 @@
       "get": {
         "operationId": "countLocations",
         "summary": "Count locations",
-        "description": "Counts locations visible to the supplier key. Accepts the same query-string filters as the list endpoint. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Counts locations visible to the supplier key. Accepts the same query-string filters as the list endpoint. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden. Filtering: the supported filters are listed as parameters below. A singular key takes one value; the plural key takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that isn't a supported filter is ignored rather than rejected. Dates use `MM/dd/yyyy HH:mm:ss` in UTC, and an `…EndDate` covers the whole day named. `sort_by` supports `name` (the default), `id`, and `locationTypeId`. Inactive locations are left out unless you ask for them.",
         "tags": [
           "Locations"
         ],
@@ -221,14 +221,43 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/locFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_search"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_storeId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_ids"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_regionId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_regionIds"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_brandId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_brandIds"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_noIsActiveFilter"
+          }
+        ]
       }
     },
     "/v1/supplier/location/locations": {
       "get": {
         "operationId": "listLocations",
         "summary": "List locations",
-        "description": "Lists locations visible to the supplier key. NOTE: on this endpoint the page size is capped at 10 (a larger limit is silently reduced to 10). For third-party suppliers each location is masked (buyer-private fields blanked); internal-service-team keys receive the full record. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists locations visible to the supplier key. NOTE: on this endpoint the page size is capped at 10 (a larger limit is silently reduced to 10). For third-party suppliers each location is masked (buyer-private fields blanked); internal-service-team keys receive the full record. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden. Filtering: the supported filters are listed as parameters below. A singular key takes one value; the plural key takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that isn't a supported filter is ignored rather than rejected. Dates use `MM/dd/yyyy HH:mm:ss` in UTC, and an `…EndDate` covers the whole day named. `sort_by` supports `name` (the default), `id`, and `locationTypeId`. Inactive locations are left out unless you ask for them.",
         "tags": [
           "Locations"
         ],
@@ -315,6 +344,33 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_search"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_storeId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_ids"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_regionId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_regionIds"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_brandId"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_brandIds"
+          },
+          {
+            "$ref": "#/components/parameters/locFilter_noIsActiveFilter"
           }
         ]
       }
@@ -798,7 +854,7 @@
       "get": {
         "operationId": "listAssets",
         "summary": "List assets",
-        "description": "Lists assets visible to the supplier key. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists assets visible to the supplier key. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden. Filtering: the supported filters are listed as parameters below. A singular key takes one value; the plural key takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that isn't a supported filter is ignored rather than rejected. Dates use `MM/dd/yyyy HH:mm:ss` in UTC, and an `…EndDate` covers the whole day named. `sort_by` supports `id` (the default), `assetNumber`, `name`, `serialNumber`, `modelNumber`, and `locationId`. Inactive assets are left out unless you ask for them.",
         "tags": [
           "Assets"
         ],
@@ -885,6 +941,54 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_assetTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_assetTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_serialNumber"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_containsSerialNumber"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_assetNumber"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_name"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_modelNumber"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_manufacturer"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_downtimeStatus"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_updatedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_updatedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_noActiveFilter"
+          },
+          {
+            "$ref": "#/components/parameters/assetFilter_search"
           }
         ]
       }
@@ -4600,7 +4704,7 @@
       "get": {
         "operationId": "listProposals",
         "summary": "List proposals",
-        "description": "Lists the supplier's proposals (quotes), tenant- and role-scoped. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists the supplier's proposals (quotes), tenant- and role-scoped. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden. Filtering: the supported filters are listed as parameters below. A singular key takes one value; the plural key takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that isn't a supported filter is ignored rather than rejected. Dates use `MM/dd/yyyy HH:mm:ss` in UTC, and an `…EndDate` covers the whole day named. `sort_by` supports `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, and `supplierFacilityId`. With no `sort_by`, or any other value, proposals come back by id ascending and `order` is ignored. There is no count endpoint; the list's `count` is the total number of matches.",
         "tags": [
           "Proposals"
         ],
@@ -4687,6 +4791,45 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_workOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_search"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_requestForProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_isRFPNull"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_approvedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_approvedAtEndDate"
           }
         ]
       },
@@ -5136,7 +5279,7 @@
       "get": {
         "operationId": "listInvoices",
         "summary": "List invoices",
-        "description": "Lists the supplier's invoices, tenant- and role-scoped. Masked for third-party suppliers. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists the supplier's invoices, tenant- and role-scoped. Masked for third-party suppliers. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden. Filtering: the supported filters are listed as parameters below. A singular key takes one value; the plural key takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that isn't a supported filter is ignored rather than rejected. Dates use `MM/dd/yyyy HH:mm:ss` in UTC, and an `…EndDate` covers the whole day named. `sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, and `supplierFacilityId`. With no `sort_by`, invoices come newest first; with one, `order` defaults to `asc`. Any other `sort_by` value sorts by `createdAt`.",
         "tags": [
           "Invoices"
         ],
@@ -5223,6 +5366,66 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_workOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_invoiceNumber"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_search"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_publishedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_publishedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_approvedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_approvedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_processedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_processedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_markedPaidAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_markedPaidAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_dueAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_dueAtEndDate"
           }
         ]
       },
@@ -17577,6 +17780,586 @@
             "true",
             "false"
           ]
+        }
+      },
+      "invFilter_status": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Your invoices in one status: `draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, or `void`. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "pending"
+      },
+      "invFilter_statuses": {
+        "name": "statuses",
+        "in": "query",
+        "required": false,
+        "description": "Your invoices in these statuses: `draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, or `void`. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "approved,processing"
+      },
+      "invFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Narrow to one client (buyer company). Get ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Your own scoping still applies, so this only narrows.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 88
+      },
+      "invFilter_workOrderId": {
+        "name": "workOrderId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for one work order.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 9001
+      },
+      "invFilter_invoiceNumber": {
+        "name": "invoiceNumber",
+        "in": "query",
+        "required": false,
+        "description": "Your invoice number, matched exactly.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_search": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Words in the work order title, or an exact invoice id, invoice number, work order id, PO number, or GL code.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for these locations. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 1204
+      },
+      "invFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for these locations. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1204,1310"
+      },
+      "invFilter_createdAtStartDate": {
+        "name": "createdAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest invoice creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_createdAtEndDate": {
+        "name": "createdAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest invoice creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_publishedAtStartDate": {
+        "name": "publishedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time you sent the invoice to the client to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_publishedAtEndDate": {
+        "name": "publishedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time you sent the invoice to the client to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_approvedAtStartDate": {
+        "name": "approvedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the client approved the invoice to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_approvedAtEndDate": {
+        "name": "approvedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the client approved the invoice to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_processedAtStartDate": {
+        "name": "processedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the invoice entered the client's payment run to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_processedAtEndDate": {
+        "name": "processedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the invoice entered the client's payment run to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_markedPaidAtStartDate": {
+        "name": "markedPaidAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the client marked the invoice paid to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_markedPaidAtEndDate": {
+        "name": "markedPaidAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the client marked the invoice paid to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_dueAtStartDate": {
+        "name": "dueAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest payment due date to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_dueAtEndDate": {
+        "name": "dueAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest payment due date to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "propFilter_status": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "Your proposals in one status: `draft`, `pending`, `awarded`, or `declined`. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "awarded"
+      },
+      "propFilter_statuses": {
+        "name": "statuses",
+        "in": "query",
+        "required": false,
+        "description": "Your proposals in these statuses: `draft`, `pending`, `awarded`, or `declined`. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "pending,awarded"
+      },
+      "propFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Narrow to one client (buyer company). Get ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Your own scoping still applies, so this only narrows.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 88
+      },
+      "propFilter_workOrderId": {
+        "name": "workOrderId",
+        "in": "query",
+        "required": false,
+        "description": "Proposals on one work order.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 9001
+      },
+      "propFilter_search": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Words in the work order title, or an exact proposal id or work order id.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "propFilter_requestForProposalId": {
+        "name": "requestForProposalId",
+        "in": "query",
+        "required": false,
+        "description": "Your bids on one request for proposal.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "propFilter_isRFPNull": {
+        "name": "isRFPNull",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns proposals that aren't RFP bids; `false` returns only RFP bids.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "propFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Proposals for these locations. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 1204
+      },
+      "propFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Proposals for these locations. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1204,1310"
+      },
+      "propFilter_createdAtStartDate": {
+        "name": "createdAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest proposal creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "propFilter_createdAtEndDate": {
+        "name": "createdAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest proposal creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "propFilter_approvedAtStartDate": {
+        "name": "approvedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the client awarded the proposal to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "propFilter_approvedAtEndDate": {
+        "name": "approvedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the client awarded the proposal to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "locFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Narrow to one client (buyer company). Get ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Your own scoping still applies, so this only narrows.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 88
+      },
+      "locFilter_search": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Words in the location name, description, store id, or address, or the location id.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "locFilter_storeId": {
+        "name": "storeId",
+        "in": "query",
+        "required": false,
+        "description": "The store number for the location, matched exactly.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "4521"
+      },
+      "locFilter_ids": {
+        "name": "ids",
+        "in": "query",
+        "required": false,
+        "description": "Several locations in one call. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1204,1205"
+      },
+      "locFilter_regionId": {
+        "name": "regionId",
+        "in": "query",
+        "required": false,
+        "description": "Locations in these regions. Only locations directly in a region match, not those in its child regions. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 4
+      },
+      "locFilter_regionIds": {
+        "name": "regionIds",
+        "in": "query",
+        "required": false,
+        "description": "Locations in these regions. Only locations directly in a region match, not those in its child regions. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "4,7"
+      },
+      "locFilter_brandId": {
+        "name": "brandId",
+        "in": "query",
+        "required": false,
+        "description": "Locations of these brands. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 2
+      },
+      "locFilter_brandIds": {
+        "name": "brandIds",
+        "in": "query",
+        "required": false,
+        "description": "Locations of these brands. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "2,5"
+      },
+      "locFilter_noIsActiveFilter": {
+        "name": "noIsActiveFilter",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns active and inactive locations together.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "assetFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Narrow to one client (buyer company). Get ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Your own scoping still applies, so this only narrows.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 88
+      },
+      "assetFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Assets at these locations. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 1204
+      },
+      "assetFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Assets at these locations. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1204,1310"
+      },
+      "assetFilter_assetTypeId": {
+        "name": "assetTypeId",
+        "in": "query",
+        "required": false,
+        "description": "Assets of these asset types. One value. To match several, use the plural key.",
+        "schema": {
+          "type": "integer"
+        },
+        "example": 31
+      },
+      "assetFilter_assetTypeIds": {
+        "name": "assetTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Assets of these asset types. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "31,32"
+      },
+      "assetFilter_serialNumber": {
+        "name": "serialNumber",
+        "in": "query",
+        "required": false,
+        "description": "The serial number, matched exactly. Use `containsSerialNumber` to match part of one.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "assetFilter_containsSerialNumber": {
+        "name": "containsSerialNumber",
+        "in": "query",
+        "required": false,
+        "description": "Assets whose serial number contains this text.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "assetFilter_assetNumber": {
+        "name": "assetNumber",
+        "in": "query",
+        "required": false,
+        "description": "The OpenWrench asset number, matched exactly.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "assetFilter_name": {
+        "name": "name",
+        "in": "query",
+        "required": false,
+        "description": "Assets whose name contains this text.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "assetFilter_modelNumber": {
+        "name": "modelNumber",
+        "in": "query",
+        "required": false,
+        "description": "Assets whose model number contains this text.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "assetFilter_manufacturer": {
+        "name": "manufacturer",
+        "in": "query",
+        "required": false,
+        "description": "Assets whose manufacturer contains this text.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "assetFilter_downtimeStatus": {
+        "name": "downtimeStatus",
+        "in": "query",
+        "required": false,
+        "description": "`offline` returns assets that are currently down; `online` returns assets in service.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "online",
+            "offline"
+          ]
+        }
+      },
+      "assetFilter_updatedAtStartDate": {
+        "name": "updatedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest change time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970, so the filter then matches everything.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "assetFilter_updatedAtEndDate": {
+        "name": "updatedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest change time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC. The bound covers the whole day named, whatever time you send. A value that doesn't parse is read as 1 January 1970, so the filter then matches nothing.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "assetFilter_noActiveFilter": {
+        "name": "noActiveFilter",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns active and inactive assets together. Inactive assets are left out by default.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "assetFilter_search": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Words in the asset name, description, location name, or asset type name, or an exact asset number or serial number.",
+        "schema": {
+          "type": "string"
         }
       }
     }

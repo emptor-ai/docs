@@ -62,7 +62,38 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/assets/5
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_types?limit=25"
 ```
 
-The single-asset read hydrates the asset's meters (envelope type `ApiAssetWithMeter`), which gives your techs meter history context before a visit. All four endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) are read-only with standard pagination and field filters.
+The single-asset read hydrates the asset's meters (envelope type `ApiAssetWithMeter`), which gives your techs meter history context before a visit. All four endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) are read-only with standard pagination; the asset list takes the [filters below](#location-and-asset-filters).
+
+### Location and asset filters
+
+The location list and its `count_by`, and the asset list, take these filters, following the [filter value rules](/supplier-api/introduction#filter-value-rules). Inactive locations and assets are left out unless you ask for them.
+
+**Locations**
+
+| Filter | Matches |
+| --- | --- |
+| `buyerCompanyId` | Locations of one client. |
+| `search` | Words in the location name, description, store id, or address, or the location id. |
+| `storeId` | The client's store number for the location, matched exactly. |
+| `ids` | Several locations in one call: `ids=1204,1205`. |
+| `regionId`, `regionIds` | Locations in these regions. Only locations directly in a region match, not those in its child regions. |
+| `brandId`, `brandIds` | Locations of these brands. |
+| `noIsActiveFilter` | `true` returns active and inactive locations together. |
+
+**Assets**
+
+| Filter | Matches |
+| --- | --- |
+| `buyerCompanyId` | Assets of one client. |
+| `locationId`, `locationIds` | Assets at these locations. |
+| `assetTypeId`, `assetTypeIds` | Assets of these types. |
+| `search` | Words in the asset name, description, location name, or asset type name, or an exact asset number or serial number. |
+| `serialNumber` | The serial number, matched exactly. Use `containsSerialNumber` to match part of one. |
+| `assetNumber` | The OpenWrench asset number, matched exactly. |
+| `name`, `modelNumber`, `manufacturer` | Assets whose name, model number, or manufacturer contains this text. |
+| `downtimeStatus` | `offline` returns assets that are currently down; `online` returns assets in service. |
+| `updatedAtStartDate`, `updatedAtEndDate` | Assets changed within the window. Use this for incremental syncs. |
+| `noActiveFilter` | `true` returns active and inactive assets together. |
 
 ## Asset labels
 

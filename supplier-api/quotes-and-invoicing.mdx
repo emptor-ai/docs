@@ -54,6 +54,33 @@ Behavior to know:
 
 Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or `declined` (decline reasons appear in `declineNotes`). List with `GET /v1/supplier/quote/proposals`, read one with `GET /v1/supplier/quote/proposals/{id}`.
 
+```bash
+# Proposals a client awarded since the start of September
+curl -G "$BASE/v1/supplier/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=awarded" \
+  --data-urlencode "approvedAtStartDate=09/01/2026 00:00:00" \
+  -d buyerCompanyId=88 -d sort_by=createdAt -d order=desc
+```
+
+### Proposal filters
+
+The list response carries the total number of matches in `count`; there's no separate count endpoint. Values follow the [filter value rules](/supplier-api/introduction#filter-value-rules).
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | Your proposals in these statuses: `draft`, `pending`, `awarded`, or `declined`. |
+| `buyerCompanyId` | Proposals to one client. |
+| `workOrderId` | Proposals on one work order. |
+| `search` | Words in the work order title, or an exact proposal id or work order id. |
+| `requestForProposalId` | Your bids on one request for proposal. |
+| `isRFPNull` | `true` returns proposals that aren't RFP bids; `false` returns only RFP bids. |
+| `locationId`, `locationIds` | Proposals for these locations. |
+| `createdAtStartDate`, `createdAtEndDate` | When you created the proposal. |
+| `approvedAtStartDate`, `approvedAtEndDate` | When the client awarded the proposal. |
+
+`sort_by` supports `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, and `locationId`. With no `sort_by`, or a value not on that list, proposals come back by id in ascending order.
+
 ## Invoices
 
 ### The lifecycle
@@ -107,7 +134,37 @@ Each precondition failing returns `400`: your facility must own the invoice, the
 
 ### Read and reconcile
 
-`GET /v1/supplier/invoice/invoices` (filterable, for example `?status=pending`) and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your accounts receivable (AR) ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
+`GET /v1/supplier/invoice/invoices` and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your accounts receivable (AR) ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
+
+```bash
+# Invoices a client paid in August
+curl -G "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "markedPaidAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "markedPaidAtEndDate=08/31/2026 00:00:00" \
+  -d buyerCompanyId=88 -d limit=25
+```
+
+### Invoice filters
+
+Values follow the [filter value rules](/supplier-api/introduction#filter-value-rules).
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | Your invoices in these statuses, including your own `draft` invoices, for example `statuses=approved,processing` for invoices on their way to payment. |
+| `buyerCompanyId` | Invoices to one client. |
+| `workOrderId` | Invoices for one work order. |
+| `invoiceNumber` | Your invoice number, matched exactly. |
+| `search` | Words in the work order title, or an exact invoice id, invoice number, work order id, PO number, or GL code. |
+| `locationId`, `locationIds` | Invoices for these locations. |
+| `createdAtStartDate`, `createdAtEndDate` | When you created the invoice. |
+| `publishedAtStartDate`, `publishedAtEndDate` | When you sent the invoice to the client. |
+| `approvedAtStartDate`, `approvedAtEndDate` | When the client approved the invoice. |
+| `processedAtStartDate`, `processedAtEndDate` | When the invoice entered the client's payment run. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | When the client marked the invoice paid. |
+| `dueAtStartDate`, `dueAtEndDate` | The invoice's payment due date. |
+
+`sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, and `locationId`. With no `sort_by`, invoices come newest first. When you pass `sort_by`, `order` defaults to `asc`.
 
 ## End-to-end billing flow
 

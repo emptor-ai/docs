@@ -70,11 +70,33 @@ Errors:
 
 ## Pagination and filtering
 
-List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). The API treats additional query parameters as filters. Each endpoint supports its own set of filter keys, and keys it does not recognize are ignored rather than rejected. Multi-value filters use a plural key with comma-separated values (`statuses=Unassigned,PendingApproval`). For work orders, see the [filter reference](/buyer-api/work-orders#filter-reference).
+List endpoints accept `offset`, `limit`, `sort_by`, and `order` (`asc` or `desc`; anything other than `asc` sorts descending, and `asc` is the default). `limit` defaults to 10 and goes up to 25. A `limit` above 25 isn't clamped: it's ignored and you get the default page of 10. The location list is capped at 10 per page.
+
+The API reads every other query parameter as a filter. Filters combine with AND, and always with the tenant scoping derived from your key, so you only ever see your company's records. Each endpoint supports its own set of filter keys:
+
+| Endpoint | Filter reference |
+| --- | --- |
+| Work orders | [Work order filters](/buyer-api/work-orders#filter-reference) |
+| Invoices | [Invoice filters](/buyer-api/invoices#filter-reference) |
+| Quotes and proposals | [Proposal filters](/buyer-api/quotes-and-proposals#filter-reference) |
+| Locations and assets | [Location filters](/buyer-api/assets-and-locations#location-filters) and [asset filters](/buyer-api/assets-and-locations#asset-filters) |
+| Planned maintenance | [Schedule filters](/buyer-api/planned-maintenance#filter-reference) |
+| Site survey walkthroughs | [Walkthrough filters](/buyer-api/site-survey-walkthroughs#filter-reference) |
+
+### Filter value rules
+
+These rules apply to every list except work orders, which resolve filters in a search index and have [their own rules](/buyer-api/work-orders#filter-value-rules).
+
+- **Keys are case-sensitive.** A query parameter that isn't a supported filter, including a misspelled key, is ignored rather than rejected, and the request still succeeds. Before relying on a new filter, compare a count with and without it.
+- **Use the plural key for several values.** A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values. Don't put spaces after the commas. If you repeat a parameter, only the first value is used.
+- **Ids are whole numbers.** A malformed id never widens the result: it matches nothing, or fails the request with a `500` rather than a `400`.
+- **Booleans are `true` or `false`.**
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. URL-encode the value (`curl -G --data-urlencode` does this for you). A `…StartDate` filter starts at the time you give. A `…EndDate` filter covers the whole day you name, whatever time you send. A date that doesn't parse is read as 1 January 1970, so a bad start date matches everything and a bad end date matches nothing. Planned maintenance `nextScheduledStartAt` and `nextScheduledEndAt` are the exception: they take `yyyy-MM-ddTHH:mm:ss`.
+- **Tenant scoping can't be overridden.** `buyerCompanyId` is always set from your API key, so passing it has no effect.
 
 ## Date formats
 
-Most timestamps are ISO 8601 strings with offset (for example, `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`. When sending date-times, use ISO 8601. Date filters on the work order list are the exception: they take `MM/dd/yyyy HH:mm:ss` in UTC (see [filter value rules](/buyer-api/work-orders#filter-value-rules)).
+Most timestamps are ISO 8601 strings with offset (for example, `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`. When sending date-times, use ISO 8601. Date filters on list endpoints are the exception: they take `MM/dd/yyyy HH:mm:ss` in UTC (see [filter value rules](#filter-value-rules)).
 
 ## Detailed guides
 

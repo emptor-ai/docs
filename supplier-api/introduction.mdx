@@ -66,13 +66,32 @@ Errors:
 
 ## Pagination and filtering
 
-List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `order` (`asc` | `desc`). Additional query parameters are treated as filters. Each endpoint supports its own set of filter keys, and keys it does not recognize are ignored rather than rejected. Multi-value filters use a plural key with comma-separated values (`statuses=TechScheduled,TechRescheduled`). For work orders, see the [filter reference](/supplier-api/work-orders#filter-reference).
+List endpoints accept `offset`, `limit`, `sort_by`, and `order` (`asc` or `desc`; anything other than `asc` sorts descending, and `asc` is the default). `limit` defaults to 10 and goes up to 25. A `limit` above 25 isn't clamped: it's ignored and you get the default page of 10. The location list is capped at 10 per page.
+
+The API reads every other query parameter as a filter. Filters combine with AND, and always with the scoping derived from your key, so you only ever see records you have access to. Each endpoint supports its own set of filter keys:
+
+| Endpoint | Filter reference |
+| --- | --- |
+| Work orders | [Work order filters](/supplier-api/work-orders#filter-reference) |
+| Invoices and proposals | [Invoice filters](/supplier-api/quotes-and-invoicing#invoice-filters) and [proposal filters](/supplier-api/quotes-and-invoicing#proposal-filters) |
+| Locations and assets | [Location and asset filters](/supplier-api/reference-data#location-and-asset-filters) |
+
+### Filter value rules
+
+These rules apply to every list except work orders, which resolve filters in a search index and have [their own rules](/supplier-api/work-orders#filter-value-rules).
+
+- **Keys are case-sensitive.** A query parameter that isn't a supported filter, including a misspelled key, is ignored rather than rejected, and the request still succeeds. Before relying on a new filter, compare results with and without it.
+- **Use the plural key for several values.** A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values. Don't put spaces after the commas. If you repeat a parameter, only the first value is used.
+- **Ids are whole numbers.** A malformed id never widens the result: it matches nothing, or fails the request with a `500` rather than a `400`.
+- **Booleans are `true` or `false`.**
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. URL-encode the value (`curl -G --data-urlencode` does this for you). A `…StartDate` filter starts at the time you give. A `…EndDate` filter covers the whole day you name, whatever time you send. A date that doesn't parse is read as 1 January 1970, so a bad start date matches everything and a bad end date matches nothing.
+- **Narrow to one client with `buyerCompanyId`.** On invoice, proposal, location, and asset lists, `buyerCompanyId` limits results to one buyer you work for. Get ids from [`GET /v1/supplier/buyer_company/buyer_companies`](/supplier-api/reference-data#buyer-companies). Your own scoping still applies, so this only narrows.
 
 ## Date formats
 
 Most timestamps are ISO 8601 strings with offset (for example, `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`.
 
-When sending date-times, use ISO 8601 with a `T` between the date and time and an explicit offset. A space-separated value such as `2026-09-10 10:43:00+00:00` is not ISO 8601 and is rejected; send `2026-09-10T10:43:00.000+00:00` instead. UTC may be written as `+00:00` or `Z`. Date filters on the work order list are the exception: they take `MM/dd/yyyy HH:mm:ss` in UTC (see [filter value rules](/supplier-api/work-orders#filter-value-rules)).
+When sending date-times, use ISO 8601 with a `T` between the date and time and an explicit offset. A space-separated value such as `2026-09-10 10:43:00+00:00` is not ISO 8601 and is rejected; send `2026-09-10T10:43:00.000+00:00` instead. UTC may be written as `+00:00` or `Z`. Date filters on list endpoints are the exception: they take `MM/dd/yyyy HH:mm:ss` in UTC (see [filter value rules](#filter-value-rules)).
 
 ## Technician time data
 

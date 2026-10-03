@@ -28,23 +28,79 @@ Statuses persist lowercase.
 ## Reading proposals
 
 ```bash
-# Pending proposals across the company
+# Pending proposals across the company, newest first
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+  "$BASE/v1/buyer/quote/proposals?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Proposals on one work order
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/quote/proposals?workOrderId=9001"
 
+# Proposals awarded in August
+curl -G "$BASE/v1/buyer/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=awarded" \
+  --data-urlencode "approvedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "approvedAtEndDate=08/31/2026 00:00:00"
+
 # One proposal
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/quote/proposals/3320"
 ```
+
+There is no separate count endpoint for proposals: the list response carries the total number of matches in `count`, so `limit=1` gets you a count cheaply.
 
 Scoping rules worth knowing:
 
 - Suppliers' unsubmitted drafts are always excluded from lists.
 - If your API key's contact is location-restricted, you only see proposals for accessible locations. A contact with an empty accessible set gets an empty page, not an error.
 - The single read returns `404` for soft-deleted proposals, drafts, and proposals outside your location scope. Treat `404` as "not visible to you", not necessarily "does not exist".
+
+### Filter reference
+
+Values follow the [filter value rules](/buyer-api/introduction#filter-value-rules): plural keys take a comma-separated list, and dates use `MM/dd/yyyy HH:mm:ss` in UTC.
+
+**Status and work order**
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | Proposals in these statuses: `pending`, `awarded`, or `declined`. Separate several with commas and no spaces: `statuses=pending,awarded`. |
+| `id` | One proposal by id. |
+| `workOrderId` | Proposals on one work order. |
+| `search` | Words in the work order title, or an exact proposal id or work order id. |
+| `requestForProposalId` | Bids submitted against one request for proposal. |
+| `isRFPNull` | `true` returns proposals that aren't bids on a request for proposal; `false` returns only RFP bids. |
+| `isCapex` | `true` returns proposals on capital expense work orders; `false` leaves them out. |
+
+**What and where**
+
+| Filter | Matches |
+| --- | --- |
+| `locationId`, `locationIds` | Proposals for these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
+| `regionIds` | Proposals whose work order is at a location in one of these regions. Only locations directly in a region match, not those in its child regions. |
+| `problemTypeIds` | Proposals whose work order has one of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). |
+| `woPriorityIds` | Proposals whose work order has one of these priorities. |
+| `spendCategoryIds` | Proposals whose work order is in one of these spend categories. |
+
+**Who**
+
+| Filter | Matches |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds` | Proposals from these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). |
+
+**Dates**
+
+Each date has a `…StartDate` and an `…EndDate` key. Send either one on its own for an open-ended range.
+
+| Filter | Matches |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | When the supplier created the proposal. |
+| `approvedAtStartDate`, `approvedAtEndDate` | When your team awarded the proposal. |
+| `workCreatedAtStartDate`, `workCreatedAtEndDate` | When the proposal's work order was created. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | When the proposal's work order was completed. |
+
+**Sorting**
+
+`sort_by` supports `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, and `supplierFacilityId`, with `order` defaulting to `asc`. With no `sort_by`, or a value not on that list, proposals come back by id in ascending order and `order` is ignored. Sorting by `submittedAt` or `status` isn't supported.
 
 ## Inside a proposal
 
@@ -58,4 +114,4 @@ Other useful fields: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApp
 2. Your approvers award or decline it in the app. Award raises the effective spend ceiling for the job.
 3. When the final [invoice](/buyer-api/invoices) arrives, compare `invoiceTotalAfterTax` against the awarded proposal's `totalAfterTax` before approving payment. Flag variances above your tolerance for human review.
 
-A practical polling loop for a procurement dashboard: filter `status=pending`, sort by `submittedAt`, and page with `limit=25`, respecting the rate limit of 10 requests per 20-second window.
+A practical polling loop for a procurement dashboard: filter `status=pending`, sort with `sort_by=createdAt&order=desc`, and page with `limit=25`, respecting the rate limit of 10 requests per 20-second window.

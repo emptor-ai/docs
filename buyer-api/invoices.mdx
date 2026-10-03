@@ -33,13 +33,21 @@ The buyer-controlled path is `pending → approved → processing → paid`. Eac
 ## Reading invoices
 
 ```bash
-# Pending invoices, newest first
+# Invoices waiting for your review, newest first
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Count only
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/invoice/invoices/count_by?status=pending"
+
+# Invoices you approved in August at two locations
+curl -G "$BASE/v1/buyer/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "locationIds=1204,1310" \
+  --data-urlencode "approvedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "approvedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25
 
 # One invoice
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/7710"
@@ -47,19 +55,66 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/
 
 An invoice links back to its `supplierFacilityId` plus **exactly one** of `workOrderId` or `projectId` (the other is `null`, along with the hydrated `workOrder` / `project`). Work-order invoices always carry `locationId` and `buyerFacilityId`; project invoices carry them only when the client supplied them, so both can be `null`. The invoice carries the money breakdown in sections (labor, material, travel, freight, misc). Each section has line items, a `taxRate`, and a `totalBeforeTax`, and the sections roll up to `invoiceTotalBeforeTax`, `invoiceTax`, and `invoiceTotalAfterTax`. Monetary values serialize as strings. A short AI-derived summary of the scope may appear in `title`. The rendered PDF is in `invoicePDFs`; supporting files are in `attachments` (see [Files and attachments](/buyer-api/files-and-attachments)).
 
-### Filtering by entity type
+`GET /invoices`, `/invoices/count_by`, and `/invoices/download` accept the same filters, so a count always describes the list it goes with. Supplier drafts are never returned.
 
-Add `invoiceEntityType=work_order` or `invoiceEntityType=project` to `GET /invoices`, `/invoices/count_by`, and `/invoices/download` to narrow to one tab; omit it to get both. `projectId` and `projectIdSeq` filter to specific projects the same way `workOrderId` / `workOrderIdSeq` filter to specific work orders.
+### Filter reference
 
-```bash
-# Just project invoices for this project
-curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
-```
+Values follow the [filter value rules](/buyer-api/introduction#filter-value-rules): plural keys take a comma-separated list, and dates use `MM/dd/yyyy HH:mm:ss` in UTC.
+
+**Status and identity**
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | Invoices in these statuses, for example `statuses=approved,processing` for your payment run. Values are listed under [invoice statuses](#invoice-statuses). |
+| `id` | One invoice by id. |
+| `invoiceNumber` | The supplier's invoice number, matched exactly. |
+| `search` | Words in the work order title, or an exact invoice id, invoice number, work order id, external work order id, PO number, or GL code. |
+| `invoiceEntityType` | `work_order` returns work-order invoices and `project` returns project invoices. Omit it to get both. |
+| `workOrderId` | Invoices for one work order. |
+| `projectId` | Invoices for one project. |
+| `hasPONumber`, `hasGLCode` | `true` returns invoices that carry a PO number (or GL code); `false` returns invoices without one. Useful for finding invoices your AP system can't post yet. |
+
+**What and where**
+
+| Filter | Matches |
+| --- | --- |
+| `locationId`, `locationIds` | Invoices for these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
+| `regionIds` | Invoices for locations in these regions. Only locations directly in a region match, not those in its child regions. |
+| `problemTypeId`, `problemTypeIds` | Invoices whose work order has one of these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). |
+| `woPriorityIds` | Invoices whose work order has one of these priorities. |
+| `spendCategoryId`, `spendCategoryIds` | Invoices whose work order is in one of these spend categories. |
+| `assetId`, `assetIds` | Invoices whose work order is on one of these assets. |
+| `isPM`, `isCapex` | `true` returns invoices for preventive maintenance (or capital expense) work orders; `false` leaves them out. |
+
+The work order filters above only match work-order invoices, because project invoices have no work order.
+
+**Who**
+
+| Filter | Matches |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds` | Invoices from these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). |
+
+**Dates**
+
+Each date has a `…StartDate` and an `…EndDate` key. Send either one on its own for an open-ended range.
+
+| Filter | Matches |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | When the supplier created the invoice. |
+| `publishedAtStartDate`, `publishedAtEndDate` | When the supplier sent the invoice to you. Use this window to pick up newly received invoices. |
+| `approvedAtStartDate`, `approvedAtEndDate` | When your team approved the invoice. |
+| `processedAtStartDate`, `processedAtEndDate` | When the invoice entered your payment run. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | When the invoice was marked paid. |
+| `dueAtStartDate`, `dueAtEndDate` | The invoice's payment due date. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | When the invoice's work order was completed. |
+
+**Sorting**
+
+`sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, and `supplierFacilityId`. With no `sort_by`, invoices come newest first. When you pass `sort_by`, `order` defaults to `asc`, so add `order=desc` for newest or largest first. Any other `sort_by` value sorts by `createdAt` in the order you asked for.
 
 ### Flattened export
 
-`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. Same filters as the list endpoint. On project invoice rows, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId`, and `locationName` are `null`; `projectId` is set.
+`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. It accepts the same [filters](#filter-reference) as the list endpoint. On project invoice rows, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId`, and `locationName` are `null`; `projectId` is set.
 
 ## Moving an invoice through approval
 
@@ -129,7 +184,7 @@ It returns the number of invoices updated. This is a power tool that bypasses th
 
 A robust accounts-payable sync:
 
-1. Poll `GET /invoices?status=pending` (or `publishedAt` windows) on a schedule.
+1. Poll `GET /invoices?status=pending`, or a `publishedAtStartDate` window starting at your last run, on a schedule.
 2. Pull each invoice. For work-order invoices, match totals against the approved [proposal](/buyer-api/quotes-and-proposals) and the work order's `nte`. For project invoices, match against your project budget instead. The NTE check does not run server-side for project invoices.
 3. `POST status/approved`, export to your AP system, then `POST status/processing`.
 4. On settlement, `POST status/paid` by id, or `status/paid/by_work_order_id` keyed on the work order reference your AP system carries.

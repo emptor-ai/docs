@@ -25,6 +25,9 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/location
 # Count matching a filter
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/count_by?regionId=4"
 
+# Find a location by its store number
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations?storeId=4521"
+
 # One location, or several in one round trip
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/1204"
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/location/locations/multiple/1204,1205,1210"
@@ -37,6 +40,23 @@ Notes:
 - The only write is `PATCH /v1/buyer/location/locations/{id}`, and it reads **only `locationTypeDetails`** from the body (custom field values for the location's type). All other fields are ignored.
 
 Regions group locations: `GET /v1/buyer/location/regions` and `GET /v1/buyer/location/regions/{id}`.
+
+### Location filters
+
+The list and `count_by` take the same filters, following the [filter value rules](/buyer-api/introduction#filter-value-rules). Inactive locations are left out unless you ask for them.
+
+| Filter | Matches |
+| --- | --- |
+| `search` | Words in the location name, description, store id, or address, or the location id. |
+| `storeId` | Your store number for the location, matched exactly. |
+| `ids` | Several locations in one call: `ids=1204,1205`. |
+| `regionId`, `regionIds` | Locations in these regions. Only locations directly in a region match, not those in its child regions. Get region ids from `GET /v1/buyer/location/regions`. |
+| `brandId`, `brandIds` | Locations of these brands. |
+| `locationTypeId`, `locationTypeIds` | Locations of these location types. |
+| `isActive` | `false` returns only inactive locations. Active locations are returned by default. |
+| `noIsActiveFilter` | `true` returns active and inactive locations together. |
+
+`sort_by` supports `name` (the default), `id`, and `locationTypeId`.
 
 ## Asset types
 
@@ -96,6 +116,9 @@ Reads:
 # Full listing with filters
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets?locationId=1204&limit=25"
 
+# Find an asset by serial number
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets?serialNumber=CX-88213"
+
 # Lite projection: id, name, type, serial, location, warranties
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asset_lite?locationId=1204"
 
@@ -103,7 +126,34 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/asse
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/asset/assets/5511"
 ```
 
-`asset_lite` is the cheap way to sync an asset picker. When you pass no pagination parameters, it returns the **unpaginated full set**, with `count` equal to the number of items returned. The single-asset read hydrates meters (the envelope `type` reads `ApiAssetWithMeter`).
+`asset_lite` is the cheap way to sync an asset picker. It pages like any other list (10 per page by default, up to 25). Pass `no_pagination=true` to get the **full set** in one call. Its `count` is the number of items returned, not the total number of matches. The single-asset read hydrates meters (the envelope `type` reads `ApiAssetWithMeter`).
+
+There's no `count_by` endpoint for assets.
+
+### Asset filters
+
+`assets` and `asset_lite` take the same filters, following the [filter value rules](/buyer-api/introduction#filter-value-rules). Inactive assets are left out unless you ask for them.
+
+| Filter | Matches |
+| --- | --- |
+| `locationId`, `locationIds` | Assets at these locations. |
+| `regionId` | Assets at locations in one region. Only locations directly in the region match, not those in its child regions. |
+| `assetTypeId`, `assetTypeIds` | Assets of these [asset types](#asset-types). |
+| `problemTypeId` | Assets whose type can take work of this problem type. |
+| `search` | Words in the asset name, description, location name, or asset type name, or an exact asset number, serial number, or your own asset id. |
+| `serialNumber` | The serial number, matched exactly. Use `containsSerialNumber` to match part of one. |
+| `assetNumber` | The OpenWrench asset number, matched exactly. |
+| `buyerSpecificAssetId` | Your own id for the asset, matched exactly. |
+| `name`, `modelNumber`, `manufacturer` | Assets whose name, model number, or manufacturer contains this text. |
+| `labelIds` | Assets carrying at least one of these [labels](#asset-labels). |
+| `parentId` | Sub-assets of one asset. `topLevelOnly=true` leaves sub-assets out. |
+| `downtimeStatus` | `offline` returns assets that are currently down; `online` returns assets in service. |
+| `updatedAtStartDate`, `updatedAtEndDate` | Assets changed within the window. Use this for incremental syncs. |
+| `installAtStartDate`, `installAtEndDate` | Assets installed within the window. |
+| `isActive` | `false` returns only inactive assets. Active assets are returned by default. |
+| `noActiveFilter` | `true` returns active and inactive assets together. |
+
+`sort_by` supports `id` (the default), `assetNumber`, `name`, `serialNumber`, `modelNumber`, and `locationId`.
 
 ## Asset labels
 
@@ -191,4 +241,4 @@ Notes:
 
 ## Sync strategy
 
-For a nightly asset sync: page `asset_lite` for the id set, diff against your system, then fetch full records by id only for changed assets. That keeps you inside the rate limit (10 requests per 20-second window) far more comfortably than paging the full listing at 25 per call.
+For a nightly asset sync, page the asset list with `updatedAtStartDate` set to your last run, so you only fetch assets that changed. Add `noActiveFilter=true` to also pick up assets that were deactivated. For a full reconciliation, pull the id set with `asset_lite?no_pagination=true` and diff it against your system. That keeps you inside the rate limit (10 requests per 20-second window) far more comfortably than paging the full listing at 25 per call.

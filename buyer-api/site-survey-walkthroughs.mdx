@@ -4,7 +4,7 @@ sidebarTitle: "Site surveys"
 description: "Read site survey walkthrough answers, photos, and issues, then generate follow-up work orders linked to survey findings with the OpenWrench Buyer API."
 ---
 
-A **walkthrough** is a completed site survey: an inspector walks a location against a task list and records answers, photos, and issues. The Buyer API exposes walkthroughs read-only, and lets you cut follow-up work orders that stay linked to the survey finding they came from.
+A **walkthrough** is one run of a site survey: an inspector walks a location against a task list and records answers, photos, and issues. The Buyer API exposes walkthroughs read-only, and lets you cut follow-up work orders that stay linked to the survey finding they came from.
 
 All examples assume:
 
@@ -17,9 +17,9 @@ export SECRET="<shared-secret>"
 ## Reading walkthroughs
 
 ```bash
-# Recent walkthroughs for a location
+# Recent completed walkthroughs for a location
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&sort_by=createdAt&order=desc"
+  "$BASE/v1/buyer/site_survey/walkthroughs?locationId=1204&status=complete&sort_by=completedAt&order=desc"
 
 # Count by filter
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -30,7 +30,26 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/site_survey/walkthroughs/230"
 ```
 
-Standard pagination and field filters apply, plus your role's location and brand scoping. Your read permission filters the work orders referenced from a walkthrough's task answers. Different keys may see different linked work orders on the same walkthrough.
+Your role's location and brand scoping applies on top of any filter. Your read permission filters the work orders referenced from a walkthrough's task answers. Different keys may see different linked work orders on the same walkthrough.
+
+### Filter reference
+
+The list and `count_by` take the same filters, following the [filter value rules](/buyer-api/introduction#filter-value-rules). The list includes walkthroughs that haven't started or aren't finished, so add `status=complete` when you only want finished ones.
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | Walkthroughs in these states: `complete`, `incomplete`, or `notStarted`. |
+| `locationId`, `locationIds` | Walkthroughs at these locations. |
+| `regionId`, `regionIds` | Walkthroughs at locations in these regions. Only locations directly in a region match, not those in its child regions. |
+| `siteSurveyId`, `siteSurveyIds` | Runs of these site surveys. |
+| `siteSurveyTitle` | Runs of the site survey with exactly this title. |
+| `search` | Words in the walkthrough title, or the walkthrough id. |
+| `completedAtStartDate`, `completedAtEndDate` | Walkthroughs finished within the window. |
+| `dueAtStartDate`, `dueAtEndDate` | Walkthroughs due within the window. |
+| `createdAtStartDate`, `createdAtEndDate` | Walkthroughs created within the window. |
+| `updatedAtStartDate`, `updatedAtEndDate` | Walkthroughs changed within the window. Use this for incremental syncs. |
+
+`sort_by` supports `updatedAt` (the default), `completedAt`, `createdAt`, and `id`. `order` defaults to `asc` even with no `sort_by`, so the default list is oldest change first; add `order=desc` for the most recent first.
 
 ## Rendering scores with heat map ranges
 
