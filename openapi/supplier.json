@@ -2823,6 +2823,16 @@
               }
             }
           },
+          "403": {
+            "description": "The API key belongs to a buyer's internal service team that is not allowed to place work orders on hold (`allowToPlaceWorkOrdersOnHold` is off), and the request would move the work order into an On Hold status. Returns `ForbiddenException` with the message `Placing work orders on hold is not enabled for this internal team`. Nothing is saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit exceeded (10 requests per 20-second window)",
             "content": {
@@ -2967,6 +2977,16 @@
           },
           "401": {
             "description": "Missing or invalid X-API-KEY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The API key belongs to a buyer's internal service team that is not allowed to place work orders on hold (`allowToPlaceWorkOrdersOnHold` is off), and the request would move the work order into an On Hold status. Returns `ForbiddenException` with the message `Placing work orders on hold is not enabled for this internal team`. Nothing is saved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3631,6 +3651,16 @@
               }
             }
           },
+          "403": {
+            "description": "The API key belongs to a buyer's internal service team that is not allowed to place work orders on hold (`allowToPlaceWorkOrdersOnHold` is off), and the request would move the work order into an On Hold status. Returns `ForbiddenException` with the message `Placing work orders on hold is not enabled for this internal team`. Nothing is saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit exceeded (10 requests per 20-second window)",
             "content": {
@@ -3976,6 +4006,16 @@
           },
           "401": {
             "description": "Missing or invalid X-API-KEY",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The API key belongs to a buyer's internal service team that is not allowed to place work orders on hold (`allowToPlaceWorkOrdersOnHold` is off), and the request would move the work order into an On Hold status. Returns `ForbiddenException` with the message `Placing work orders on hold is not enabled for this internal team`. Nothing is saved.",
             "content": {
               "application/json": {
                 "schema": {
