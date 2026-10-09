@@ -7355,7 +7355,7 @@
         "name": "isStale",
         "in": "query",
         "required": false,
-        "description": "`true` returns open work that has stayed overdue for a set period without supplier progress, and that your team hasn't archived. The period is set for your company (14 days by default). Supplier activity on overdue work, such as accepting it or submitting it for review, restarts the period. If your company has turned stale tracking off, new work orders are not marked stale. If your company excludes self-managed suppliers from stale tracking, work orders assigned to a self-managed supplier are never marked stale, and moving work to or from one clears or restarts its stale tracking.",
+        "description": "`true` returns open work that has stayed overdue for a set period without supplier progress, and that your team hasn't archived. The period is set for your company (14 days by default). Supplier activity on overdue work, such as accepting it or submitting it for review, restarts the period. If your company has turned stale tracking off, new work orders are not marked stale. If your company excludes self-managed suppliers from stale tracking, work orders assigned to a self-managed supplier are never marked stale. Moving work to or from a self-managed supplier clears or restarts its stale tracking.",
         "schema": {
           "type": "string",
           "enum": [
