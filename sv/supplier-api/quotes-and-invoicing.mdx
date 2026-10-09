@@ -4,7 +4,7 @@ sidebarTitle: "Offerter och fakturering"
 description: "Skapa förslag för köparens godkännande och fakturera avslutade arbetsordrar med Supplier API: fakturautkast, sektioner, PDF-uppladdning och publicering."
 ---
 
-Pengar flödar genom två objekt: **förslag** (offerter som köparen godkänner innan arbetet fortsätter) och **fakturor** (räkningen för utfört arbete). Båda skapas av leverantörer genom det här API:et.
+Pengar flödar genom två objekt: **förslag** (offerter som köparen godkänner innan arbetet fortsätter) och **fakturor** (räkningen för utfört arbete). Leverantörer skapar båda genom det här API:et.
 
 <Note>
 Ingen av slutpunkterna är tillgänglig för interna serviceteams nycklar; offerering och fakturering är för tredjepartsleverantörer som fakturerar en köpare.
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-Slutpunkten returnerar `400` om någon förutsättning misslyckas: din anläggning måste äga fakturan, den associerade arbetsordern måste vara i visningsstatus **Completed**, och leverantörsfakturaredigering måste tillåtas av köparens konfiguration.
+Slutpunkten returnerar `400` om någon förutsättning misslyckas: din anläggning måste äga fakturan, den associerade arbetsordern måste vara i visningsstatus **Completed**, och köparens konfiguration måste tillåta leverantörsfakturaredigering.
 
 ### Läsa och stämma av
 

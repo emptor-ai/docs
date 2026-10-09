@@ -4,7 +4,7 @@ sidebarTitle: "Soumissions et facturation"
 description: "Créez des propositions pour l'approbation de l'acheteur et facturez les bons de travail terminés : brouillons, sections de postes et PDF."
 ---
 
-L'argent circule à travers deux objets : les **propositions** (soumissions que l'acheteur approuve avant que le travail se poursuive) et les **factures** (la facturation pour le travail terminé). Les deux sont créés par les fournisseurs via cette API.
+L'argent circule à travers deux objets : les **propositions** (soumissions que l'acheteur approuve avant que le travail se poursuive) et les **factures** (la facturation pour le travail terminé). Les fournisseurs créent les deux via cette API.
 
 <Note>
 Aucun de ces endpoints n'est disponible pour les clés d'équipes de service internes; la soumission et la facturation sont pour les fournisseurs tiers qui facturent un acheteur.
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-L'endpoint renvoie `400` si une précondition n'est pas satisfaite : votre établissement doit posséder la facture, le bon de travail associé doit être au statut d'affichage **Completed**, et la modification de facture par le fournisseur doit être permise par la configuration de l'acheteur.
+L'endpoint renvoie `400` si une précondition n'est pas satisfaite : votre établissement doit posséder la facture, le bon de travail associé doit être au statut d'affichage **Completed**, et la configuration de l'acheteur doit permettre la modification de facture par le fournisseur.
 
 ### Lire et réconcilier
 
