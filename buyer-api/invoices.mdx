@@ -174,7 +174,7 @@ Project invoices are anchored to a project (`projectId`) instead of a work order
 - The per-WO "one invoice per supplier" duplicate check.
 - The currency-scoped validation on `taxLineItems` (amounts are still validated as numeric).
 
-Cost-by-location and cost-by-facility analytics only include invoices that carry the respective field, so a project invoice created without `locationId` or `buyerFacilityId` is excluded from those reports.
+Cost-by-location and cost-by-facility analytics only include invoices that carry the respective field. A project invoice created without `locationId` or `buyerFacilityId` doesn't appear in those reports.
 
 The `POST status/paid/by_work_order_id` shortcut only matches work-order invoices; for a project invoice, mark paid by `id` via `POST status/paid`.
 
