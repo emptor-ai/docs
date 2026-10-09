@@ -109,6 +109,10 @@ Valeurs courantes de `checkOutStatus` :
 | `PartsRequested`, `PartsOnOrder`, `PartsReceived` | La visite s'est terminée et le travail est en attente de pièces. |
 | `TechAssigned`, `TechScheduled` | La visite s'est terminée et une autre visite est nécessaire. |
 
+<Note>
+Un acheteur peut désactiver `allowToPlaceWorkOrdersOnHold` pour son équipe de service interne. Les clés de cette équipe ne peuvent alors pas quitter avec un `checkOutStatus` En attente, comme `PartsRequested` ou `PartsOnOrder`, sauf si le bon de travail est déjà en attente. L'appel retourne `403 ForbiddenException` avec `"Placing work orders on hold is not enabled for this internal team"`, et l'appel de service n'est pas enregistré. Les clés des fournisseurs tiers ne sont jamais restreintes. Consultez [lorsque les équipes internes ne peuvent pas mettre les bons de travail en attente](/fr-CA/supplier-api/work-orders#lorsque-les-équipes-internes-ne-peuvent-pas-mettre-les-bons-de-travail-en-attente).
+</Note>
+
 **Pour compléter un bon de travail, quittez avec `WaitingForReview`.** `WorkReviewedAndCompleted` est un statut qui appartient à l'acheteur. L'acheteur le définit après avoir révisé votre travail, ou OpenWrench le définit automatiquement lorsque l'approbation automatique s'applique (voir ci-dessous). L'acheteur peut aussi rejeter le travail avec `WorkUnsatisfactory`. Vous apprenez la décision de l'acheteur par le [webhook](/fr-CA/supplier-api/webhooks) `workorder.status_update`.
 
 Enregistrez les pièces et le stock consommés durant la visite via `partsWithQuantity`, `stockLocationIds` et `equipmentPerStockLocationIds` dans la même charge utile. Les ids proviennent de votre [catalogue d'inventaire](/fr-CA/supplier-api/purchasing-and-inventory#catalogue--pièces-équipement-vendeurs-et-stock).

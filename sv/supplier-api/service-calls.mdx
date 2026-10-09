@@ -109,6 +109,10 @@ Vanliga värden för `checkOutStatus`:
 | `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Besöket avslutades och jobbet väntar på delar. |
 | `TechAssigned`, `TechScheduled` | Besöket avslutades och ytterligare ett besök behövs. |
 
+<Note>
+En köpare kan stänga av `allowToPlaceWorkOrdersOnHold` för sitt interna serviceteam. Teamets nycklar kan då inte checka ut med en On Hold-`checkOutStatus`, till exempel `PartsRequested` eller `PartsOnOrder`, om inte arbetsordern redan är i vänteläge. Anropet returnerar `403 ForbiddenException` med `"Placing work orders on hold is not enabled for this internal team"`, och servicebesöket sparas inte. Nycklar för tredjepartsleverantörer begränsas aldrig. Se [när interna team inte kan sätta arbetsordrar i vänteläge](/sv/supplier-api/work-orders#när-interna-team-inte-kan-sätta-arbetsordrar-i-vänteläge).
+</Note>
+
 **Slutför en arbetsorder genom att checka ut med `WaitingForReview`.** `WorkReviewedAndCompleted` är en status som ägs av köparen. Köparen sätter den efter att ha granskat ditt arbete, eller så sätter OpenWrench den automatiskt när automatiskt godkännande gäller (se nedan). Köparen kan också avvisa arbetet med `WorkUnsatisfactory`. Du får veta köparens beslut via [webhooken](/sv/supplier-api/webhooks) `workorder.status_update`.
 
 Registrera delar och lager som förbrukas vid besöket via `partsWithQuantity`, `stockLocationIds` och `equipmentPerStockLocationIds` i samma nyttolast. Id:na kommer från din [lagerkatalog](/sv/supplier-api/purchasing-and-inventory#katalog-delar-utrustning-leverantörer-och-lager).

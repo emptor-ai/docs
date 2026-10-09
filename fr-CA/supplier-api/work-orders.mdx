@@ -154,6 +154,27 @@ Trois signaux légers pendant que le travail est en cours :
 | `POST .../status_update/parts_ordered` | `PartsOnOrder` |
 | `POST .../status_update/parts_received` | `PartsReceived` |
 
+### Lorsque les équipes internes ne peuvent pas mettre les bons de travail en attente
+
+Un acheteur peut empêcher son équipe de service interne de mettre des bons de travail en attente. Le paramètre par équipe est `allowToPlaceWorkOrdersOnHold`. Il est activé par défaut, et l'acheteur peut le désactiver pour une équipe interne.
+
+Lorsque le paramètre est désactivé, les clés de la Supplier API qui appartiennent à cette équipe interne ne peuvent pas faire passer un bon de travail à un statut En attente. Les statuts En attente sont `WaitingForProposal`, `WaitingForProposalApproval`, `PartsRequested`, `PartsOnOrder` et `DelayedByThirdParty`. Le blocage s'applique à :
+
+- `POST .../status_update/parts_requested` et `POST .../status_update/parts_ordered`.
+- Le [départ](/fr-CA/supplier-api/service-calls#3-quitter-et-définir-le-résultat) de l'appel de service et le départ à distance avec un `checkOutStatus` En attente.
+
+Un appel bloqué retourne `403` et ne modifie rien :
+
+```json
+{ "message": "Placing work orders on hold is not enabled for this internal team", "type": "ForbiddenException", "status": "error", "traceId": "abc123def45" }
+```
+
+Ce qui reste permis :
+
+- **Changements à l'intérieur ou hors de En attente.** Un bon de travail déjà en attente peut passer à un autre statut En attente, par exemple de `PartsRequested` à `PartsOnOrder`. Il peut aussi sortir de En attente, par exemple avec `parts_received`.
+- **Fournisseurs tiers.** Les clés des fournisseurs tiers ne sont jamais restreintes. Les équipes internes sans ce paramètre ne sont pas restreintes non plus.
+- **Autres flux.** La création de bons de travail, les statuts de sous-traitance et les flux automatiques, comme les demandes de proposition et les soumissions, ne sont pas touchés.
+
 **Date d'achèvement estimée.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` ne lit que `estimatedCompletionDate` (ISO 8601) dans le corps :
 
 ```bash
