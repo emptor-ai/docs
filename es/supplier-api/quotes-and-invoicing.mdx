@@ -83,11 +83,11 @@ curl -X POST "$BASE/v1/supplier/invoice/invoices" \
   }'
 ```
 
-Detalles que muerden:
+Comportamiento a tener en cuenta:
 
 - `poNumber` toma por defecto el PO number de la orden de trabajo.
 - `serviceCallIds` toma por defecto **todas** las llamadas de servicio de la orden de trabajo cuando se omite o está vacío; establécelo explícitamente cuando factures un subconjunto de visitas.
-- `taxLineItems` se validan contra los tipos de impuestos permitidos por la moneda de la factura (actualmente solo CAD los soporta: GST/HST/PST); cualquier otro se rechaza.
+- OpenWrench valida `taxLineItems` contra los tipos de impuestos permitidos por la moneda de la factura y rechaza cualquier otro. Actualmente solo CAD los soporta (GST/HST/PST).
 - `invoicePDFLink` (una URL válida) se convierte en la única entrada de PDF de la factura si alojas tú mismo el PDF; la mayoría de integraciones usa en su lugar el endpoint de subida más abajo.
 - `autoPublishOnApproval` inscribe esta factura en la auto-publicación cuando la orden de trabajo se completa.
 - Guardar una factura puede transicionar el estado de la orden de trabajo asociada según el mapeo de estado factura-a-orden. Un fallo de validación a nivel de guardado devuelve `406`.
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-Cada precondición que falla devuelve `400`: tu instalación debe ser dueña de la factura, la orden de trabajo asociada debe estar en display status **Completed**, y la edición de facturas por proveedor debe estar permitida por la configuración del comprador.
+El endpoint devuelve `400` si falla alguna precondición: tu instalación debe ser dueña de la factura, la orden de trabajo asociada debe estar en display status **Completed**, y la edición de facturas por proveedor debe estar permitida por la configuración del comprador.
 
 ### Leer y conciliar
 

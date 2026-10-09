@@ -174,7 +174,7 @@ Les factures de projet sont rattachées à un projet (`projectId`) plutôt qu'à
 - La vérification de doublons « une facture par fournisseur » par BT.
 - La validation à portée devise sur `taxLineItems` (les montants sont tout de même validés comme numériques).
 
-Les analyses de coût par emplacement et de coût par établissement n'incluent que les factures qui portent le champ correspondant, alors une facture de projet créée sans `locationId` ou `buyerFacilityId` est exclue de ces rapports.
+Les analyses de coût par emplacement et de coût par établissement n'incluent que les factures qui portent le champ correspondant. Une facture de projet créée sans `locationId` ou `buyerFacilityId` n'apparaît pas dans ces rapports.
 
 Le raccourci `POST status/paid/by_work_order_id` ne correspond qu'aux factures de bon de travail; pour une facture de projet, marquez-la payée par `id` via `POST status/paid`.
 

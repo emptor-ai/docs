@@ -174,7 +174,7 @@ Projektfakturor är förankrade till ett projekt (`projectId`) i stället för e
 - Per-WO-dubblettkontrollen "en faktura per leverantör".
 - Den valutabegränsade valideringen av `taxLineItems` (belopp valideras fortfarande som numeriska).
 
-Analyser för kostnad-per-plats och kostnad-per-anläggning inkluderar endast fakturor som bär respektive fält, så en projektfaktura skapad utan `locationId` eller `buyerFacilityId` utesluts från dessa rapporter.
+Analyser för kostnad-per-plats och kostnad-per-anläggning inkluderar endast fakturor som bär respektive fält. En projektfaktura skapad utan `locationId` eller `buyerFacilityId` visas inte i dessa rapporter.
 
 Genvägen `POST status/paid/by_work_order_id` matchar endast arbetsorderfakturor; för en projektfaktura, markera som betald via `id` med `POST status/paid`.
 
