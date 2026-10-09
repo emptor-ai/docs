@@ -154,6 +154,27 @@ Tres señales ligeras mientras el trabajo está en marcha:
 | `POST .../status_update/parts_ordered` | `PartsOnOrder` |
 | `POST .../status_update/parts_received` | `PartsReceived` |
 
+### Cuando los equipos internos no pueden poner órdenes de trabajo en espera
+
+Un comprador puede impedir que su equipo de servicio interno ponga órdenes de trabajo en espera. La configuración por equipo es `allowToPlaceWorkOrdersOnHold`. Está activada de forma predeterminada, y el comprador puede desactivarla para un equipo interno.
+
+Cuando la configuración está desactivada, las claves de la Supplier API que pertenecen a ese equipo interno no pueden mover una orden de trabajo a un estado En espera. Los estados En espera son `WaitingForProposal`, `WaitingForProposalApproval`, `PartsRequested`, `PartsOnOrder` y `DelayedByThirdParty`. El bloqueo se aplica a:
+
+- `POST .../status_update/parts_requested` y `POST .../status_update/parts_ordered`.
+- El [check-out](/es/supplier-api/service-calls#3-check-out-y-establecer-el-resultado) de la llamada de servicio y el check-out remoto con un `checkOutStatus` En espera.
+
+Una llamada bloqueada devuelve `403` y no cambia nada:
+
+```json
+{ "message": "Placing work orders on hold is not enabled for this internal team", "type": "ForbiddenException", "status": "error", "traceId": "abc123def45" }
+```
+
+Lo que sigue permitido:
+
+- **Movimientos dentro de En espera o para salir de él.** Una orden de trabajo que ya está en espera puede pasar a otro estado En espera, como de `PartsRequested` a `PartsOnOrder`. También puede salir de En espera, por ejemplo con `parts_received`.
+- **Proveedores externos.** Las claves de proveedores externos nunca están restringidas. Los equipos internos sin la configuración tampoco están restringidos.
+- **Otros flujos.** La creación de órdenes de trabajo, los estados de subcontratación y los flujos automáticos, como las solicitudes de propuesta y las cotizaciones, no se ven afectados.
+
 **Fecha estimada de finalización.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` lee solo `estimatedCompletionDate` (ISO 8601) del cuerpo:
 
 ```bash

@@ -154,6 +154,27 @@ Tre lätta signaler medan jobbet pågår:
 | `POST .../status_update/parts_ordered` | `PartsOnOrder` |
 | `POST .../status_update/parts_received` | `PartsReceived` |
 
+### När interna team inte kan sätta arbetsordrar i vänteläge
+
+En köpare kan hindra sitt interna serviceteam från att sätta arbetsordrar i vänteläge. Inställningen per team är `allowToPlaceWorkOrdersOnHold`. Den är på som standard, och köparen kan stänga av den för ett internt team.
+
+När inställningen är av kan Supplier API-nycklar som tillhör det interna teamet inte flytta en arbetsorder till en On Hold-status. On Hold-statusarna är `WaitingForProposal`, `WaitingForProposalApproval`, `PartsRequested`, `PartsOnOrder` och `DelayedByThirdParty`. Blockeringen gäller:
+
+- `POST .../status_update/parts_requested` och `POST .../status_update/parts_ordered`.
+- [Utcheckning](/sv/supplier-api/service-calls#3-checka-ut-och-sätt-utfallet) av servicebesök och fjärrutcheckning med en On Hold-`checkOutStatus`.
+
+Ett blockerat anrop returnerar `403` och ändrar ingenting:
+
+```json
+{ "message": "Placing work orders on hold is not enabled for this internal team", "type": "ForbiddenException", "status": "error", "traceId": "abc123def45" }
+```
+
+Det här är fortfarande tillåtet:
+
+- **Flyttar inom eller ut ur On Hold.** En arbetsorder som redan är i vänteläge kan flyttas till en annan On Hold-status, till exempel från `PartsRequested` till `PartsOnOrder`. Den kan också lämna On Hold, till exempel med `parts_received`.
+- **Tredjepartsleverantörer.** Nycklar för tredjepartsleverantörer begränsas aldrig. Interna team utan inställningen begränsas inte heller.
+- **Andra flöden.** Skapande av arbetsordrar, underleverantörsstatusar och automatiska flöden som offertförfrågningar och offerter påverkas inte.
+
 **Uppskattat slutdatum.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` läser endast `estimatedCompletionDate` (ISO 8601) från kroppen:
 
 ```bash
