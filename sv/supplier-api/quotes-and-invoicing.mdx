@@ -52,7 +52,7 @@ Beteende att känna till:
 - `proposalPdfLink`, om skickad, måste vara en giltig URL. `attachments` tar `FileDetails` från [filuppladdningsslutpunkten](/sv/supplier-api/files-and-users).
 - Att skicka ett `id` uppdaterar ett befintligt förslag.
 
-Följ utfallet genom att hämta om: `status` går från `pending` till `awarded` eller `declined` (avslagsskäl visas i `declineNotes`). Lista med `GET /v1/supplier/quote/proposals`, läs en med `GET /v1/supplier/quote/proposals/{id}`.
+Följ utfallet genom att hämta om: `status` går från `pending` till `awarded` eller `declined` (avslagsskäl visas i `declineNotes`). Lista med `GET /v1/supplier/quote/proposals` (se [filtrera listor](#filtrera-listor)), läs en med `GET /v1/supplier/quote/proposals/{id}`.
 
 ## Fakturor
 
@@ -107,7 +107,73 @@ Varje förutsättning som misslyckas returnerar `400`: din anläggning måste ä
 
 ### Läsa och stämma av
 
-`GET /v1/supplier/invoice/invoices` (filtrerbar, till exempel `?status=pending`) och `GET /v1/supplier/invoice/invoices/{id}`. Tredjepartsleverantörer ser maskerade poster med köpar-privata fält bortrensade. Polla status för att driva din AR-huvudbok: `approvedAt`, `processedAt` och `markedPaidAt` tidsstämplar köparens framsteg.
+`GET /v1/supplier/invoice/invoices` (filtrerbar, se [filtrera listor](#filtrera-listor)) och `GET /v1/supplier/invoice/invoices/{id}`. Tredjepartsleverantörer ser maskerade poster med köpar-privata fält bortrensade. Polla status för att driva din AR-huvudbok: `approvedAt`, `processedAt` och `markedPaidAt` tidsstämplar köparens framsteg.
+
+## Filtrera listor
+
+`GET /v1/supplier/quote/proposals` och `GET /v1/supplier/invoice/invoices` tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`, plus filtren nedan. Filter kombineras med AND och kombineras alltid med din nyckels tenant-avgränsning, så du ser bara din anläggnings förslag och fakturor. Ingen av listorna har en räkningsslutpunkt; svarets `count` är det totala antalet träffar.
+
+```bash
+# Godkända och behandlade fakturor för en köpare, markerade som betalda i augusti
+curl -G "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "statuses=approved,processing,paid" \
+  --data-urlencode "buyerCompanyId=42" \
+  --data-urlencode "markedPaidAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "markedPaidAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+
+# Väntande förslag på en arbetsorder
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/quote/proposals?status=pending&workOrderId=9001"
+```
+
+**Båda listorna**
+
+| Filter | Matchar |
+| --- | --- |
+| `status`, `statuses` | Statusen, med gemener. Förslag: `draft`, `pending`, `awarded`, `declined`. Fakturor: `draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, `void`. |
+| `workOrderId` | Poster för en arbetsorder. |
+| `buyerCompanyId` | Poster för en av dina köparkunder. Det smalnar av dina resultat; det kan inte vidga dem. |
+| `locationId`, `locationIds` | Poster för dessa platser. |
+| `regionIds` | Poster för platser i dessa regioner. |
+| `problemTypeIds` | Poster vars arbetsorder har dessa problemtyper. |
+| `woPriorityIds` | Poster vars arbetsorder har dessa prioriteter. |
+| `isCapex` | `true` returnerar endast poster för arbetsordrar flaggade som investeringsutgift (capex); `false` utesluter dem. |
+| `createdAtStartDate`, `createdAtEndDate` | Poster skapade inom fönstret. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Förslag tilldelade, eller fakturor godkända, inom fönstret. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Poster vars arbetsorder slutfördes inom fönstret. |
+
+**Endast förslag**
+
+| Filter | Matchar |
+| --- | --- |
+| `search` | En del av arbetsorderns titel. Ett numeriskt värde matchar också förslagets id eller arbetsorderns id exakt. |
+
+**Endast fakturor**
+
+| Filter | Matchar |
+| --- | --- |
+| `search` | En del av arbetsorderns titel, eller exakt ett av: arbetsorder-id, externt arbetsorder-id, fakturanummer, faktura-id, PO-nummer, GL-kod. |
+| `invoiceNumber` | Fakturor med detta fakturanummer. |
+| `externalWorkOrderId` | Fakturor för en arbetsorder, via köparens externa referens på den. |
+| `workOrderDisplayStatus` | Fakturor vars arbetsorder har denna visningsstatus: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` eller `Cancelled`. |
+| `assetId`, `assetIds` | Fakturor vars arbetsorder gäller dessa tillgångar. |
+| `problemTypeId` | Fakturor vars arbetsorder har denna problemtyp. |
+| `isPM` | `true` returnerar endast fakturor för arbetsordrar för förebyggande underhåll; `false` utesluter dem. |
+| `publishedAtStartDate`, `publishedAtEndDate` | Fakturor publicerade till köparen inom fönstret. |
+| `processedAtStartDate`, `processedAtEndDate` | Fakturor som köparen flyttade till `processing` inom fönstret. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | Fakturor markerade som betalda inom fönstret. Användbart för AR-avstämning. |
+| `dueAtStartDate`, `dueAtEndDate` | Fakturor som förfaller inom fönstret. |
+
+Regler för filtervärden:
+
+- **Sortering.** Båda listorna sorterar efter `createdAt`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` eller `buyerFacilityId`; fakturor sorterar även efter `invoiceTotalAfterTax`, och förslag efter `updatedAt` och `totalAfterTax`. När du sätter `sort_by` blir `order` som standard `asc`, så skicka `order=desc` för nyast först. Utan `sort_by` kommer fakturor nyast först och förslag i `id`-ordning (äldst först). Ett `sort_by` som inte stöds på förslag faller också tillbaka på `id`-ordning.
+- **Listor tar kommatecken utan mellanslag.** En nyckel i singular (`status`) tar ett värde; nyckeln i plural tar en kommaseparerad lista. `status=pending,approved` letar efter en enda status med just det namnet och returnerar ingenting. Ett mellanslag efter ett kommatecken kan få anropet att misslyckas.
+- **Ett värde per nyckel.** Om du upprepar en parameter används bara den första.
+- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar; slutgränsen täcker hela slutdagen (dess tid ersätts med 23:59:59). URL-koda värdet. Ett datum som inte kan tolkas läses som 1 januari 1970 istället för att avvisas, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Värden måste vara välformade.** Ett icke-numeriskt id, eller ett booleskt värde annat än `true` eller `false`, kan få anropet att misslyckas med `500` istället för `400`.
+- **Okända filter ignoreras**, och din tenant-avgränsning kan inte åsidosättas: `supplierFacilityId` sätts alltid från din API-nyckel.
 
 ## End-to-end-faktureringsflöde
 

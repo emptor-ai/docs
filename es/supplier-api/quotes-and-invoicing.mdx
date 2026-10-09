@@ -52,7 +52,7 @@ Comportamiento a conocer:
 - `proposalPdfLink`, si se envía, debe ser una URL válida. `attachments` toma `FileDetails` del [endpoint de subida de archivos](/es/supplier-api/files-and-users).
 - Pasar un `id` actualiza una propuesta existente.
 
-Rastrea el resultado volviendo a consultar: `status` se mueve de `pending` a `awarded` o `declined` (los motivos del rechazo aparecen en `declineNotes`). Lista con `GET /v1/supplier/quote/proposals`, lee una con `GET /v1/supplier/quote/proposals/{id}`.
+Rastrea el resultado volviendo a consultar: `status` se mueve de `pending` a `awarded` o `declined` (los motivos del rechazo aparecen en `declineNotes`). Lista con `GET /v1/supplier/quote/proposals` (ver [filtrar listados](#filtrar-listados)), lee una con `GET /v1/supplier/quote/proposals/{id}`.
 
 ## Facturas
 
@@ -107,7 +107,73 @@ Cada precondición que falla devuelve `400`: tu instalación debe ser dueña de 
 
 ### Leer y conciliar
 
-`GET /v1/supplier/invoice/invoices` (filtrable, por ejemplo `?status=pending`) y `GET /v1/supplier/invoice/invoices/{id}`. Los proveedores terceros ven registros enmascarados con los campos privados del comprador en blanco. Consulta el estado por sondeo para alimentar tu libro AR: `approvedAt`, `processedAt` y `markedPaidAt` marcan la progresión del comprador.
+`GET /v1/supplier/invoice/invoices` (filtrable, ver [filtrar listados](#filtrar-listados)) y `GET /v1/supplier/invoice/invoices/{id}`. Los proveedores terceros ven registros enmascarados con los campos privados del comprador en blanco. Consulta el estado por sondeo para alimentar tu libro AR: `approvedAt`, `processedAt` y `markedPaidAt` marcan la progresión del comprador.
+
+## Filtrar listados
+
+`GET /v1/supplier/quote/proposals` y `GET /v1/supplier/invoice/invoices` aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`, además de los filtros de abajo. Los filtros se combinan con AND, y siempre se combinan con el alcance por inquilino de tu clave, así que solo ves las propuestas y facturas de tu instalación. Ninguno de los dos listados tiene endpoint de conteo; el `count` de la respuesta es el número total de coincidencias.
+
+```bash
+# Facturas aprobadas y en procesamiento de un comprador, marcadas como pagadas en agosto
+curl -G "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "statuses=approved,processing,paid" \
+  --data-urlencode "buyerCompanyId=42" \
+  --data-urlencode "markedPaidAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "markedPaidAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+
+# Propuestas pendientes de una orden de trabajo
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/quote/proposals?status=pending&workOrderId=9001"
+```
+
+**Ambos listados**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `status`, `statuses` | El estado, en minúsculas. Propuestas: `draft`, `pending`, `awarded`, `declined`. Facturas: `draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, `void`. |
+| `workOrderId` | Registros de una orden de trabajo. |
+| `buyerCompanyId` | Registros de uno de tus clientes compradores. Acota tus resultados; no puede ampliarlos. |
+| `locationId`, `locationIds` | Registros de estas ubicaciones. |
+| `regionIds` | Registros de ubicaciones en estas regiones. |
+| `problemTypeIds` | Registros cuya orden de trabajo tiene estos tipos de problema. |
+| `woPriorityIds` | Registros cuya orden de trabajo tiene estas prioridades. |
+| `isCapex` | `true` devuelve solo registros de órdenes de trabajo marcadas como gasto de capital; `false` los deja fuera. |
+| `createdAtStartDate`, `createdAtEndDate` | Registros creados dentro de la ventana. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Propuestas otorgadas, o facturas aprobadas, dentro de la ventana. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Registros cuya orden de trabajo se completó dentro de la ventana. |
+
+**Solo propuestas**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `search` | Parte del título de la orden de trabajo. Un valor numérico también coincide exactamente con el id de la propuesta o el id de la orden de trabajo. |
+
+**Solo facturas**
+
+| Filtro | Coincide con |
+| --- | --- |
+| `search` | Parte del título de la orden de trabajo, o exactamente uno de: id de orden de trabajo, id externo de orden de trabajo, número de factura, id de factura, número de PO, código GL. |
+| `invoiceNumber` | Facturas con este número de factura. |
+| `externalWorkOrderId` | Facturas de una orden de trabajo, por la referencia externa del comprador en ella. |
+| `workOrderDisplayStatus` | Facturas cuya orden de trabajo está en este display status: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` o `Cancelled`. |
+| `assetId`, `assetIds` | Facturas cuya orden de trabajo es sobre estos activos. |
+| `problemTypeId` | Facturas cuya orden de trabajo tiene este tipo de problema. |
+| `isPM` | `true` devuelve solo facturas de órdenes de trabajo de mantenimiento preventivo; `false` las deja fuera. |
+| `publishedAtStartDate`, `publishedAtEndDate` | Facturas publicadas al comprador dentro de la ventana. |
+| `processedAtStartDate`, `processedAtEndDate` | Facturas que el comprador movió a `processing` dentro de la ventana. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | Facturas marcadas como pagadas dentro de la ventana. Útil para la conciliación de AR. |
+| `dueAtStartDate`, `dueAtEndDate` | Facturas que vencen dentro de la ventana. |
+
+Reglas de valores:
+
+- **Ordenamiento.** Ambos listados se ordenan por `createdAt`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` o `buyerFacilityId`; las facturas también por `invoiceTotalAfterTax`, y las propuestas por `updatedAt` y `totalAfterTax`. Una vez que estableces `sort_by`, `order` toma por defecto `asc`, así que envía `order=desc` para ver los más recientes primero. Sin `sort_by`, las facturas llegan de más reciente a más antigua y las propuestas en orden de `id` (más antiguas primero). Un `sort_by` no admitido en propuestas también recae en el orden por `id`.
+- **Las listas llevan comas sin espacios.** Una clave en singular (`status`) toma un valor; la clave en plural toma una lista separada por comas. `status=pending,approved` busca un único estado con ese nombre literal y no devuelve nada. Un espacio después de una coma puede hacer fallar la solicitud.
+- **Un valor por clave.** Si repites un parámetro, solo se usa el primero.
+- **Las fechas usan `MM/dd/yyyy HH:mm:ss` en UTC**, por ejemplo `08/01/2026 00:00:00`. La hora es obligatoria. El extremo inicial es inclusivo a partir de la hora que envías; el extremo final cubre todo el día final (su hora se reemplaza por 23:59:59). Codifica el valor para URL. Una fecha que no se puede interpretar se lee como 1 de enero de 1970 en lugar de rechazarse, así que una fecha de inicio errónea coincide con todo y una fecha de fin errónea no coincide con nada.
+- **Los valores deben estar bien formados.** Un id no numérico, o un booleano distinto de `true` o `false`, puede hacer fallar la solicitud con un `500` en lugar de un `400`.
+- **Los filtros no reconocidos se ignoran**, y tu alcance por inquilino no se puede anular: `supplierFacilityId` siempre se establece a partir de tu clave de API.
 
 ## Flujo de facturación de extremo a extremo
 

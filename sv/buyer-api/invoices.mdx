@@ -35,7 +35,7 @@ Den köparkontrollerade vägen är `pending → approved → processing → paid
 ```bash
 # Väntande fakturor, nyast först
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Endast antal
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -47,15 +47,85 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/
 
 En faktura länkar tillbaka till sitt `supplierFacilityId` plus **exakt ett** av `workOrderId` eller `projectId` (det andra är `null`, tillsammans med den hydrerade `workOrder` / `project`). Arbetsorderfakturor bär alltid `locationId` och `buyerFacilityId`; projektfakturor bär dem endast när klienten angav dem, så båda kan vara `null`. Fakturan bär pengauppdelningen i sektioner (arbete, material, resa, frakt, övrigt), var och en med rader, en `taxRate` och en `totalBeforeTax`, som rullar upp till `invoiceTotalBeforeTax`, `invoiceTax` och `invoiceTotalAfterTax`. Monetära värden serialiseras som strängar. En kort AI-härledd sammanfattning av omfattningen kan visas i `title`. Den renderade PDF:en finns i `invoicePDFs`; stödjande filer finns i `attachments` (se [Filer och bilagor](/sv/buyer-api/files-and-attachments)).
 
-### Filtrera efter entitetstyp
-
-Lägg till `invoiceEntityType=work_order` eller `invoiceEntityType=project` till `GET /invoices`, `/invoices/count_by` och `/invoices/download` för att avgränsa till en flik; utelämna det för att få båda. `projectId` och `projectIdSeq` filtrerar till specifika projekt på samma sätt som `workOrderId` / `workOrderIdSeq` filtrerar till specifika arbetsordrar.
+### Lista, filtrera och räkna
 
 ```bash
+# Godkända fakturor på två platser, publicerade i augusti, största först
+curl -G "$BASE/v1/buyer/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=approved" \
+  --data-urlencode "locationIds=1204,1310" \
+  --data-urlencode "publishedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "publishedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=invoiceTotalAfterTax -d order=desc
+
 # Endast projektfakturor för det här projektet
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
 ```
+
+`GET /invoices`, `/invoices/count_by` och `/invoices/download` tar samma filter från [filterreferensen](#filterreferens) nedan. Filter kombineras med AND och kombineras alltid med tenant-avgränsningen som härleds från din nyckel. Leverantörsutkast och ogiltigförklarade fakturor returneras aldrig, oavsett vad du filtrerar på.
+
+- **Sortering.** `sort_by` stöder `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` och `buyerFacilityId`. Utan `sort_by` kommer resultaten nyast först. När du sätter `sort_by` blir `order` som standard `asc`, så skicka `order=desc` för fallande ordning. Andra fält, till exempel `publishedAt`, går inte att sortera på; filtrera på ett `publishedAt`-fönster istället.
+- **Okända filter ignoreras.** Varje frågeparameter som inte finns i filterreferensen ignoreras istället för att avvisas, och anropet lyckas ändå. Innan du förlitar dig på ett nytt filter, jämför `count_by` med och utan det.
+
+### Filterreferens
+
+Nycklarna är skiftlägeskänsliga. En nyckel i singular (`status`) tar ett värde; nyckeln i plural (`statuses`) tar en kommaseparerad lista och matchar något av värdena.
+
+**Status**
+
+| Filter | Matchar |
+| --- | --- |
+| `status`, `statuses` | Fakturans status, med gemener: `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue` eller `transferred`. Se [fakturastatusar](#fakturastatusar). |
+| `invoiceEntityType` | `work_order` returnerar endast arbetsorderfakturor; `project` returnerar endast [projektfakturor](#projektfakturor). Utelämna det för att få båda. |
+| `workOrderDisplayStatus` | Fakturor vars arbetsorder har denna visningsstatus: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` eller `Cancelled`. |
+
+**Vad och var**
+
+| Filter | Matchar |
+| --- | --- |
+| `search` | En del av arbetsorderns titel, eller exakt ett av: arbetsorder-id, externt arbetsorder-id, fakturanummer, faktura-id, PO-nummer, GL-kod. |
+| `workOrderId` | Fakturor för en arbetsorder. |
+| `externalWorkOrderId` | Fakturor för en arbetsorder, via den externa referens som ditt system lagrar på den. |
+| `projectId` | Fakturor förankrade till ett projekt. |
+| `buyerProjectId` | Fakturor för arbetsordrarna i ett projekt. En arbetsorder listar sina projekt i `buyerProjectIds`. |
+| `invoiceNumber` | Fakturor med detta leverantörsfakturanummer. |
+| `locationId`, `locationIds` | Fakturor för dessa platser. Hämta plats-id:n från [`GET /v1/buyer/location/locations`](/sv/buyer-api/assets-and-locations#platser). |
+| `regionIds` | Fakturor för platser i dessa regioner. |
+| `assetId`, `assetIds` | Fakturor vars arbetsorder gäller dessa tillgångar. |
+| `problemTypeId`, `problemTypeIds` | Fakturor vars arbetsorder har dessa problemtyper. Hämta id:n från [`GET /v1/buyer/work_order/problem_types`](/sv/buyer-api/work-orders#problemtyper). |
+| `woPriorityIds` | Fakturor vars arbetsorder har dessa prioriteter. |
+| `isPM` | `true` returnerar endast fakturor för arbetsordrar för förebyggande underhåll; `false` utesluter dem. |
+| `isCapex` | `true` returnerar endast fakturor för arbetsordrar flaggade som investeringsutgift (capex); `false` utesluter dem. |
+
+**Vem och bokföring**
+
+| Filter | Matchar |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds` | Fakturor från dessa leverantörer. Hämta leverantörsanläggnings-id:n från [`GET /v1/buyer/supplier_facilities`](/sv/buyer-api/supplier-network#ditt-leverantörsnätverk). |
+| `hasPONumber` | `true` returnerar fakturor som har ett PO-nummer; `false` returnerar fakturor utan. |
+| `hasGLCode` | `true` returnerar fakturor som har en GL-kod; `false` returnerar fakturor utan. |
+
+**Datum**
+
+| Filter | Matchar |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Fakturor skapade inom fönstret. |
+| `publishedAtStartDate`, `publishedAtEndDate` | Fakturor som leverantören publicerade till dig inom fönstret. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Fakturor godkända inom fönstret. |
+| `processedAtStartDate`, `processedAtEndDate` | Fakturor flyttade till `processing` inom fönstret. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | Fakturor markerade som betalda inom fönstret. |
+| `dueAtStartDate`, `dueAtEndDate` | Fakturor som förfaller inom fönstret. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Fakturor vars arbetsorder slutfördes inom fönstret. |
+
+### Regler för filtervärden
+
+- **Använd pluralnyckeln för flera värden, utan mellanslag.** `statuses=approved,processing` matchar någon av statusarna. `status=approved,processing` letar efter en enda status med just det namnet och returnerar ingenting. Ett mellanslag efter ett kommatecken i en id-lista kan få anropet att misslyckas.
+- **Ett värde per nyckel.** Om du upprepar en parameter används bara den första.
+- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar. Slutgränsen täcker hela slutdagen: dess tid ersätts med 23:59:59. URL-koda värdet (`curl -G --data-urlencode` gör det åt dig). Ett datum som inte kan tolkas avvisas inte. Det läses som 1 januari 1970, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Booleska värden är `true` eller `false`.** Alla andra värden, eller ett icke-numeriskt id, kan få anropet att misslyckas med `500` istället för `400`.
+- **Tenant-avgränsningen kan inte åsidosättas.** `buyerCompanyId` sätts alltid från din API-nyckel, så att skicka det har ingen effekt.
 
 ### Plattad export
 
