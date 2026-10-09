@@ -26,9 +26,9 @@ Les statuts sont conservés en minuscules.
 ## Lire les propositions
 
 ```bash
-# Propositions en attente dans toute l'entreprise
+# Propositions en attente dans toute l'entreprise, les plus récentes en premier
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+  "$BASE/v1/buyer/quote/proposals?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Propositions sur un bon de travail
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -44,6 +44,44 @@ Règles de portée à connaître :
 - Si le contact de votre clé d'API est restreint par emplacement, vous ne voyez que les propositions des emplacements accessibles. Un contact avec un ensemble accessible vide obtient une page vide, pas une erreur.
 - La lecture unique retourne `404` pour les propositions supprimées de manière logique, les brouillons et les propositions hors de votre portée d'emplacement. Traitez `404` comme « pas visible pour vous », pas nécessairement « n'existe pas ».
 
+### Référence des filtres
+
+La liste accepte `offset`, `limit` (par défaut 10, max 25), `sort_by` et `order`, ainsi que les filtres ci-dessous. Les filtres se combinent avec ET, et se combinent toujours avec la restriction locataire et la restriction par emplacement de votre clé. Il n'existe pas d'endpoint de comptage : le `count` de la réponse de liste est le nombre total de correspondances, donc demandez `limit=1` lorsque vous n'avez besoin que du nombre.
+
+```bash
+# Propositions attribuées de deux fournisseurs, attribuées en août
+curl -G "$BASE/v1/buyer/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=awarded" \
+  --data-urlencode "supplierFacilityIds=88,91" \
+  --data-urlencode "approvedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "approvedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+```
+
+| Filtre | Correspond à |
+| --- | --- |
+| `status`, `statuses` | Le statut de la proposition, en minuscules : `pending`, `awarded` ou `declined`. `statuses` prend une liste séparée par des virgules (`statuses=pending,awarded`). |
+| `search` | Une partie du titre du bon de travail. Une valeur numérique correspond aussi exactement à l'identifiant de la proposition ou du bon de travail. |
+| `workOrderId` | Les propositions sur un bon de travail. |
+| `locationId`, `locationIds` | Les propositions de ces emplacements. Obtenez les identifiants d'emplacement avec [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
+| `regionIds` | Les propositions des bons de travail situés dans des emplacements de ces régions. |
+| `problemTypeIds` | Les propositions dont le bon de travail a ces types de problème. Obtenez les identifiants avec [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). |
+| `woPriorityIds` | Les propositions dont le bon de travail a ces priorités. |
+| `isCapex` | `true` ne retourne que les propositions des bons de travail marqués comme dépenses d'investissement ; `false` les exclut. |
+| `supplierFacilityId`, `supplierFacilityIds` | Les propositions de ces fournisseurs. Obtenez les identifiants d'établissement fournisseur avec [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). |
+| `createdAtStartDate`, `createdAtEndDate` | Les propositions créées dans la fenêtre. Une proposition rédigée en brouillon dans l'application peut être soumise plus tard ; son `submittedAt` indique quand. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Les propositions attribuées dans la fenêtre. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Les propositions dont le bon de travail a été complété dans la fenêtre. |
+
+Règles des valeurs :
+
+- **Tri.** `sort_by` accepte `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` et `buyerFacilityId`. Sans `sort_by`, ou avec toute autre valeur, les résultats sont triés par `id` croissant (les plus anciens en premier). Dès que vous définissez `sort_by`, `order` vaut `asc` par défaut ; envoyez donc `order=desc` pour obtenir les plus récents en premier.
+- **Les listes prennent des virgules sans espaces.** Une clé au singulier (`status`) prend une seule valeur ; la clé au pluriel prend une liste séparée par des virgules. Un espace après une virgule peut faire échouer la requête.
+- **Les dates utilisent le format `MM/dd/yyyy HH:mm:ss` en UTC**, par exemple `08/01/2026 00:00:00`. L'heure est obligatoire. La borne de début est inclusive à l'heure que vous envoyez ; la borne de fin couvre toute la journée de fin. Une date qui ne s'analyse pas est lue comme le 1er janvier 1970 plutôt que rejetée : une date de début erronée correspond donc à tout, et une date de fin erronée ne correspond à rien.
+- **Les valeurs doivent être bien formées.** Un identifiant non numérique, ou un booléen autre que `true` ou `false`, peut faire échouer la requête avec un `500` plutôt qu'un `400`.
+- **Les filtres non reconnus sont ignorés**, et la restriction locataire ne peut pas être contournée : `buyerCompanyId` est toujours défini à partir de votre clé d'API, et les brouillons sont exclus même si vous demandez `status=draft`.
+
 ## À l'intérieur d'une proposition
 
 Le montant est ventilé dans les mêmes sections que les factures : `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` et `miscLineItems`, chaque section avec son propre taux de taxe et son `...TotalBeforeTax`. Ces sections se cumulent dans `totalBeforeTax`, `tax` et `totalAfterTax`. **Les valeurs monétaires sont sérialisées sous forme de chaînes** ; analysez-les comme des décimales, pas des flottants, si vous effectuez des calculs.
@@ -56,4 +94,4 @@ Autres champs utiles : `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeA
 2. Vos approbateurs l'accordent ou la refusent dans l'application. L'attribution augmente le plafond de dépenses effectif pour le travail.
 3. À l'arrivée de la [facture](/buyer-api/invoices) finale, comparez `invoiceTotalAfterTax` au `totalAfterTax` de la proposition attribuée avant d'approuver le paiement. Signalez les écarts au-dessus de votre tolérance pour une revue humaine.
 
-Une boucle d'interrogation pratique pour un tableau de bord des achats : filtrez `status=pending`, triez par `submittedAt` et paginez avec `limit=25`, en respectant la limite de débit de 10 requêtes par fenêtre de 20 secondes.
+Une boucle d'interrogation pratique pour un tableau de bord des achats : filtrez `status=pending`, triez avec `sort_by=createdAt&order=desc` et paginez avec `limit=25`, en respectant la limite de débit de 10 requêtes par fenêtre de 20 secondes.
