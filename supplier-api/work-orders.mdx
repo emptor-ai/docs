@@ -154,6 +154,27 @@ Three lightweight signals while the job is in flight:
 | `POST .../status_update/parts_ordered` | `PartsOnOrder` |
 | `POST .../status_update/parts_received` | `PartsReceived` |
 
+### When internal teams can't place work orders on hold
+
+A buyer can stop its internal service team from putting work orders on hold. The per-team setting is `allowToPlaceWorkOrdersOnHold`. It is on by default, and the buyer can turn it off for an internal team.
+
+When the setting is off, Supplier API keys that belong to that internal team cannot move a work order into an On Hold status. The On Hold statuses are `WaitingForProposal`, `WaitingForProposalApproval`, `PartsRequested`, `PartsOnOrder`, and `DelayedByThirdParty`. The block applies to:
+
+- `POST .../status_update/parts_requested` and `POST .../status_update/parts_ordered`.
+- Service call [check-out](/supplier-api/service-calls#3-check-out-and-set-the-outcome) and remote check-out with an On Hold `checkOutStatus`.
+
+A blocked call returns `403` and changes nothing:
+
+```json
+{ "message": "Placing work orders on hold is not enabled for this internal team", "type": "ForbiddenException", "status": "error", "traceId": "abc123def45" }
+```
+
+What stays allowed:
+
+- **Moves within or out of On Hold.** A work order that is already on hold can move to another On Hold status, such as `PartsRequested` to `PartsOnOrder`. It can also leave On Hold, for example with `parts_received`.
+- **Third-party suppliers.** Keys of third-party suppliers are never restricted. Internal teams without the setting are not restricted either.
+- **Other flows.** Work order creation, sub-contract statuses, and automatic flows such as requests for proposal and quotes are not affected.
+
 **Estimated completion date.** `PATCH /v1/supplier/work_order/work_orders/{id}/estimated_completion_date` reads only `estimatedCompletionDate` (ISO 8601) from the body:
 
 ```bash
