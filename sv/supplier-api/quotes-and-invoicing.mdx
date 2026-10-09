@@ -83,11 +83,11 @@ curl -X POST "$BASE/v1/supplier/invoice/invoices" \
   }'
 ```
 
-Detaljer som biter:
+Beteende att känna till:
 
 - `poNumber` blir som standard arbetsorderns PO-nummer.
 - `serviceCallIds` blir som standard **alla** servicebesök på arbetsordern när det utelämnas eller är tomt; sätt det uttryckligen när du fakturerar en delmängd av besök.
-- `taxLineItems` valideras mot fakturavalutans tillåtna skattetyper (för närvarande stödjer endast CAD dem: GST/HST/PST); allt annat avvisas.
+- OpenWrench validerar `taxLineItems` mot fakturavalutans tillåtna skattetyper och avvisar allt annat. För närvarande stödjer endast CAD dem (GST/HST/PST).
 - `invoicePDFLink` (en giltig URL) blir fakturans enda PDF-post om du är värd för PDF:en själv; de flesta integrationer använder uppladdningsslutpunkten nedan istället.
 - `autoPublishOnApproval` väljer denna faktura för auto-publicering när arbetsordern avslutas.
 - Att spara en faktura kan flytta den associerade arbetsorderns status enligt mappningen faktura-till-arbetsorder-status. Ett spar-nivåvalideringsfel returnerar `406`.
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-Varje förutsättning som misslyckas returnerar `400`: din anläggning måste äga fakturan, den associerade arbetsordern måste vara i visningsstatus **Completed**, och leverantörsfakturaredigering måste tillåtas av köparens konfiguration.
+Slutpunkten returnerar `400` om någon förutsättning misslyckas: din anläggning måste äga fakturan, den associerade arbetsordern måste vara i visningsstatus **Completed**, och leverantörsfakturaredigering måste tillåtas av köparens konfiguration.
 
 ### Läsa och stämma av
 

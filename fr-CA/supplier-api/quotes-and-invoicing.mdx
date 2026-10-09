@@ -83,11 +83,11 @@ curl -X POST "$BASE/v1/supplier/invoice/invoices" \
   }'
 ```
 
-Détails qui piquent :
+Comportement à connaître :
 
 - `poNumber` prend par défaut le numéro de BC du bon de travail.
 - `serviceCallIds` prend par défaut **tous** les appels de service du bon de travail lorsqu'il est omis ou vide; définissez-le explicitement lorsque vous facturez un sous-ensemble de visites.
-- `taxLineItems` sont validés contre les types de taxe permis pour la devise de la facture (actuellement seul le CAD les prend en charge : GST/HST/PST); tout autre est rejeté.
+- OpenWrench valide `taxLineItems` contre les types de taxe permis pour la devise de la facture et rejette tout autre type. Actuellement, seul le CAD les prend en charge (GST/HST/PST).
 - `invoicePDFLink` (une URL valide) devient la seule entrée PDF de la facture si vous hébergez le PDF vous-même; la plupart des intégrations utilisent plutôt l'endpoint de téléversement ci-dessous.
 - `autoPublishOnApproval` inscrit cette facture à la publication automatique lorsque le bon de travail se termine.
 - Sauvegarder une facture peut faire passer le statut du bon de travail associé selon la correspondance facture-vers-bon-de-travail. Un échec de validation au niveau de la sauvegarde renvoie `406`.
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-Chaque précondition non satisfaite renvoie `400` : votre établissement doit posséder la facture, le bon de travail associé doit être au statut d'affichage **Completed**, et la modification de facture par le fournisseur doit être permise par la configuration de l'acheteur.
+L'endpoint renvoie `400` si une précondition n'est pas satisfaite : votre établissement doit posséder la facture, le bon de travail associé doit être au statut d'affichage **Completed**, et la modification de facture par le fournisseur doit être permise par la configuration de l'acheteur.
 
 ### Lire et réconcilier
 

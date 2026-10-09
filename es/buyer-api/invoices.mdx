@@ -174,7 +174,7 @@ Las facturas de proyecto se anclan a un proyecto (`projectId`) en lugar de a una
 - La verificación por orden de trabajo de "una factura por proveedor" para duplicados.
 - La validación con alcance de moneda sobre `taxLineItems` (los montos aún se validan como numéricos).
 
-Las analíticas de costo por ubicación y costo por instalación solo incluyen facturas que llevan el campo respectivo, por lo que una factura de proyecto creada sin `locationId` o `buyerFacilityId` queda excluida de esos reportes.
+Las analíticas de costo por ubicación y costo por instalación solo incluyen facturas que llevan el campo respectivo. Una factura de proyecto creada sin `locationId` o `buyerFacilityId` no aparece en esos reportes.
 
 El atajo `POST status/paid/by_work_order_id` solo coincide con facturas de orden de trabajo; para una factura de proyecto, márcala como pagada por `id` mediante `POST status/paid`.
 
