@@ -83,11 +83,11 @@ curl -X POST "$BASE/v1/supplier/invoice/invoices" \
   }'
 ```
 
-Details that bite:
+Behavior to know:
 
 - `poNumber` defaults to the work order's PO number.
 - `serviceCallIds` defaults to **all** service calls on the work order when omitted or empty; set it explicitly when billing a subset of visits.
-- `taxLineItems` are validated against the invoice currency's allowed tax types (currently only CAD supports them: GST/HST/PST); anything else is rejected.
+- OpenWrench validates `taxLineItems` against the invoice currency's allowed tax types and rejects anything else. Currently only CAD supports them (GST/HST/PST).
 - `invoicePDFLink` (a valid URL) becomes the invoice's single PDF entry if you host the PDF yourself; most integrations use the upload endpoint below instead.
 - `autoPublishOnApproval` opts this invoice into auto-publishing when the work order completes.
 - Saving an invoice can transition the associated work order's status per the invoice-to-work-order status mapping. A save-level validation failure returns `406`.
@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-Each precondition failing returns `400`: your facility must own the invoice, the associated work order must be in **Completed** display status, and the buyer's configuration must allow supplier invoice editing.
+The endpoint returns `400` if any precondition fails: your facility must own the invoice, the associated work order must be in **Completed** display status, and the buyer's configuration must allow supplier invoice editing.
 
 ### Read and reconcile
 
