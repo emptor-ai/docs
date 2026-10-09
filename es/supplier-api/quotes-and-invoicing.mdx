@@ -103,7 +103,7 @@ curl -X POST "$BASE/v1/supplier/invoice/file/upload_and_publish/7710" \
   -F "file=@INV-2026-0451.pdf"
 ```
 
-El endpoint devuelve `400` si falla alguna precondición: tu instalación debe ser dueña de la factura, la orden de trabajo asociada debe estar en display status **Completed**, y la edición de facturas por proveedor debe estar permitida por la configuración del comprador.
+El endpoint devuelve `400` si falla alguna precondición: tu instalación debe ser dueña de la factura, la orden de trabajo asociada debe estar en display status **Completed**, y la configuración del comprador debe permitir la edición de facturas por proveedor.
 
 ### Leer y conciliar
 
