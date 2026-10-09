@@ -158,7 +158,7 @@ Trois signaux légers pendant que le travail est en cours :
 
 Un acheteur peut empêcher son équipe de service interne de mettre des bons de travail en attente. Le paramètre par équipe est `allowToPlaceWorkOrdersOnHold`. Il est activé par défaut, et l'acheteur peut le désactiver pour une équipe interne.
 
-Lorsque le paramètre est désactivé, les clés de la Supplier API qui appartiennent à cette équipe interne ne peuvent pas faire passer un bon de travail à un statut En attente. Les statuts En attente sont `WaitingForProposal`, `WaitingForProposalApproval`, `PartsRequested`, `PartsOnOrder` et `DelayedByThirdParty`. Le blocage s'applique à :
+Lorsque le paramètre est désactivé, les clés de l'API Fournisseur qui appartiennent à cette équipe interne ne peuvent pas faire passer un bon de travail à un statut En attente. Les statuts En attente sont `WaitingForProposal`, `WaitingForProposalApproval`, `PartsRequested`, `PartsOnOrder` et `DelayedByThirdParty`. Le blocage s'applique à :
 
 - `POST .../status_update/parts_requested` et `POST .../status_update/parts_ordered`.
 - Le [départ](/fr-CA/supplier-api/service-calls#3-quitter-et-définir-le-résultat) de l'appel de service et le départ à distance avec un `checkOutStatus` En attente.
