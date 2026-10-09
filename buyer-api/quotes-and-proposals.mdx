@@ -28,9 +28,9 @@ Statuses persist lowercase.
 ## Reading proposals
 
 ```bash
-# Pending proposals across the company
+# Pending proposals across the company, newest first
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+  "$BASE/v1/buyer/quote/proposals?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Proposals on one work order
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -46,6 +46,44 @@ Scoping rules worth knowing:
 - If your API key's contact is location-restricted, you only see proposals for accessible locations. A contact with an empty accessible set gets an empty page, not an error.
 - The single read returns `404` for soft-deleted proposals, drafts, and proposals outside your location scope. Treat `404` as "not visible to you", not necessarily "does not exist".
 
+### Filter reference
+
+The list takes `offset`, `limit` (default 10, max 25), `sort_by`, and `order`, plus the filters below. Filters combine with AND, and always combine with your key's tenant and location scoping. There is no count endpoint: the list response's `count` is the total number of matches, so request `limit=1` when you only need the number.
+
+```bash
+# Awarded proposals from two suppliers, awarded in August
+curl -G "$BASE/v1/buyer/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=awarded" \
+  --data-urlencode "supplierFacilityIds=88,91" \
+  --data-urlencode "approvedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "approvedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+```
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | The proposal status, lowercase: `pending`, `awarded`, or `declined`. `statuses` takes a comma-separated list (`statuses=pending,awarded`). |
+| `search` | Part of the work order title. A numeric value also matches the proposal id or the work order id exactly. |
+| `workOrderId` | Proposals on one work order. |
+| `locationId`, `locationIds` | Proposals for these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
+| `regionIds` | Proposals for work orders at locations in these regions. |
+| `problemTypeIds` | Proposals whose work order has these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). |
+| `woPriorityIds` | Proposals whose work order has these priorities. |
+| `isCapex` | `true` returns only proposals for work orders flagged as capital expenditure; `false` leaves them out. |
+| `supplierFacilityId`, `supplierFacilityIds` | Proposals from these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). |
+| `createdAtStartDate`, `createdAtEndDate` | Proposals created within the window. A proposal drafted in the app may be submitted later; its `submittedAt` shows when. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Proposals awarded within the window. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Proposals whose work order was completed within the window. |
+
+Value rules:
+
+- **Sorting.** `sort_by` supports `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, or any other value, results are sorted by `id` ascending (oldest first). Once you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for newest first.
+- **Lists take commas with no spaces.** A singular key (`status`) takes one value; the plural key takes a comma-separated list. A space after a comma can fail the request.
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required. The start bound is inclusive at the time you send; the end bound covers the whole end day. A date that does not parse is read as 1 January 1970 rather than rejected, so a bad start date matches everything and a bad end date matches nothing.
+- **Values must be well formed.** A non-numeric id, or a boolean other than `true` or `false`, can fail the request with a `500` rather than a `400`.
+- **Unrecognized filters are ignored**, and tenant scoping can't be overridden: `buyerCompanyId` is always set from your API key, and drafts are excluded even if you ask for `status=draft`.
+
 ## Inside a proposal
 
 The money is broken into the same sections as invoices: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems`, and `miscLineItems`. Each section has its own tax rate and `...TotalBeforeTax`, and the sections roll up to `totalBeforeTax`, `tax`, and `totalAfterTax`. **Monetary values serialize as strings**; parse them as decimals, not floats, if you are doing arithmetic.
@@ -58,4 +96,4 @@ Other useful fields: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApp
 2. Your approvers award or decline it in the app. Award raises the effective spend ceiling for the job.
 3. When the final [invoice](/buyer-api/invoices) arrives, compare `invoiceTotalAfterTax` against the awarded proposal's `totalAfterTax` before approving payment. Flag variances above your tolerance for human review.
 
-A practical polling loop for a procurement dashboard: filter `status=pending`, sort by `submittedAt`, and page with `limit=25`, respecting the rate limit of 10 requests per 20-second window.
+A practical polling loop for a procurement dashboard: filter `status=pending`, sort with `sort_by=createdAt&order=desc`, and page with `limit=25`, respecting the rate limit of 10 requests per 20-second window.

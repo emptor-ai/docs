@@ -35,7 +35,7 @@ Le chemin contrôlé par l'acheteur est `pending → approved → processing →
 ```bash
 # Factures en attente, les plus récentes en premier
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Nombre uniquement
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -47,15 +47,85 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/
 
 Une facture est reliée à son `supplierFacilityId` en plus d'**exactement un** de `workOrderId` ou `projectId` (l'autre est `null`, tout comme l'objet hydraté `workOrder` / `project`). Les factures de bon de travail portent toujours `locationId` et `buyerFacilityId`; les factures de projet ne les portent que si le client les a fournis, alors les deux peuvent être `null`. La facture porte la ventilation monétaire en sections (main-d'œuvre, matériel, déplacement, fret, divers), chacune avec des postes, un `taxRate` et un `totalBeforeTax`. Ces sections se totalisent à `invoiceTotalBeforeTax`, `invoiceTax` et `invoiceTotalAfterTax`. Les valeurs monétaires sont sérialisées en chaînes de caractères. Un court résumé de la portée dérivé par IA peut apparaître dans `title`. Le PDF rendu se trouve dans `invoicePDFs`; les fichiers de soutien sont dans `attachments` (voir [Fichiers et pièces jointes](/fr-CA/buyer-api/files-and-attachments)).
 
-### Filtrer par type d'entité
-
-Ajoutez `invoiceEntityType=work_order` ou `invoiceEntityType=project` à `GET /invoices`, `/invoices/count_by` et `/invoices/download` pour restreindre à un seul onglet; omettez-le pour obtenir les deux. `projectId` et `projectIdSeq` filtrent vers des projets précis de la même façon que `workOrderId` / `workOrderIdSeq` filtrent vers des bons de travail précis.
+### Lister, filtrer et compter
 
 ```bash
+# Factures approuvées à deux emplacements, publiées en août, les plus élevées en premier
+curl -G "$BASE/v1/buyer/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=approved" \
+  --data-urlencode "locationIds=1204,1310" \
+  --data-urlencode "publishedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "publishedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=invoiceTotalAfterTax -d order=desc
+
 # Uniquement les factures de projet pour ce projet
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
 ```
+
+`GET /invoices`, `/invoices/count_by` et `/invoices/download` prennent les mêmes filtres de la [référence des filtres](#référence-des-filtres) ci-dessous. Les filtres se combinent avec ET, et se combinent toujours avec la portée de locataire dérivée de votre clé. Les brouillons des fournisseurs et les factures annulées ne sont jamais retournés, peu importe vos filtres.
+
+- **Tri.** `sort_by` prend en charge `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` et `buyerFacilityId`. Sans `sort_by`, les résultats sont triés du plus récent au plus ancien. Dès que vous définissez `sort_by`, `order` est `asc` par défaut, alors envoyez `order=desc` pour un tri décroissant. Les autres champs, comme `publishedAt`, ne sont pas triables; filtrez plutôt sur une fenêtre `publishedAt`.
+- **Les filtres non reconnus sont ignorés.** Tout paramètre de requête absent de la référence des filtres est ignoré plutôt que rejeté, et la requête aboutit quand même. Avant de vous appuyer sur un nouveau filtre, comparez `count_by` avec et sans lui.
+
+### Référence des filtres
+
+Les clés sont sensibles à la casse. Une clé au singulier (`status`) prend une seule valeur; la clé au pluriel (`statuses`) prend une liste séparée par des virgules et correspond à l'une ou l'autre des valeurs.
+
+**Statut**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `status`, `statuses` | Le statut de la facture, en minuscules : `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue` ou `transferred`. Voir [statuts de facture](#statuts-de-facture). |
+| `invoiceEntityType` | `work_order` retourne uniquement les factures de bon de travail; `project` retourne uniquement les [factures de projet](#factures-de-projet). Omettez-le pour obtenir les deux. |
+| `workOrderDisplayStatus` | Les factures dont le bon de travail est dans ce statut d'affichage : `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed` ou `Cancelled`. |
+
+**Quoi et où**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `search` | Une partie du titre du bon de travail, ou exactement l'un des éléments suivants : id du bon de travail, id externe du bon de travail, numéro de facture, id de facture, numéro de bon de commande, code GL. |
+| `workOrderId` | Les factures d'un bon de travail. |
+| `externalWorkOrderId` | Les factures d'un bon de travail, selon la référence externe que votre système conserve sur celui-ci. |
+| `projectId` | Les factures rattachées à un projet. |
+| `buyerProjectId` | Les factures des bons de travail d'un projet. Un bon de travail liste ses projets dans `buyerProjectIds`. |
+| `invoiceNumber` | Les factures portant ce numéro de facture du fournisseur. |
+| `locationId`, `locationIds` | Les factures de ces emplacements. Obtenez les ids d'emplacement avec [`GET /v1/buyer/location/locations`](/fr-CA/buyer-api/assets-and-locations#emplacements). |
+| `regionIds` | Les factures des emplacements de ces régions. |
+| `assetId`, `assetIds` | Les factures dont le bon de travail porte sur ces actifs. |
+| `problemTypeId`, `problemTypeIds` | Les factures dont le bon de travail est de ces types de problèmes. Obtenez les ids avec [`GET /v1/buyer/work_order/problem_types`](/fr-CA/buyer-api/work-orders#types-de-problèmes). |
+| `woPriorityIds` | Les factures dont le bon de travail est à ces priorités. |
+| `isPM` | `true` retourne uniquement les factures des bons de travail d'entretien préventif; `false` les exclut. |
+| `isCapex` | `true` retourne uniquement les factures des bons de travail marqués comme dépenses en immobilisations; `false` les exclut. |
+
+**Qui et comptabilité**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds` | Les factures de ces fournisseurs. Obtenez les ids d'établissement fournisseur avec [`GET /v1/buyer/supplier_facilities`](/fr-CA/buyer-api/supplier-network#votre-réseau-de-fournisseurs). |
+| `hasPONumber` | `true` retourne les factures qui portent un numéro de bon de commande; `false` retourne celles qui n'en ont pas. |
+| `hasGLCode` | `true` retourne les factures qui portent un code GL; `false` retourne celles qui n'en ont pas. |
+
+**Dates**
+
+| Filtre | Correspond à |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Les factures créées dans la fenêtre. |
+| `publishedAtStartDate`, `publishedAtEndDate` | Les factures que le fournisseur vous a publiées dans la fenêtre. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Les factures approuvées dans la fenêtre. |
+| `processedAtStartDate`, `processedAtEndDate` | Les factures passées à `processing` dans la fenêtre. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | Les factures marquées payées dans la fenêtre. |
+| `dueAtStartDate`, `dueAtEndDate` | Les factures échues dans la fenêtre. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Les factures dont le bon de travail a été complété dans la fenêtre. |
+
+### Règles des valeurs de filtre
+
+- **Utilisez la clé au pluriel pour plusieurs valeurs, sans espaces.** `statuses=approved,processing` correspond à l'un ou l'autre statut. `status=approved,processing` cherche un unique statut portant ce nom littéral et ne renvoie rien. Une espace après une virgule dans une liste d'ids peut faire échouer la requête.
+- **Une valeur par clé.** Si vous répétez un paramètre, seul le premier est utilisé.
+- **Les dates utilisent `MM/dd/yyyy HH:mm:ss` en UTC**, par exemple `08/01/2026 00:00:00`. L'heure est obligatoire. La borne de début est incluse à l'heure que vous envoyez. La borne de fin couvre toute la journée de fin : son heure est remplacée par 23:59:59. Encodez la valeur pour l'URL (`curl -G --data-urlencode` le fait pour vous). Une date qui ne peut pas être analysée n'est pas rejetée. Elle est lue comme le 1er janvier 1970, alors une date de début invalide correspond à tout et une date de fin invalide ne correspond à rien.
+- **Les booléens sont `true` ou `false`.** Toute autre valeur, ou un id non numérique, peut faire échouer la requête avec un `500` plutôt qu'un `400`.
+- **La portée de locataire ne peut pas être contournée.** `buyerCompanyId` est toujours défini à partir de votre clé d'API, alors le passer n'a aucun effet.
 
 ### Export aplati
 

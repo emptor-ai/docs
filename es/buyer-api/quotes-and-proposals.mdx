@@ -28,9 +28,9 @@ Los estados se guardan en minúsculas.
 ## Leer propuestas
 
 ```bash
-# Propuestas pendientes en toda la empresa
+# Propuestas pendientes en toda la empresa, más recientes primero
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+  "$BASE/v1/buyer/quote/proposals?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Propuestas de una orden de trabajo
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -46,6 +46,44 @@ Reglas de alcance que conviene conocer:
 - Si el contacto de tu clave de API tiene restricción por ubicación, solo ves propuestas de las ubicaciones accesibles. Un contacto con un conjunto accesible vacío obtiene una página vacía, no un error.
 - La lectura individual devuelve `404` para propuestas eliminadas de forma lógica, borradores y propuestas fuera de tu alcance de ubicación. Trata `404` como "no visible para ti", no necesariamente como "no existe".
 
+### Referencia de filtros
+
+El listado acepta `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order`, además de los filtros de abajo. Los filtros se combinan con AND, y siempre se combinan con el alcance por inquilino y por ubicación de tu clave. No hay endpoint de conteo: el `count` de la respuesta del listado es el número total de coincidencias, así que pide `limit=1` cuando solo necesites el número.
+
+```bash
+# Propuestas otorgadas de dos proveedores, otorgadas en agosto
+curl -G "$BASE/v1/buyer/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=awarded" \
+  --data-urlencode "supplierFacilityIds=88,91" \
+  --data-urlencode "approvedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "approvedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+```
+
+| Filtro | Coincide con |
+| --- | --- |
+| `status`, `statuses` | El estado de la propuesta, en minúsculas: `pending`, `awarded` o `declined`. `statuses` toma una lista separada por comas (`statuses=pending,awarded`). |
+| `search` | Parte del título de la orden de trabajo. Un valor numérico también coincide exactamente con el id de la propuesta o el id de la orden de trabajo. |
+| `workOrderId` | Propuestas de una orden de trabajo. |
+| `locationId`, `locationIds` | Propuestas de estas ubicaciones. Obtén los ids de ubicación con [`GET /v1/buyer/location/locations`](/es/buyer-api/assets-and-locations#ubicaciones). |
+| `regionIds` | Propuestas de órdenes de trabajo en ubicaciones de estas regiones. |
+| `problemTypeIds` | Propuestas cuya orden de trabajo tiene estos tipos de problema. Obtén los ids con [`GET /v1/buyer/work_order/problem_types`](/es/buyer-api/work-orders#tipos-de-problema). |
+| `woPriorityIds` | Propuestas cuya orden de trabajo tiene estas prioridades. |
+| `isCapex` | `true` devuelve solo propuestas de órdenes de trabajo marcadas como gasto de capital; `false` las deja fuera. |
+| `supplierFacilityId`, `supplierFacilityIds` | Propuestas de estos proveedores. Obtén los ids de instalación de proveedor con [`GET /v1/buyer/supplier_facilities`](/es/buyer-api/supplier-network#tu-red-de-proveedores). |
+| `createdAtStartDate`, `createdAtEndDate` | Propuestas creadas dentro de la ventana. Una propuesta redactada en la app puede enviarse más tarde; su `submittedAt` indica cuándo. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Propuestas otorgadas dentro de la ventana. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Propuestas cuya orden de trabajo se completó dentro de la ventana. |
+
+Reglas de valores:
+
+- **Ordenamiento.** `sort_by` admite `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` y `buyerFacilityId`. Sin `sort_by`, o con cualquier otro valor, los resultados se ordenan por `id` ascendente (más antiguas primero). Una vez que estableces `sort_by`, `order` toma por defecto `asc`, así que envía `order=desc` para ver las más recientes primero.
+- **Las listas llevan comas sin espacios.** Una clave en singular (`status`) toma un valor; la clave en plural toma una lista separada por comas. Un espacio después de una coma puede hacer fallar la solicitud.
+- **Las fechas usan `MM/dd/yyyy HH:mm:ss` en UTC**, por ejemplo `08/01/2026 00:00:00`. La hora es obligatoria. El extremo inicial es inclusivo a partir de la hora que envías; el extremo final cubre todo el día final. Una fecha que no se puede interpretar se lee como 1 de enero de 1970 en lugar de rechazarse, así que una fecha de inicio errónea coincide con todo y una fecha de fin errónea no coincide con nada.
+- **Los valores deben estar bien formados.** Un id no numérico, o un booleano distinto de `true` o `false`, puede hacer fallar la solicitud con un `500` en lugar de un `400`.
+- **Los filtros no reconocidos se ignoran**, y el alcance por inquilino no se puede anular: `buyerCompanyId` siempre se establece a partir de tu clave de API, y los borradores se excluyen aunque pidas `status=draft`.
+
 ## Dentro de una propuesta
 
 El dinero se descompone en las mismas secciones que las facturas: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` y `miscLineItems`, cada sección con su propia tasa de impuestos y `...TotalBeforeTax`, que se suman a `totalBeforeTax`, `tax` y `totalAfterTax`. **Los valores monetarios se serializan como cadenas**; parséalos como decimales, no como floats, si vas a hacer aritmética.
@@ -58,4 +96,4 @@ Otros campos útiles: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeAp
 2. Tus aprobadores la otorgan o la rechazan en la app. Otorgarla eleva el techo de gasto efectivo para el trabajo.
 3. Cuando llega la [factura](/es/buyer-api/invoices) final, compara `invoiceTotalAfterTax` con el `totalAfterTax` de la propuesta otorgada antes de aprobar el pago. Marca las variaciones por encima de tu tolerancia para revisión humana.
 
-Un ciclo práctico de sondeo para un tablero de compras: filtra `status=pending`, ordena por `submittedAt` y pagina con `limit=25`, respetando el límite de tasa de 10 solicitudes por ventana de 20 segundos.
+Un ciclo práctico de sondeo para un tablero de compras: filtra `status=pending`, ordena con `sort_by=createdAt&order=desc` y pagina con `limit=25`, respetando el límite de tasa de 10 solicitudes por ventana de 20 segundos.

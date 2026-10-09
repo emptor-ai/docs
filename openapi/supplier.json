@@ -4640,7 +4640,7 @@
       "get": {
         "operationId": "listProposals",
         "summary": "List proposals",
-        "description": "Lists the supplier's proposals (quotes), tenant- and role-scoped. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists the supplier's proposals (quotes), tenant- and role-scoped. The response's `count` is the total number of matches. Filtering: the supported filters are listed as parameters below. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that is not a supported filter is ignored rather than rejected. A non-numeric id, a space in a list, or a boolean other than `true`/`false` can fail the request with a 500. Filters are combined with the tenant-security filters derived from the API key, which can't be overridden. `sort_by` supports `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, or an unsupported value, results are sorted by `id` ascending (oldest first); send `sort_by=createdAt&order=desc` for newest first. When you set `sort_by`, `order` defaults to `asc`.",
         "tags": [
           "Proposals"
         ],
@@ -4707,13 +4707,7 @@
             "description": "Page size. Default 10, maximum 25."
           },
           {
-            "name": "sort_by",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Column name to sort by."
+            "$ref": "#/components/parameters/propFilter_sort_by"
           },
           {
             "name": "order",
@@ -4727,6 +4721,57 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_search"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_workOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_regionIds"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_problemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_woPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_isCapex"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_approvedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_approvedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_workCompletedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/propFilter_workCompletedAtEndDate"
           }
         ]
       },
@@ -5176,7 +5221,7 @@
       "get": {
         "operationId": "listInvoices",
         "summary": "List invoices",
-        "description": "Lists the supplier's invoices, tenant- and role-scoped. Masked for third-party suppliers. Standard pagination applies. Additional entity-specific query-string filters (indexed column names) are passed through to the data layer; tenant-security filters restricting results to the API key's supplier facility/company are always applied server-side and cannot be overridden.",
+        "description": "Lists the supplier's invoices, tenant- and role-scoped, including drafts. Masked for third-party suppliers. Filtering: the supported filters are listed as parameters below. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that is not a supported filter is ignored rather than rejected. A non-numeric id, a space in a list, or a boolean other than `true`/`false` can fail the request with a 500. Filters are combined with the tenant-security filters derived from the API key, which can't be overridden. `sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, results are newest first (`createdAt` descending). When you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for descending.",
         "tags": [
           "Invoices"
         ],
@@ -5243,13 +5288,7 @@
             "description": "Page size. Default 10, maximum 25."
           },
           {
-            "name": "sort_by",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Column name to sort by."
+            "$ref": "#/components/parameters/invFilter_sort_by"
           },
           {
             "name": "order",
@@ -5263,6 +5302,102 @@
               ]
             },
             "description": "Sort direction."
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_search"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_status"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_statuses"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_workOrderDisplayStatus"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_workOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_externalWorkOrderId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_invoiceNumber"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_locationId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_locationIds"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_regionIds"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_assetId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_assetIds"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_problemTypeId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_problemTypeIds"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_woPriorityIds"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_isPM"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_isCapex"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_buyerCompanyId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_createdAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_createdAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_publishedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_publishedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_approvedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_approvedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_processedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_processedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_markedPaidAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_markedPaidAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_dueAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_dueAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_workCompletedAtStartDate"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_workCompletedAtEndDate"
           }
         ]
       },
@@ -17618,6 +17753,512 @@
             "false"
           ]
         }
+      },
+      "invFilter_sort_by": {
+        "name": "sort_by",
+        "in": "query",
+        "required": false,
+        "description": "Field to sort by: `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, or `buyerFacilityId`. Omit for newest first.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_search": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Free-text lookup. Matches part of the work order title, or exactly one of: work order id, external work order id, invoice number, invoice id, PO number, GL code.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_status": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "One invoice status, lowercase: `draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, `void`.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "pending"
+      },
+      "invFilter_statuses": {
+        "name": "statuses",
+        "in": "query",
+        "required": false,
+        "description": "Several invoice statuses, lowercase (`draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, `void`). Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "approved,processing"
+      },
+      "invFilter_workOrderDisplayStatus": {
+        "name": "workOrderDisplayStatus",
+        "in": "query",
+        "required": false,
+        "description": "Invoices whose work order is in this display status: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "Pending",
+            "Deferred",
+            "Open",
+            "InProgress",
+            "OnHold",
+            "Completed",
+            "Cancelled"
+          ]
+        }
+      },
+      "invFilter_workOrderId": {
+        "name": "workOrderId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for one work order.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "invFilter_externalWorkOrderId": {
+        "name": "externalWorkOrderId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for one work order, by the external reference your system stores on it. Exact match.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_invoiceNumber": {
+        "name": "invoiceNumber",
+        "in": "query",
+        "required": false,
+        "description": "Invoices with this supplier invoice number.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for one location.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "invFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for these locations. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1204,1310"
+      },
+      "invFilter_regionIds": {
+        "name": "regionIds",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for locations in these regions. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_assetId": {
+        "name": "assetId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices whose work order is on this asset.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "invFilter_assetIds": {
+        "name": "assetIds",
+        "in": "query",
+        "required": false,
+        "description": "Invoices whose work order is on one of these assets. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_problemTypeId": {
+        "name": "problemTypeId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices whose work order has this problem type.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "invFilter_problemTypeIds": {
+        "name": "problemTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Invoices whose work order has one of these problem types. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_woPriorityIds": {
+        "name": "woPriorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Invoices whose work order has one of these priorities. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "invFilter_isPM": {
+        "name": "isPM",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns only invoices for preventive maintenance work orders; `false` leaves them out.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "invFilter_isCapex": {
+        "name": "isCapex",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns only invoices for work orders flagged as capital expenditure; `false` leaves them out.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "invFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Invoices for one of your buyer customers. Narrows your results; it cannot widen them.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "invFilter_createdAtStartDate": {
+        "name": "createdAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest creation time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_createdAtEndDate": {
+        "name": "createdAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest creation time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_publishedAtStartDate": {
+        "name": "publishedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the invoice was published to the buyer to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_publishedAtEndDate": {
+        "name": "publishedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the invoice was published to the buyer to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_approvedAtStartDate": {
+        "name": "approvedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest approval time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_approvedAtEndDate": {
+        "name": "approvedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest approval time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_processedAtStartDate": {
+        "name": "processedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the invoice moved to `processing` to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_processedAtEndDate": {
+        "name": "processedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the invoice moved to `processing` to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_markedPaidAtStartDate": {
+        "name": "markedPaidAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest time the invoice was marked paid to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_markedPaidAtEndDate": {
+        "name": "markedPaidAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest time the invoice was marked paid to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "invFilter_dueAtStartDate": {
+        "name": "dueAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest due date to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "09/01/2026 00:00:00"
+      },
+      "invFilter_dueAtEndDate": {
+        "name": "dueAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest due date to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "09/30/2026 00:00:00"
+      },
+      "invFilter_workCompletedAtStartDate": {
+        "name": "workCompletedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest completion time of the invoice's work order to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "invFilter_workCompletedAtEndDate": {
+        "name": "workCompletedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest completion time of the invoice's work order to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "propFilter_sort_by": {
+        "name": "sort_by",
+        "in": "query",
+        "required": false,
+        "description": "Field to sort by: `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, or `buyerFacilityId`. Omit for `id` ascending.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "propFilter_search": {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "description": "Matches part of the work order title. A numeric value also matches the proposal id or the work order id exactly.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "propFilter_status": {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "description": "One proposal status, lowercase: `draft`, `pending`, `awarded`, `declined`.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "pending"
+      },
+      "propFilter_statuses": {
+        "name": "statuses",
+        "in": "query",
+        "required": false,
+        "description": "Several proposal statuses, lowercase (`draft`, `pending`, `awarded`, `declined`). Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "pending,awarded"
+      },
+      "propFilter_workOrderId": {
+        "name": "workOrderId",
+        "in": "query",
+        "required": false,
+        "description": "Proposals on one work order.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "propFilter_locationId": {
+        "name": "locationId",
+        "in": "query",
+        "required": false,
+        "description": "Proposals for one location.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "propFilter_locationIds": {
+        "name": "locationIds",
+        "in": "query",
+        "required": false,
+        "description": "Proposals for these locations. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "1204,1310"
+      },
+      "propFilter_regionIds": {
+        "name": "regionIds",
+        "in": "query",
+        "required": false,
+        "description": "Proposals for work orders at locations in these regions. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "propFilter_problemTypeIds": {
+        "name": "problemTypeIds",
+        "in": "query",
+        "required": false,
+        "description": "Proposals whose work order has one of these problem types. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "propFilter_woPriorityIds": {
+        "name": "woPriorityIds",
+        "in": "query",
+        "required": false,
+        "description": "Proposals whose work order has one of these priorities. Comma-separated list with no spaces; matches any value listed.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "propFilter_isCapex": {
+        "name": "isCapex",
+        "in": "query",
+        "required": false,
+        "description": "`true` returns only proposals for work orders flagged as capital expenditure; `false` leaves them out.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      "propFilter_buyerCompanyId": {
+        "name": "buyerCompanyId",
+        "in": "query",
+        "required": false,
+        "description": "Proposals for one of your buyer customers. Narrows your results; it cannot widen them.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "propFilter_createdAtStartDate": {
+        "name": "createdAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest creation time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "propFilter_createdAtEndDate": {
+        "name": "createdAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest creation time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "propFilter_approvedAtStartDate": {
+        "name": "approvedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest award time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "propFilter_approvedAtEndDate": {
+        "name": "approvedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest award time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
+      },
+      "propFilter_workCompletedAtStartDate": {
+        "name": "workCompletedAtStartDate",
+        "in": "query",
+        "required": false,
+        "description": "Earliest completion time of the proposal's work order to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/01/2026 00:00:00"
+      },
+      "propFilter_workCompletedAtEndDate": {
+        "name": "workCompletedAtEndDate",
+        "in": "query",
+        "required": false,
+        "description": "Latest completion time of the proposal's work order to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "schema": {
+          "type": "string"
+        },
+        "example": "08/31/2026 00:00:00"
       }
     }
   }

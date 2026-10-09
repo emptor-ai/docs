@@ -52,7 +52,7 @@ Behavior to know:
 - `proposalPdfLink`, if sent, must be a valid URL. `attachments` take `FileDetails` from the [file upload endpoint](/supplier-api/files-and-users).
 - Passing an `id` updates an existing proposal.
 
-Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or `declined` (decline reasons appear in `declineNotes`). List with `GET /v1/supplier/quote/proposals`, read one with `GET /v1/supplier/quote/proposals/{id}`.
+Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or `declined` (decline reasons appear in `declineNotes`). List with `GET /v1/supplier/quote/proposals` (see [filtering lists](#filtering-lists)), read one with `GET /v1/supplier/quote/proposals/{id}`.
 
 ## Invoices
 
@@ -107,7 +107,73 @@ Each precondition failing returns `400`: your facility must own the invoice, the
 
 ### Read and reconcile
 
-`GET /v1/supplier/invoice/invoices` (filterable, for example `?status=pending`) and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your accounts receivable (AR) ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
+`GET /v1/supplier/invoice/invoices` (filterable, see [filtering lists](#filtering-lists)) and `GET /v1/supplier/invoice/invoices/{id}`. Third-party suppliers see masked records with buyer-private fields blanked. Poll status to drive your accounts receivable (AR) ledger: `approvedAt`, `processedAt`, and `markedPaidAt` timestamp the buyer's progress.
+
+## Filtering lists
+
+`GET /v1/supplier/quote/proposals` and `GET /v1/supplier/invoice/invoices` take `offset`, `limit` (default 10, max 25), `sort_by`, and `order`, plus the filters below. Filters combine with AND, and always combine with your key's tenant scoping, so you only see your facility's proposals and invoices. Neither list has a count endpoint; the response's `count` is the total number of matches.
+
+```bash
+# Approved and processing invoices for one buyer, marked paid in August
+curl -G "$BASE/v1/supplier/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "statuses=approved,processing,paid" \
+  --data-urlencode "buyerCompanyId=42" \
+  --data-urlencode "markedPaidAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "markedPaidAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+
+# Pending proposals on one work order
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/quote/proposals?status=pending&workOrderId=9001"
+```
+
+**Both lists**
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | The status, lowercase. Proposals: `draft`, `pending`, `awarded`, `declined`. Invoices: `draft`, `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, `transferred`, `void`. |
+| `workOrderId` | Records for one work order. |
+| `buyerCompanyId` | Records for one of your buyer customers. It narrows your results; it can't widen them. |
+| `locationId`, `locationIds` | Records for these locations. |
+| `regionIds` | Records for locations in these regions. |
+| `problemTypeIds` | Records whose work order has these problem types. |
+| `woPriorityIds` | Records whose work order has these priorities. |
+| `isCapex` | `true` returns only records for work orders flagged as capital expenditure; `false` leaves them out. |
+| `createdAtStartDate`, `createdAtEndDate` | Records created within the window. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Proposals awarded, or invoices approved, within the window. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Records whose work order was completed within the window. |
+
+**Proposals only**
+
+| Filter | Matches |
+| --- | --- |
+| `search` | Part of the work order title. A numeric value also matches the proposal id or the work order id exactly. |
+
+**Invoices only**
+
+| Filter | Matches |
+| --- | --- |
+| `search` | Part of the work order title, or exactly one of: work order id, external work order id, invoice number, invoice id, PO number, GL code. |
+| `invoiceNumber` | Invoices with this invoice number. |
+| `externalWorkOrderId` | Invoices for one work order, by the buyer's external reference on it. |
+| `workOrderDisplayStatus` | Invoices whose work order is in this display status: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. |
+| `assetId`, `assetIds` | Invoices whose work order is on these assets. |
+| `problemTypeId` | Invoices whose work order has this problem type. |
+| `isPM` | `true` returns only invoices for preventive maintenance work orders; `false` leaves them out. |
+| `publishedAtStartDate`, `publishedAtEndDate` | Invoices published to the buyer within the window. |
+| `processedAtStartDate`, `processedAtEndDate` | Invoices the buyer moved to `processing` within the window. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | Invoices marked paid within the window. Useful for AR reconciliation. |
+| `dueAtStartDate`, `dueAtEndDate` | Invoices due within the window. |
+
+Value rules:
+
+- **Sorting.** Both lists sort by `createdAt`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, or `buyerFacilityId`; invoices also sort by `invoiceTotalAfterTax`, and proposals by `updatedAt` and `totalAfterTax`. Once you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for newest first. With no `sort_by`, invoices come newest first and proposals come in `id` order (oldest first). An unsupported `sort_by` on proposals also falls back to `id` order.
+- **Lists take commas with no spaces.** A singular key (`status`) takes one value; the plural key takes a comma-separated list. `status=pending,approved` looks for one status with that literal name and returns nothing. A space after a comma can fail the request.
+- **One value per key.** If you repeat a parameter, only the first is used.
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required. The start bound is inclusive at the time you send; the end bound covers the whole end day (its time is replaced with 23:59:59). URL-encode the value. A date that does not parse is read as 1 January 1970 rather than rejected, so a bad start date matches everything and a bad end date matches nothing.
+- **Values must be well formed.** A non-numeric id, or a boolean other than `true` or `false`, can fail the request with a `500` rather than a `400`.
+- **Unrecognized filters are ignored**, and your tenant scoping can't be overridden: `supplierFacilityId` is always set from your API key.
 
 ## End-to-end billing flow
 

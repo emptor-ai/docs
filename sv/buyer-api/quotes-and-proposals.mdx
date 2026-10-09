@@ -28,9 +28,9 @@ Statusar behåller gemener.
 ## Läsa förslag
 
 ```bash
-# Väntande förslag över hela företaget
+# Väntande förslag över hela företaget, nyast först
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/quote/proposals?status=pending&limit=25"
+  "$BASE/v1/buyer/quote/proposals?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Förslag på en arbetsorder
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -46,6 +46,44 @@ Avgränsningsregler värda att känna till:
 - Om din API-nyckels kontakt är platsbegränsad ser du bara förslag för tillgängliga platser. En kontakt med en tom tillgänglig uppsättning får en tom sida, inte ett fel.
 - Den enskilda läsningen returnerar `404` för mjukt raderade förslag, utkast och förslag utanför ditt platsomfång. Behandla `404` som "inte synlig för dig", inte nödvändigtvis "existerar inte".
 
+### Filterreferens
+
+Listan tar `offset`, `limit` (standard 10, max 25), `sort_by` och `order`, plus filtren nedan. Filter kombineras med AND och kombineras alltid med din nyckels tenant- och platsavgränsning. Det finns ingen räkningsslutpunkt: listsvarets `count` är det totala antalet träffar, så begär `limit=1` när du bara behöver antalet.
+
+```bash
+# Tilldelade förslag från två leverantörer, tilldelade i augusti
+curl -G "$BASE/v1/buyer/quote/proposals" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=awarded" \
+  --data-urlencode "supplierFacilityIds=88,91" \
+  --data-urlencode "approvedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "approvedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=createdAt -d order=desc
+```
+
+| Filter | Matchar |
+| --- | --- |
+| `status`, `statuses` | Förslagets status, med gemener: `pending`, `awarded` eller `declined`. `statuses` tar en kommaseparerad lista (`statuses=pending,awarded`). |
+| `search` | En del av arbetsorderns titel. Ett numeriskt värde matchar också förslagets id eller arbetsorderns id exakt. |
+| `workOrderId` | Förslag på en arbetsorder. |
+| `locationId`, `locationIds` | Förslag för dessa platser. Hämta plats-id:n från [`GET /v1/buyer/location/locations`](/sv/buyer-api/assets-and-locations#platser). |
+| `regionIds` | Förslag för arbetsordrar på platser i dessa regioner. |
+| `problemTypeIds` | Förslag vars arbetsorder har dessa problemtyper. Hämta id:n från [`GET /v1/buyer/work_order/problem_types`](/sv/buyer-api/work-orders#problemtyper). |
+| `woPriorityIds` | Förslag vars arbetsorder har dessa prioriteter. |
+| `isCapex` | `true` returnerar endast förslag för arbetsordrar flaggade som investeringsutgift (capex); `false` utesluter dem. |
+| `supplierFacilityId`, `supplierFacilityIds` | Förslag från dessa leverantörer. Hämta leverantörsanläggnings-id:n från [`GET /v1/buyer/supplier_facilities`](/sv/buyer-api/supplier-network#ditt-leverantörsnätverk). |
+| `createdAtStartDate`, `createdAtEndDate` | Förslag skapade inom fönstret. Ett förslag som utarbetats i appen kan skickas in senare; dess `submittedAt` visar när. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Förslag tilldelade inom fönstret. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Förslag vars arbetsorder slutfördes inom fönstret. |
+
+Regler för filtervärden:
+
+- **Sortering.** `sort_by` stöder `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` och `buyerFacilityId`. Utan `sort_by`, eller med något annat värde, sorteras resultaten efter `id` stigande (äldst först). När du sätter `sort_by` blir `order` som standard `asc`, så skicka `order=desc` för nyast först.
+- **Listor tar kommatecken utan mellanslag.** En nyckel i singular (`status`) tar ett värde; nyckeln i plural tar en kommaseparerad lista. Ett mellanslag efter ett kommatecken kan få anropet att misslyckas.
+- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar; slutgränsen täcker hela slutdagen. Ett datum som inte kan tolkas läses som 1 januari 1970 istället för att avvisas, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Värden måste vara välformade.** Ett icke-numeriskt id, eller ett booleskt värde annat än `true` eller `false`, kan få anropet att misslyckas med `500` istället för `400`.
+- **Okända filter ignoreras**, och tenant-avgränsningen kan inte åsidosättas: `buyerCompanyId` sätts alltid från din API-nyckel, och utkast utesluts även om du ber om `status=draft`.
+
 ## Inuti ett förslag
 
 Pengarna delas in i samma sektioner som fakturor: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems` och `miscLineItems`, varje sektion med sin egen skattesats och `...TotalBeforeTax`, som rullar upp till `totalBeforeTax`, `tax` och `totalAfterTax`. **Monetära värden serialiseras som strängar**; parsa dem som decimaler, inte flyttal, om du gör aritmetik.
@@ -58,4 +96,4 @@ Andra användbara fält: `workOrderId`, `supplierFacilityId`, `workOrderNTEBefor
 2. Dina godkännare tilldelar eller avvisar det i appen. En tilldelning höjer det effektiva utgiftstaket för jobbet.
 3. När den slutliga [fakturan](/sv/buyer-api/invoices) anländer, jämför `invoiceTotalAfterTax` mot det tilldelade förslagets `totalAfterTax` innan du godkänner betalning. Flagga avvikelser över din tolerans för mänsklig granskning.
 
-En praktisk pollningsloop för en inköpsdashboard: filtrera `status=pending`, sortera efter `submittedAt` och paginera med `limit=25`, respekterande hastighetsgränsen på 10 förfrågningar per 20-sekundersfönster.
+En praktisk pollningsloop för en inköpsdashboard: filtrera `status=pending`, sortera med `sort_by=createdAt&order=desc` och paginera med `limit=25`, respekterande hastighetsgränsen på 10 förfrågningar per 20-sekundersfönster.
