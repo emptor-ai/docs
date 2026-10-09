@@ -35,7 +35,7 @@ The buyer-controlled path is `pending → approved → processing → paid`. Eac
 ```bash
 # Pending invoices, newest first
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
-  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=publishedAt&order=desc&limit=25"
+  "$BASE/v1/buyer/invoice/invoices?status=pending&sort_by=createdAt&order=desc&limit=25"
 
 # Count only
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
@@ -47,15 +47,85 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/buyer/invoice/invoices/
 
 An invoice links back to its `supplierFacilityId` plus **exactly one** of `workOrderId` or `projectId` (the other is `null`, along with the hydrated `workOrder` / `project`). Work-order invoices always carry `locationId` and `buyerFacilityId`; project invoices carry them only when the client supplied them, so both can be `null`. The invoice carries the money breakdown in sections (labor, material, travel, freight, misc). Each section has line items, a `taxRate`, and a `totalBeforeTax`, and the sections roll up to `invoiceTotalBeforeTax`, `invoiceTax`, and `invoiceTotalAfterTax`. Monetary values serialize as strings. A short AI-derived summary of the scope may appear in `title`. The rendered PDF is in `invoicePDFs`; supporting files are in `attachments` (see [Files and attachments](/buyer-api/files-and-attachments)).
 
-### Filtering by entity type
-
-Add `invoiceEntityType=work_order` or `invoiceEntityType=project` to `GET /invoices`, `/invoices/count_by`, and `/invoices/download` to narrow to one tab; omit it to get both. `projectId` and `projectIdSeq` filter to specific projects the same way `workOrderId` / `workOrderIdSeq` filter to specific work orders.
+### List, filter, and count
 
 ```bash
+# Approved invoices at two locations, published in August, largest first
+curl -G "$BASE/v1/buyer/invoice/invoices" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "status=approved" \
+  --data-urlencode "locationIds=1204,1310" \
+  --data-urlencode "publishedAtStartDate=08/01/2026 00:00:00" \
+  --data-urlencode "publishedAtEndDate=08/31/2026 00:00:00" \
+  -d limit=25 -d sort_by=invoiceTotalAfterTax -d order=desc
+
 # Just project invoices for this project
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
 ```
+
+`GET /invoices`, `/invoices/count_by`, and `/invoices/download` take the same filters from the [filter reference](#filter-reference) below. Filters combine with AND, and always combine with the tenant scoping derived from your key. Supplier drafts and voided invoices are never returned, whatever you filter on.
+
+- **Sorting.** `sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, results are newest first. Once you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for descending. Other fields, such as `publishedAt`, are not sortable; filter on a `publishedAt` window instead.
+- **Unrecognized filters are ignored.** Any query parameter not in the filter reference is ignored rather than rejected, and the request still succeeds. Before relying on a new filter, compare `count_by` with and without it.
+
+### Filter reference
+
+Keys are case-sensitive. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list and matches any of the values.
+
+**Status**
+
+| Filter | Matches |
+| --- | --- |
+| `status`, `statuses` | The invoice status, lowercase: `pending`, `approved`, `processing`, `paid`, `disputed`, `pastdue`, or `transferred`. See [invoice statuses](#invoice-statuses). |
+| `invoiceEntityType` | `work_order` returns only work-order invoices; `project` returns only [project invoices](#project-invoices). Omit it to get both. |
+| `workOrderDisplayStatus` | Invoices whose work order is in this display status: `Pending`, `Deferred`, `Open`, `InProgress`, `OnHold`, `Completed`, or `Cancelled`. |
+
+**What and where**
+
+| Filter | Matches |
+| --- | --- |
+| `search` | Part of the work order title, or exactly one of: work order id, external work order id, invoice number, invoice id, PO number, GL code. |
+| `workOrderId` | Invoices for one work order. |
+| `externalWorkOrderId` | Invoices for one work order, by the external reference your system stores on it. |
+| `projectId` | Invoices anchored to one project. |
+| `buyerProjectId` | Invoices for the work orders in one project. A work order lists its projects in `buyerProjectIds`. |
+| `invoiceNumber` | Invoices with this supplier invoice number. |
+| `locationId`, `locationIds` | Invoices for these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
+| `regionIds` | Invoices for locations in these regions. |
+| `assetId`, `assetIds` | Invoices whose work order is on these assets. |
+| `problemTypeId`, `problemTypeIds` | Invoices whose work order has these problem types. Get ids from [`GET /v1/buyer/work_order/problem_types`](/buyer-api/work-orders#problem-types). |
+| `woPriorityIds` | Invoices whose work order has these priorities. |
+| `isPM` | `true` returns only invoices for preventive maintenance work orders; `false` leaves them out. |
+| `isCapex` | `true` returns only invoices for work orders flagged as capital expenditure; `false` leaves them out. |
+
+**Who and accounting**
+
+| Filter | Matches |
+| --- | --- |
+| `supplierFacilityId`, `supplierFacilityIds` | Invoices from these suppliers. Get supplier facility ids from [`GET /v1/buyer/supplier_facilities`](/buyer-api/supplier-network#your-supplier-network). |
+| `hasPONumber` | `true` returns invoices that carry a PO number; `false` returns invoices without one. |
+| `hasGLCode` | `true` returns invoices that carry a GL code; `false` returns invoices without one. |
+
+**Dates**
+
+| Filter | Matches |
+| --- | --- |
+| `createdAtStartDate`, `createdAtEndDate` | Invoices created within the window. |
+| `publishedAtStartDate`, `publishedAtEndDate` | Invoices the supplier published to you within the window. |
+| `approvedAtStartDate`, `approvedAtEndDate` | Invoices approved within the window. |
+| `processedAtStartDate`, `processedAtEndDate` | Invoices moved to `processing` within the window. |
+| `markedPaidAtStartDate`, `markedPaidAtEndDate` | Invoices marked paid within the window. |
+| `dueAtStartDate`, `dueAtEndDate` | Invoices due within the window. |
+| `workCompletedAtStartDate`, `workCompletedAtEndDate` | Invoices whose work order was completed within the window. |
+
+### Filter value rules
+
+- **Use the plural key for several values, with no spaces.** `statuses=approved,processing` matches either status. `status=approved,processing` looks for one status with that literal name and returns nothing. A space after a comma in an id list can fail the request.
+- **One value per key.** If you repeat a parameter, only the first is used.
+- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required. The start bound is inclusive at the time you send. The end bound covers the whole end day: its time is replaced with 23:59:59. URL-encode the value (`curl -G --data-urlencode` does this for you). A date that does not parse is not rejected. It is read as 1 January 1970, so a bad start date matches everything and a bad end date matches nothing.
+- **Booleans are `true` or `false`.** Any other value, or a non-numeric id, can fail the request with a `500` rather than a `400`.
+- **Tenant scoping can't be overridden.** `buyerCompanyId` is always set from your API key, so passing it has no effect.
 
 ### Flattened export
 
