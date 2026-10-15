@@ -31,6 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Contraintes :
 
 - Les deux dates sont au format `yyyy-MM-dd`, et la fenêtre peut couvrir **au plus un mois**. Divisez les plages plus longues en appels d'un mois.
+- Les dates sont des jours UTC, sauf si vous passez `timezone` (voir [Fuseaux horaires](#fuseaux-horaires)). La limite d'un mois est vérifiée sur les dates telles que fournies, avant l'application du fuseau.
 - Le rollup couvre l'établissement fournisseur de votre clé d'API. Une clé dont le contact n'est pas rattaché à un établissement fournisseur reçoit `401`.
 
 ## Le journal d'événements brut
@@ -43,7 +44,8 @@ Contraintes :
 | `scheduleId` | Un horaire WrenchMode. **Désactive la pagination** : la chronologie complète des événements de l'horaire est retournée en une seule réponse. |
 | `eventTypes` | Séparés par des virgules. Valeurs valides : `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Les valeurs inconnues sont rejetées avec `400`. |
 | `supplierEmails` | Courriels de techniciens séparés par des virgules, appariés sans tenir compte de la casse. |
-| `fromDate`, `toDate` | `yyyy-MM-dd`; les dates malformées donnent `400`. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; les dates malformées donnent `400`. `fromDate` commence au début de son jour et `toDate` inclut son jour entier. |
+| `timezone` | Nom de fuseau IANA, comme `America/Chicago` ou `UTC`, dans lequel `fromDate` et `toDate` sont lus. Par défaut, jours UTC. Voir [Fuseaux horaires](#fuseaux-horaires). |
 
 La pagination standard (`offset`, `limit` max 25, `sort_by`, `order`) s'applique sauf sous `scheduleId`. Un piège de formatage : un filtre CSV présent mais vide (par exemple `eventTypes=,`) est rejeté comme malformé plutôt qu'ignoré.
 
@@ -58,6 +60,28 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 ```
 
 Le vocabulaire d'événements se divise en événements de trajet (`began_trip` jusqu'à `trip_cancelled`, plus `drive_note`) et événements de travail (`started_work`, `ended_work`, et les événements de minuterie `location_*` qui marquent les pauses et reprises sur place).
+
+## Fuseaux horaires
+
+Les deux routes WrenchMode acceptent un paramètre de requête facultatif `timezone`. Il définit le fuseau dans lequel `fromDate` et `toDate` sont lus, pour qu'un jour corresponde au jour local de vos techniciens plutôt qu'à un jour UTC.
+
+- Passez un nom de fuseau IANA, comme `America/Chicago`, `America/Toronto` ou `UTC`. Les noms sont sensibles à la casse.
+- `fromDate` commence au début de ce jour dans le fuseau. `toDate` inclut ce jour entier dans le fuseau.
+- OpenWrench utilise les limites de jour réelles du fuseau. Un jour de changement d'heure dure 23 ou 25 heures.
+- Sans `timezone`, les dates sont des jours UTC.
+- Les décalages fixes (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), les abréviations (`CST`) et les noms inconnus renvoient `400`.
+
+Par exemple, un technicien à Chicago termine son travail à 23 h 30, heure du Centre, le 9 octobre. Cela correspond à 4 h 30 UTC le 10 octobre. Sans `timezone`, l'événement tombe le 10 octobre. Avec `timezone=America/Chicago`, il tombe le 9 octobre :
+
+```bash
+# Événements du 9 octobre en heure du Centre, incluant l'événement de 23 h 30
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?fromDate=2026-10-09&toDate=2026-10-09&timezone=America/Chicago"
+
+# Une semaine de temps des techniciens, en jours de l'heure du Centre
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-10-05/2026-10-11?timezone=America/Chicago"
+```
 
 ## Choisir entre les deux
 

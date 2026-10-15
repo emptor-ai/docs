@@ -31,6 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Constraints:
 
 - Both dates are `yyyy-MM-dd`, and the window may span **at most one month**. Split longer ranges into month-sized calls.
+- Dates are UTC days unless you pass `timezone` (see [Time zones](#time-zones)). The one-month cap is checked on the dates as given, before the zone is applied.
 - The rollup covers your API key's supplier facility. A key whose contact is not attached to a supplier facility gets `401`.
 
 ## The raw event log
@@ -43,7 +44,8 @@ Constraints:
 | `scheduleId` | One WrenchMode schedule. **Disables pagination**: the schedule's full event timeline is returned in one response. |
 | `eventTypes` | Comma-separated. Valid values: `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Unknown values are rejected with `400`. |
 | `supplierEmails` | Comma-separated technician emails, matched case-insensitively. |
-| `fromDate`, `toDate` | `yyyy-MM-dd`; malformed dates are `400`. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; malformed dates are `400`. `fromDate` starts at the beginning of its day and `toDate` includes its whole day. |
+| `timezone` | IANA zone name, such as `America/Chicago` or `UTC`, that `fromDate` and `toDate` are read in. Defaults to UTC days. See [Time zones](#time-zones). |
 
 Standard pagination (`offset`, `limit` max 25, `sort_by`, `order`) applies except under `scheduleId`. One formatting trap: a present-but-empty CSV filter (for example `eventTypes=,`) is rejected as malformed rather than ignored.
 
@@ -58,6 +60,28 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 ```
 
 The event vocabulary splits into trip events (`began_trip` through `trip_cancelled`, plus `drive_note`) and work events (`started_work`, `ended_work`, and the `location_*` timer events that mark pauses and resumes on site).
+
+## Time zones
+
+Both WrenchMode routes accept an optional `timezone` query parameter. It sets the zone that `fromDate` and `toDate` are read in, so a day matches your technicians' local day instead of a UTC day.
+
+- Pass an IANA zone name, such as `America/Chicago`, `America/New_York`, or `UTC`. Names are case-sensitive.
+- `fromDate` starts at the beginning of that day in the zone. `toDate` includes that whole day in the zone.
+- OpenWrench uses the zone's real day boundaries. A daylight saving change day is 23 or 25 hours long.
+- Without `timezone`, dates are UTC days.
+- Fixed offsets (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), abbreviations (`CST`), and unknown names return `400`.
+
+For example, a technician in Chicago ends work at 11:30 PM Central on October 9. That is 04:30 UTC on October 10. Without `timezone`, the event falls on October 10. With `timezone=America/Chicago`, it falls on October 9:
+
+```bash
+# Events from October 9 in Central time, including the 11:30 PM event
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?fromDate=2026-10-09&toDate=2026-10-09&timezone=America/Chicago"
+
+# One week of tech time, on Central days
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-10-05/2026-10-11?timezone=America/Chicago"
+```
 
 ## Choosing between them
 
