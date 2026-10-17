@@ -33,6 +33,8 @@ Constraints:
 - Both dates are `yyyy-MM-dd`, and the window may span **at most one month**. Split longer ranges into month-sized calls.
 - The rollup covers your API key's supplier facility. A key whose contact is not attached to a supplier facility gets `401`.
 
+Drive time includes drives to a technician's home address, such as the drive home at the end of the day or back to a shop mid-day. Events with neither a location nor a home address are ignored.
+
 ## The raw event log
 
 `GET /v1/supplier/wrench_mode/events` returns the underlying events, tenant-scoped to your supplier. Filters:
@@ -57,7 +59,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
 ```
 
-The event vocabulary splits into trip events (`began_trip` through `trip_cancelled`, plus `drive_note`) and work events (`started_work`, `ended_work`, and the `location_*` timer events that mark pauses and resumes on site).
+The event vocabulary splits into trip events (`began_trip` through `trip_cancelled`, plus `drive_note`) and work events (`started_work`, `ended_work`, and the `location_*` timer events that mark pauses and resumes on site). Trip events may point to a home address instead of a location.
+
+A home trip is a trip event (`began_trip`, `trip_paused`, `trip_resumed`, `trip_cancelled`, `drive_note`, or `arrived`) that has `homeAddressId` set and no `locationId`, `workOrderId`, or `serviceCallId`. Work events never carry `homeAddressId`. Because of this, `locationId` can be `null` on trip events.
+
+```json
+{
+  "scheduleId": 4417,
+  "supplierEmail": "tech@supplier.com",
+  "eventType": "began_trip",
+  "homeAddressId": 12,
+  "locationId": null,
+  "workOrderId": null,
+  "serviceCallId": null
+}
+```
 
 ## Choosing between them
 
@@ -67,7 +83,7 @@ The event vocabulary splits into trip events (`began_trip` through `trip_cancell
 
 ## Worked patterns
 
-**Weekly payroll pull.** Every Monday, call analytics for the prior week, join on technician email against your payroll system, and use work + drive time as the paid-hours input. One call per week per facility keeps you far under the rate limit.
+**Weekly payroll pull.** Every Monday, call analytics for the prior week, join on technician email against your payroll system, and use work + drive time as the paid-hours input. The drive home counts toward the drive-time total, even though it is not billed to any work order. One call per week per facility keeps you far under the rate limit.
 
 **Monthly utilization report.** Analytics with month boundaries (`2026-08-01` to `2026-08-31` is within the one-month cap); divide work time by scheduled time from your rostering system.
 

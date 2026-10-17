@@ -33,6 +33,8 @@ Restricciones:
 - Ambas fechas son `yyyy-MM-dd`, y la ventana puede abarcar **como máximo un mes**. Divide rangos más largos en llamadas del tamaño de un mes.
 - El resumen cubre la instalación de proveedor de tu clave de API. Una clave cuyo contacto no esté adjunto a una instalación de proveedor obtiene `401`.
 
+El tiempo de conducción incluye los trayectos a la dirección de casa de un técnico, como el regreso a casa al final del día o la vuelta a un taller a mitad del día. Los eventos sin ubicación ni dirección de casa se siguen ignorando.
+
 ## El registro bruto de eventos
 
 `GET /v1/supplier/wrench_mode/events` devuelve los eventos subyacentes, limitados por inquilino a tu proveedor. Filtros:
@@ -57,7 +59,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
 ```
 
-El vocabulario de eventos se divide en eventos de viaje (`began_trip` hasta `trip_cancelled`, más `drive_note`) y eventos de trabajo (`started_work`, `ended_work` y los eventos de temporizador `location_*` que marcan pausas y reanudaciones en sitio).
+El vocabulario de eventos se divide en eventos de viaje (`began_trip` hasta `trip_cancelled`, más `drive_note`) y eventos de trabajo (`started_work`, `ended_work` y los eventos de temporizador `location_*` que marcan pausas y reanudaciones en sitio). Los eventos de viaje pueden apuntar a una dirección de casa en lugar de a una ubicación.
+
+Un viaje a casa es un evento de viaje (`began_trip`, `trip_paused`, `trip_resumed`, `trip_cancelled`, `drive_note` o `arrived`) que tiene `homeAddressId` definido y no tiene `locationId`, `workOrderId` ni `serviceCallId`. Los eventos de trabajo nunca llevan `homeAddressId`. Por eso, `locationId` puede ser `null` en los eventos de viaje.
+
+```json
+{
+  "scheduleId": 4417,
+  "supplierEmail": "tech@supplier.com",
+  "eventType": "began_trip",
+  "homeAddressId": 12,
+  "locationId": null,
+  "workOrderId": null,
+  "serviceCallId": null
+}
+```
 
 ## Cuándo elegir cada uno
 
@@ -67,7 +83,7 @@ El vocabulario de eventos se divide en eventos de viaje (`began_trip` hasta `tri
 
 ## Patrones aplicados
 
-**Extracción semanal de nómina.** Cada lunes, llama a analítica para la semana anterior, cruza por correo del técnico contra tu sistema de nómina y usa el tiempo de trabajo + conducción como la entrada de horas pagadas. Una llamada por semana por instalación te mantiene muy por debajo del límite de tasa.
+**Extracción semanal de nómina.** Cada lunes, llama a analítica para la semana anterior, cruza por correo del técnico contra tu sistema de nómina y usa el tiempo de trabajo + conducción como la entrada de horas pagadas. El trayecto a casa cuenta en el total de tiempo de conducción, aunque no se factura a ninguna orden de trabajo. Una llamada por semana por instalación te mantiene muy por debajo del límite de tasa.
 
 **Reporte mensual de utilización.** Analítica con límites de mes (`2026-08-01` a `2026-08-31` está dentro del tope de un mes); divide el tiempo de trabajo entre el tiempo programado desde tu sistema de rostering.
 

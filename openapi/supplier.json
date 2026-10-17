@@ -4559,7 +4559,7 @@
       "get": {
         "operationId": "getWrenchHubAnalytics",
         "summary": "WrenchMode per-technician analytics",
-        "description": "Returns the per-technician drive/work/total time rollup for the API key's supplier facility over the given window. The window may span at most 1 month; both dates are yyyy-MM-dd. Requires the key's contact to belong to a supplier facility (401 otherwise).",
+        "description": "Returns the per-technician drive/work/total time rollup for the API key's supplier facility over the given window. The window may span at most 1 month; both dates are yyyy-MM-dd. Requires the key's contact to belong to a supplier facility (401 otherwise). Drive time includes drives to a home address (home trips, identified by homeAddressId on trip events), such as the drive home at the end of the day or back to a shop mid-day. Events with neither a location nor a home address are ignored.",
         "tags": [
           "WrenchMode"
         ],
@@ -10422,6 +10422,7 @@
             "type": "string"
           },
           "locationId": {
+            "description": "Location the event belongs to. Null on trip events for a drive to a home address (see homeAddressId).",
             "anyOf": [
               {
                 "type": "integer",
@@ -10483,6 +10484,18 @@
           },
           "supplierFacilityId": {
             "type": "integer"
+          },
+          "homeAddressId": {
+            "description": "Home address the technician is driving to. Set only on trip events (began_trip, trip_paused, trip_resumed, trip_cancelled, drive_note, arrived) for a home trip, such as the drive home at the end of the day or back to a shop mid-day. A home trip event has homeAddressId set and no locationId, workOrderId or serviceCallId. Work events (started_work, ended_work, location_*) never carry it.",
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "isDeleted": {
             "type": "boolean"
