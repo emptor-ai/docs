@@ -62,6 +62,24 @@ Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, max 25), `so
 
 La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`) ; certains champs d'horodatage de base de données sont sérialisés sous la forme `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heure, utilisez ISO 8601.
 
+Les filtres de date des listes de factures, de propositions et de bons de travail font exception. Ils prennent le format `MM/dd/yyyy HH:mm:ss`, une heure locale d'horloge sans décalage, par exemple `10/09/2026 00:00:00` :
+
+- **Fuseau horaire.** Passez le paramètre de requête facultatif `timezone` pour définir le fuseau dans lequel les valeurs sont lues. Utilisez un nom de fuseau IANA, comme `America/Chicago`, `America/New_York` ou `UTC`. Les noms sont sensibles à la casse. Sans `timezone`, les valeurs sont lues en UTC.
+- **Fuseaux rejetés.** Les décalages fixes (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), les abréviations (`CST`) et les noms inconnus retournent `400`.
+- **Pas de décalage dans la valeur.** OpenWrench ignore un décalage comme `-05:00` à la fin d'une valeur de filtre. Utilisez plutôt `timezone`.
+- **Les valeurs mal formées retournent `400`.** Une valeur qui ne correspond pas au format retourne `400`, par exemple `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Cela inclut les valeurs ISO 8601 (`2026-10-09T00:00:00`), les dates sans heure (`10/09/2026`) et les valeurs composées uniquement d'espaces. Une valeur vide est toujours lue comme le 1er janvier 1970.
+- **Bornes de fin.** Les dates de fin des factures et des propositions couvrent toute la journée de fin : OpenWrench remplace l'heure par 23:59:59 à cette date dans `timezone`. Les dates de fin des bons de travail sont exactes ; envoyez donc `23:59:59` pour inclure toute la journée.
+- **Heure d'été.** Une heure située dans l'heure sautée lors du passage à l'heure d'été est avancée de la durée de l'écart. Une heure située dans l'heure répétée lors du retour à l'heure d'hiver désigne l'occurrence en heure normale, c'est-à-dire la seconde.
+
+Par exemple, cette requête retourne les factures marquées comme payées le 9 octobre 2026, heure du Centre :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/invoice/invoices?markedPaidAtStartDate=10/09/2026%2000:00:00&markedPaidAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
+
+Pour les filtres de chaque liste, consultez les règles des valeurs de filtre des [bons de travail](/supplier-api/work-orders#filter-value-rules) et des [propositions et factures](/supplier-api/quotes-and-invoicing#filtering-lists).
+
 ## Données de temps des techniciens
 
 Les endpoints WrenchMode exposent le temps de travail et de conduite par technicien : `GET /v1/supplier/wrench_mode/events/analytics/{fromDate}/{toDate}` retourne un cumul conduite/travail/total par technicien (fenêtre plafonnée à 1 mois). `GET /v1/supplier/wrench_mode/events` retourne le journal d'événements brut sous-jacent. Les extensions de visite de service (`/with_work_logs`, `/with_tech_details`) offrent le récit par visite.

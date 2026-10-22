@@ -123,9 +123,18 @@ Nycklarna är skiftlägeskänsliga. En nyckel i singular (`status`) tar ett vär
 
 - **Använd pluralnyckeln för flera värden, utan mellanslag.** `statuses=approved,processing` matchar någon av statusarna. `status=approved,processing` letar efter en enda status med just det namnet och returnerar ingenting. Ett mellanslag efter ett kommatecken i en id-lista kan få anropet att misslyckas.
 - **Ett värde per nyckel.** Om du upprepar en parameter används bara den första.
-- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar. Slutgränsen täcker hela slutdagen: dess tid ersätts med 23:59:59. URL-koda värdet (`curl -G --data-urlencode` gör det åt dig). Ett datum som inte kan tolkas avvisas inte. Det läses som 1 januari 1970, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Datum använder `MM/dd/yyyy HH:mm:ss`**, till exempel `08/01/2026 00:00:00`. Värdet är en lokal klocktid som läses i den zon du anger i `timezone`, eller i UTC om den saknas. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar. Slutgränsen täcker hela slutdagen i den zonen: dess tid ersätts med 23:59:59. URL-koda värdet (`curl -G --data-urlencode` gör det åt dig). Lägg inte till en offset som `-05:00` i värdet: OpenWrench ignorerar den.
+- **Ett datum som inte kan tolkas returnerar `400`** med `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. Det gäller även ISO 8601-värden (`2026-10-09T00:00:00`), datum utan tid (`10/09/2026`) och värden som bara består av mellanslag. Ett tomt värde läses fortfarande som 1 januari 1970.
+- **`timezone` tar ett IANA-zonnamn**, som `America/Chicago` eller `UTC`. Fasta offset (`-05:00`, `GMT-5`), förkortningar (`CST`) och okända namn returnerar `400`. Se [Datumformat](/sv/buyer-api/introduction#datumformat) för sommartid.
 - **Booleska värden är `true` eller `false`.** Alla andra värden, eller ett icke-numeriskt id, kan få anropet att misslyckas med `500` istället för `400`.
 - **Tenant-avgränsningen kan inte åsidosättas.** `buyerCompanyId` sätts alltid från din API-nyckel, så att skicka det har ingen effekt.
+
+Om du vill matcha en lokal dag skickar du samma datum för båda gränserna tillsammans med din zon. Den här förfrågan returnerar fakturor som markerades som betalda den 9 oktober 2026, Central time:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?markedPaidAtStartDate=10/09/2026%2000:00:00&markedPaidAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
 
 ### Plattad export
 

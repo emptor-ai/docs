@@ -3052,6 +3052,9 @@
           },
           {
             "$ref": "#/components/parameters/woFilter_createdByEmails"
+          },
+          {
+            "$ref": "#/components/parameters/timezone"
           }
         ],
         "responses": {
@@ -3066,7 +3069,7 @@
             }
           },
           "400": {
-            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "description": "Bad input, parse failure (including a date filter value that isn't `MM/dd/yyyy HH:mm:ss` or an invalid `timezone`), or the API key's contact could not be resolved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3118,7 +3121,7 @@
             }
           },
           "400": {
-            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "description": "Bad input, parse failure (including a date filter value that isn't `MM/dd/yyyy HH:mm:ss` or an invalid `timezone`), or the API key's contact could not be resolved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3262,6 +3265,9 @@
           },
           {
             "$ref": "#/components/parameters/woFilter_createdByEmails"
+          },
+          {
+            "$ref": "#/components/parameters/timezone"
           }
         ]
       }
@@ -4832,6 +4838,9 @@
           },
           {
             "$ref": "#/components/parameters/invFilter_workCompletedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/timezone"
           }
         ],
         "responses": {
@@ -4846,7 +4855,7 @@
             }
           },
           "400": {
-            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "description": "Bad input, parse failure (including a date filter value that isn't `MM/dd/yyyy HH:mm:ss` or an invalid `timezone`), or the API key's contact could not be resolved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -4898,7 +4907,7 @@
             }
           },
           "400": {
-            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "description": "Bad input, parse failure (including a date filter value that isn't `MM/dd/yyyy HH:mm:ss` or an invalid `timezone`), or the API key's contact could not be resolved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5042,6 +5051,9 @@
           },
           {
             "$ref": "#/components/parameters/invFilter_workCompletedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/timezone"
           }
         ]
       }
@@ -5180,6 +5192,9 @@
           },
           {
             "$ref": "#/components/parameters/invFilter_workCompletedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/timezone"
           }
         ],
         "responses": {
@@ -5194,7 +5209,7 @@
             }
           },
           "400": {
-            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "description": "Bad input, parse failure (including a date filter value that isn't `MM/dd/yyyy HH:mm:ss` or an invalid `timezone`), or the API key's contact could not be resolved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -5975,6 +5990,9 @@
           },
           {
             "$ref": "#/components/parameters/propFilter_workCompletedAtEndDate"
+          },
+          {
+            "$ref": "#/components/parameters/timezone"
           }
         ],
         "responses": {
@@ -5989,7 +6007,7 @@
             }
           },
           "400": {
-            "description": "Bad input, parse failure, or the API key's contact could not be resolved.",
+            "description": "Bad input, parse failure (including a date filter value that isn't `MM/dd/yyyy HH:mm:ss` or an invalid `timezone`), or the API key's contact could not be resolved.",
             "content": {
               "application/json": {
                 "schema": {
@@ -7605,7 +7623,7 @@
         "name": "createdAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Earliest creation time to include. Format `MM/dd/yyyy HH:mm:ss`, for example `08/01/2026 00:00:00`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. The bound is inclusive. Send either end on its own for an open-ended range. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -7615,7 +7633,7 @@
         "name": "createdAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest creation time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest creation time to include. Format `MM/dd/yyyy HH:mm:ss`, for example `08/01/2026 00:00:00`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. The bound is inclusive and exact, so send `23:59:59` to include the whole end day. Send either end on its own for an open-ended range. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -7625,7 +7643,7 @@
         "name": "completedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest completion time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Earliest completion time to include. Format `MM/dd/yyyy HH:mm:ss`, for example `08/01/2026 00:00:00`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. The bound is inclusive. Send either end on its own for an open-ended range. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -7635,7 +7653,7 @@
         "name": "completedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest completion time to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest completion time to include. Format `MM/dd/yyyy HH:mm:ss`, for example `08/01/2026 00:00:00`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. The bound is inclusive and exact, so send `23:59:59` to include the whole end day. Send either end on its own for an open-ended range. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -7645,7 +7663,7 @@
         "name": "lastServiceCallServiceScheduledAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Earliest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss`, for example `08/01/2026 00:00:00`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. The bound is inclusive. Send either end on its own for an open-ended range. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -7655,7 +7673,7 @@
         "name": "lastServiceCallServiceScheduledAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss` in UTC, for example `08/01/2026 00:00:00`; the bound is inclusive. Send either end on its own for an open-ended range. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest scheduled time of the most recent visit to include. Format `MM/dd/yyyy HH:mm:ss`, for example `08/01/2026 00:00:00`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. The bound is inclusive and exact, so send `23:59:59` to include the whole end day. Send either end on its own for an open-ended range. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8046,7 +8064,7 @@
         "name": "createdAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest creation time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest creation time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8056,7 +8074,7 @@
         "name": "createdAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest creation time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest creation time to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8066,7 +8084,7 @@
         "name": "publishedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest time the invoice was published to the buyer to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest time the invoice was published to the buyer to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8076,7 +8094,7 @@
         "name": "publishedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest time the invoice was published to the buyer to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest time the invoice was published to the buyer to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8086,7 +8104,7 @@
         "name": "approvedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest approval time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest approval time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8096,7 +8114,7 @@
         "name": "approvedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest approval time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest approval time to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8106,7 +8124,7 @@
         "name": "processedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest time the invoice moved to `processing` to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest time the invoice moved to `processing` to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8116,7 +8134,7 @@
         "name": "processedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest time the invoice moved to `processing` to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest time the invoice moved to `processing` to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8126,7 +8144,7 @@
         "name": "markedPaidAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest time the invoice was marked paid to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest time the invoice was marked paid to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8136,7 +8154,7 @@
         "name": "markedPaidAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest time the invoice was marked paid to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest time the invoice was marked paid to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8146,7 +8164,7 @@
         "name": "dueAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest due date to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest due date to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8156,7 +8174,7 @@
         "name": "dueAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest due date to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest due date to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8166,7 +8184,7 @@
         "name": "workCompletedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest completion time of the invoice's work order to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest completion time of the invoice's work order to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8176,7 +8194,7 @@
         "name": "workCompletedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest completion time of the invoice's work order to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest completion time of the invoice's work order to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8310,7 +8328,7 @@
         "name": "createdAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest creation time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest creation time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8320,7 +8338,7 @@
         "name": "createdAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest creation time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest creation time to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8330,7 +8348,7 @@
         "name": "approvedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest award time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest award time to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8340,7 +8358,7 @@
         "name": "approvedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest award time to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest award time to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
@@ -8350,7 +8368,7 @@
         "name": "workCompletedAtStartDate",
         "in": "query",
         "required": false,
-        "description": "Earliest completion time of the proposal's work order to include, inclusive. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected. Send either end on its own for an open-ended range.",
+        "description": "Earliest completion time of the proposal's work order to include, inclusive. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970. Send either end on its own for an open-ended range.",
         "schema": {
           "type": "string"
         },
@@ -8360,11 +8378,23 @@
         "name": "workCompletedAtEndDate",
         "in": "query",
         "required": false,
-        "description": "Latest completion time of the proposal's work order to include. The whole end day is included: the time part is replaced with 23:59:59. Format `MM/dd/yyyy HH:mm:ss` in UTC. A value that doesn't parse is read as 1 January 1970 rather than rejected.",
+        "description": "Latest completion time of the proposal's work order to include. The whole end day is included: the time part is replaced with 23:59:59 on that date in `timezone`. Format `MM/dd/yyyy HH:mm:ss`: a local wall-clock time read in `timezone`, or UTC when `timezone` is omitted. Don't include an offset in the value: it is ignored. A non-empty value that doesn't parse, such as an ISO 8601 value or a date without a time, is rejected with 400. An empty value is read as 1 January 1970.",
         "schema": {
           "type": "string"
         },
         "example": "08/31/2026 00:00:00"
+      },
+      "timezone": {
+        "name": "timezone",
+        "in": "query",
+        "required": false,
+        "description": "Optional IANA time zone name, such as America/Chicago or UTC, that this route's date filters are read in. Each date filter value is a local wall-clock time in this zone. When omitted, date filters are read in UTC. Names are case-sensitive. Fixed offsets (-05:00, GMT-5, Z, Etc/GMT+5), abbreviations (CST), and unknown names are rejected with 400. On a daylight saving change day, a time in the skipped hour moves forward by the length of the gap, and a time in the repeated hour means the standard-time (second) occurrence.",
+        "schema": {
+          "type": "string",
+          "examples": [
+            "America/Chicago"
+          ]
+        }
       }
     },
     "schemas": {

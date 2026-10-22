@@ -121,9 +121,18 @@ Les clés sont sensibles à la casse. Une clé au singulier (`status`) prend une
 
 - **Utilisez la clé au pluriel pour plusieurs valeurs, sans espaces.** `statuses=approved,processing` correspond à l'un ou l'autre statut. `status=approved,processing` cherche un unique statut portant ce nom littéral et ne retourne rien. Un espace après une virgule dans une liste d'identifiants peut faire échouer la requête.
 - **Une valeur par clé.** Si vous répétez un paramètre, seule la première occurrence est utilisée.
-- **Les dates utilisent le format `MM/dd/yyyy HH:mm:ss` en UTC**, par exemple `08/01/2026 00:00:00`. L'heure est obligatoire. La borne de début est inclusive à l'heure que vous envoyez. La borne de fin couvre toute la journée de fin : son heure est remplacée par 23:59:59. Encodez la valeur pour l'URL (`curl -G --data-urlencode` le fait pour vous). Une date qui ne s'analyse pas n'est pas rejetée. Elle est lue comme le 1er janvier 1970 : une date de début erronée correspond donc à tout, et une date de fin erronée ne correspond à rien.
+- **Les dates utilisent le format `MM/dd/yyyy HH:mm:ss`**, par exemple `08/01/2026 00:00:00`. La valeur est une heure locale d'horloge, lue dans le fuseau que vous passez dans `timezone`, ou en UTC sans ce paramètre. L'heure est obligatoire. La borne de début est inclusive à l'heure que vous envoyez. La borne de fin couvre toute la journée de fin dans ce fuseau : son heure est remplacée par 23:59:59. Encodez la valeur pour l'URL (`curl -G --data-urlencode` le fait pour vous). N'ajoutez pas de décalage comme `-05:00` à la valeur : OpenWrench l'ignore.
+- **Une date qui ne s'analyse pas retourne `400`** avec `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. Cela inclut les valeurs ISO 8601 (`2026-10-09T00:00:00`), les dates sans heure (`10/09/2026`) et les valeurs composées uniquement d'espaces. Une valeur vide est toujours lue comme le 1er janvier 1970.
+- **`timezone` prend un nom de fuseau IANA**, comme `America/Chicago` ou `UTC`. Les décalages fixes (`-05:00`, `GMT-5`), les abréviations (`CST`) et les noms inconnus retournent `400`. Consultez [Formats de date](/buyer-api/introduction#date-formats) pour l'heure d'été.
 - **Les booléens valent `true` ou `false`.** Toute autre valeur, ou un identifiant non numérique, peut faire échouer la requête avec un `500` plutôt qu'un `400`.
 - **La restriction locataire ne peut pas être contournée.** `buyerCompanyId` est toujours défini à partir de votre clé d'API ; le passer n'a donc aucun effet.
+
+Pour correspondre à une journée locale, envoyez la même date pour les deux bornes avec votre fuseau. Cette requête retourne les factures marquées comme payées le 9 octobre 2026, heure du Centre :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?markedPaidAtStartDate=10/09/2026%2000:00:00&markedPaidAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
 
 ### Export aplati
 
