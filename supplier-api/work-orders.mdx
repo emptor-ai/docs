@@ -269,7 +269,7 @@ Behavior to know:
 
 ## Create a supplier-initiated work order
 
-Suppliers can open work orders themselves (a tech spots a broken door while on site for something else). `POST /v1/supplier/work_order/work_orders` requires `title` and `locationId`; the location determines the buyer facility and company.
+Suppliers can open work orders themselves (a technician spots a broken door while on site for something else). `POST /v1/supplier/work_order/work_orders` requires `title` and `locationId`; the location determines the buyer facility and company.
 
 ```bash
 curl -X POST "$BASE/v1/supplier/work_order/work_orders" \

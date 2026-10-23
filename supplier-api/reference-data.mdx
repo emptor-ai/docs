@@ -62,7 +62,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/assets/5
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" "$BASE/v1/supplier/asset/asset_types?limit=25"
 ```
 
-The single-asset read hydrates the asset's meters (envelope type `ApiAssetWithMeter`), which gives your techs meter history context before a visit. All four endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) are read-only with standard pagination and field filters.
+The single-asset read hydrates the asset's meters (envelope type `ApiAssetWithMeter`), which gives your technicians meter history context before a visit. All four endpoints (`assets`, `assets/{id}`, `asset_types`, `asset_types/{id}`) are read-only with standard pagination and field filters.
 
 ## Asset labels
 
