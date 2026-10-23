@@ -174,9 +174,11 @@ Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
   **Use the list to query, not to watch for changes.** If your integration needs to know when work orders are created, change status, or get a new note, register a [webhook](/buyer-api/webhooks). Fetch the work order named in each event by id. Polling the list endpoint on a schedule is slow on large accounts, spends your rate limit, and still misses changes between polls. Keep list calls for ad-hoc queries, the one-time initial load, and an occasional narrowly filtered reconciliation (for example `isActive=true` for one location, or a `completedAtStartDate` window, with a small `limit`).
 </Warning>
 
-## Reassign a supplier
+## Reassign a supplier or update projects
 
-`PATCH /v1/buyer/work_order/work_orders/{id}` is deliberately narrow: **only `supplierFacilityId` and `supplierPrimaryContactEmail` are read from the body**. Every other field you send is silently ignored rather than rejected.
+`PATCH /v1/buyer/work_order/work_orders/{id}` is deliberately narrow: **only `supplierFacilityId`, `supplierPrimaryContactEmail`, and `buyerProjectIds` are read from the body**. Every other field you send is silently ignored rather than rejected. You can send a supplier reassignment, a project update, or both in one request.
+
+### Reassign a supplier
 
 ```bash
 curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
@@ -185,12 +187,38 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
   -d '{ "supplierFacilityId": 3055, "supplierPrimaryContactEmail": "dispatch@newsupplier.com" }'
 ```
 
-Two gotchas:
-
-- `supplierPrimaryContactEmail` only applies as part of a reassignment. Sending it without a supplier facility change makes the whole patch a no-op: nothing persists and the current work order is returned.
-- A nonexistent id and a permission denial both return the same `400` unauthorized response, so do not use this endpoint to probe whether a work order exists.
-
 To pick the right supplier programmatically, see [Supplier network](/buyer-api/supplier-network), which covers the ranked private-network endpoint.
+
+### Update a work order's projects
+
+Use `buyerProjectIds` to add existing work orders to a project, move them between projects, or remove them from projects. The value is an array of integer project ids, and it **fully replaces** the work order's project membership:
+
+| You send | Result |
+| --- | --- |
+| `"buyerProjectIds": [42, 57]` | The work order belongs to projects `42` and `57` only. Any other project it was in is removed. |
+| `"buyerProjectIds": []` | The work order is removed from every project. |
+| No `buyerProjectIds` key | Project membership is unchanged. |
+
+To add a project without dropping existing ones, read the work order's current `buyerProjectIds` first and send the full list with the new id appended.
+
+```bash
+curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/9001" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{ "buyerProjectIds": [42, 57] }'
+```
+
+To list the work orders in a project afterwards, filter the list endpoint with `buyerProjectId`.
+
+OpenWrench validates `buyerProjectIds` before saving anything:
+
+- A non-numeric id returns `400` `InvalidInputError` with the message `Field 'buyerProjectIds' must be an array of project ids`.
+- A project id that does not belong to your company fails the whole save with `400` and the message `Could not find projects: <ids>`. Nothing is written, including any supplier reassignment in the same request.
+
+### Gotchas
+
+- `supplierPrimaryContactEmail` only applies as part of a reassignment. A body with neither a supplier facility change nor `buyerProjectIds` is a no-op: nothing persists and the current work order is returned.
+- A nonexistent id and a permission denial both return the same `400` unauthorized response, so do not use this endpoint to probe whether a work order exists.
 
 ## Buyer status actions
 
