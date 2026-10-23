@@ -34,7 +34,7 @@ Delade förfrågningsfält: `workOrderId` och `numberOfTechs` krävs alltid. `id
 | `POST .../service_calls/status_update/check_out` | `checkOutStatus` du skickar (obligatoriskt) |
 | `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Samma som deras motsvarigheter på plats, för fjärrarbete |
 
-Alla sökvägar ligger under `/v1/supplier/work_order/`. Det finns inga motsvarigheter på köparsidan: check-in och check-out kan inte styras från Buyer API.
+Alla sökvägar ligger under `/v1/supplier/work_order/`. Det finns inga motsvarigheter på köparsidan: incheckning och utcheckning kan inte styras från Buyer API.
 
 <Warning>
 **`check_in`, `check_out` och deras `remote_`-varianter kräver ett befintligt servicebesöks-`id`.** De uppdaterar ett besök; de skapar inte ett. Att skicka dem utan `id` returnerar `400 InvalidInputException` med `"required param: id"`. Starta besöket med `tech_scheduled`. Det skapar det första servicebesöket och returnerar arbetsordern med det nya servicebesöket i `associatedServiceCalls` / `lastServiceCall`. Återanvänd det `id`:et vid varje senare uppdatering av samma besök.
@@ -79,7 +79,7 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
   }'
 ```
 
-`checkInTime` sätts som standard till serverns aktuella tid när du sätter en `checkInStatus` utan tid, så liveintegrationer kan utelämna det; backfills bör skicka det explicit. `checkInImages` tar fotoreferenser och geokoordinater ger köparen bevis på plats.
+`checkInTime` sätts som standard till serverns aktuella tid när du sätter en `checkInStatus` utan tid, så du kan utelämna det i liveintegrationer. Skicka det explicit när du fyller i historiska data. `checkInImages` tar fotoreferenser och geokoordinater ger köparen bevis på plats.
 
 ## 3. Checka ut och sätt utfallet
 
