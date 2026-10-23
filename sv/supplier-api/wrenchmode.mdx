@@ -34,7 +34,7 @@ Begränsningar:
 - Datumen är UTC-dygn om du inte skickar `timezone` (se [Tidszoner](#tidszoner)). En-månads-taket kontrolleras på datumen som de skickas, innan zonen tillämpas.
 - Sammanställningen täcker din API-nyckels leverantörsanläggning. En nyckel vars kontakt inte är kopplad till en leverantörsanläggning får `401`.
 
-Körtiden inkluderar körningar till en teknikers hemadress, till exempel hemresan i slutet av dagen eller tillbaka till en verkstad mitt på dagen. Händelser utan vare sig plats eller hemadress ignoreras fortfarande.
+Körtiden inkluderar körningar till en teknikers hemadress, till exempel hemresan i slutet av dagen eller tillbaka till en verkstad mitt på dagen. Sammanställningen ignorerar fortfarande händelser utan vare sig plats eller hemadress.
 
 ## Den råa händelseloggen
 

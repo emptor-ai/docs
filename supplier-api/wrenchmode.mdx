@@ -34,7 +34,7 @@ Constraints:
 - Dates are UTC days unless you pass `timezone` (see [Time zones](#time-zones)). The one-month cap is checked on the dates as given, before the zone is applied.
 - The rollup covers your API key's supplier facility. A key whose contact is not attached to a supplier facility gets `401`.
 
-Drive time includes drives to a technician's home address, such as the drive home at the end of the day or back to a shop mid-day. Events with neither a location nor a home address are ignored.
+Drive time includes drives to a technician's home address, such as the drive home at the end of the day or back to a shop mid-day. The rollup ignores events with neither a location nor a home address.
 
 ## The raw event log
 
