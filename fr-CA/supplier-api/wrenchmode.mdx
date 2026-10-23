@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Contraintes :
 
 - Les deux dates sont au format `yyyy-MM-dd`, et la fenêtre peut couvrir **au plus un mois**. Divisez les plages plus longues en appels d'un mois.
-- Les dates sont des jours UTC, sauf si vous passez `timezone` (voir [Fuseaux horaires](#fuseaux-horaires)). La limite d'un mois est vérifiée sur les dates telles que fournies, avant l'application du fuseau.
+- Les dates sont des jours UTC, sauf si vous passez `timezone` (voir [Fuseaux horaires](#fuseaux-horaires)). OpenWrench vérifie la limite d'un mois sur les dates telles que fournies, avant d'appliquer le fuseau.
 - Le rollup couvre l'établissement fournisseur de votre clé d'API. Une clé dont le contact n'est pas rattaché à un établissement fournisseur reçoit `401`.
 
 Le temps de conduite inclut les trajets vers l'adresse de domicile d'un technicien, comme le retour à la maison en fin de journée ou le retour à un atelier en milieu de journée. Le rollup ignore toujours les événements sans emplacement ni adresse de domicile.

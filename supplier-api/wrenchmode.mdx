@@ -31,7 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Constraints:
 
 - Both dates are `yyyy-MM-dd`, and the window may span **at most one month**. Split longer ranges into month-sized calls.
-- Dates are UTC days unless you pass `timezone` (see [Time zones](#time-zones)). The one-month cap is checked on the dates as given, before the zone is applied.
+- Dates are UTC days unless you pass `timezone` (see [Time zones](#time-zones)). OpenWrench checks the one-month cap on the dates as given, before it applies the zone.
 - The rollup covers your API key's supplier facility. A key whose contact is not attached to a supplier facility gets `401`.
 
 Drive time includes drives to a technician's home address, such as the drive home at the end of the day or back to a shop mid-day. The rollup ignores events with neither a location nor a home address.
