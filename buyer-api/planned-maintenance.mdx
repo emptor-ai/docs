@@ -73,4 +73,4 @@ The full external-scheduler loop:
 1. Read schedules and their cadence from the API.
 2. When a run comes due, create the PM work order.
 3. Record the run with `scheduler_run_logs`, linking the `woId`.
-4. If a run must be skipped instead, call `skip_schedule` so the next due date advances.
+4. If you need to skip a run instead, call `skip_schedule` so the next due date advances.
