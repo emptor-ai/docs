@@ -31,6 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Restricciones:
 
 - Ambas fechas son `yyyy-MM-dd`, y la ventana puede abarcar **como máximo un mes**. Divide rangos más largos en llamadas del tamaño de un mes.
+- Las fechas son días UTC a menos que envíes `timezone` (consulta [Zonas horarias](#zonas-horarias)). El tope de un mes se verifica sobre las fechas tal como las envías, antes de aplicar la zona.
 - El resumen cubre la instalación de proveedor de tu clave de API. Una clave cuyo contacto no esté adjunto a una instalación de proveedor obtiene `401`.
 
 El tiempo de conducción incluye los trayectos a la dirección de casa de un técnico, como el regreso a casa al final del día o la vuelta a un taller a mitad del día. Los eventos sin ubicación ni dirección de casa se siguen ignorando.
@@ -45,7 +46,8 @@ El tiempo de conducción incluye los trayectos a la dirección de casa de un té
 | `scheduleId` | Un cronograma de WrenchMode. **Desactiva la paginación**: la línea de tiempo completa de eventos del cronograma se devuelve en una sola respuesta. |
 | `eventTypes` | Separados por coma. Valores válidos: `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Los valores desconocidos se rechazan con `400`. |
 | `supplierEmails` | Correos de técnicos separados por coma, comparados sin distinguir mayúsculas. |
-| `fromDate`, `toDate` | `yyyy-MM-dd`; las fechas mal formadas son `400`. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; las fechas mal formadas son `400`. `fromDate` empieza al inicio de su día y `toDate` incluye su día completo. |
+| `timezone` | Nombre de zona IANA, como `America/Chicago` o `UTC`, en la que se leen `fromDate` y `toDate`. Por defecto, días UTC. Consulta [Zonas horarias](#zonas-horarias). |
 
 Aplica la paginación estándar (`offset`, `limit` máx. 25, `sort_by`, `order`) excepto bajo `scheduleId`. Una trampa de formato: un filtro CSV presente pero vacío (por ejemplo `eventTypes=,`) se rechaza como mal formado en lugar de ignorarse.
 
@@ -73,6 +75,28 @@ Un viaje a casa es un evento de viaje (`began_trip`, `trip_paused`, `trip_resume
   "workOrderId": null,
   "serviceCallId": null
 }
+```
+
+## Zonas horarias
+
+Ambas rutas de WrenchMode aceptan un parámetro de consulta opcional `timezone`. Define la zona en la que se leen `fromDate` y `toDate`, para que un día coincida con el día local de tus técnicos en lugar de un día UTC.
+
+- Envía un nombre de zona IANA, como `America/Chicago`, `America/New_York` o `UTC`. Los nombres distinguen mayúsculas y minúsculas.
+- `fromDate` empieza al inicio de ese día en la zona. `toDate` incluye ese día completo en la zona.
+- OpenWrench usa los límites reales de día de la zona. Un día de cambio de horario de verano dura 23 o 25 horas.
+- Sin `timezone`, las fechas son días UTC.
+- Los desplazamientos fijos (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), las abreviaturas (`CST`) y los nombres desconocidos devuelven `400`.
+
+Por ejemplo, un técnico en Chicago termina su trabajo a las 11:30 p. m., hora del Centro, el 9 de octubre. Eso es 04:30 UTC del 10 de octubre. Sin `timezone`, el evento cae el 10 de octubre. Con `timezone=America/Chicago`, cae el 9 de octubre:
+
+```bash
+# Eventos del 9 de octubre en hora del Centro, incluido el evento de las 11:30 p. m.
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?fromDate=2026-10-09&toDate=2026-10-09&timezone=America/Chicago"
+
+# Una semana de tiempo de técnicos, en días de hora del Centro
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-10-05/2026-10-11?timezone=America/Chicago"
 ```
 
 ## Cuándo elegir cada uno

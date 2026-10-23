@@ -31,6 +31,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 Begränsningar:
 
 - Båda datumen är `yyyy-MM-dd`, och fönstret får spänna **högst en månad**. Dela längre intervall i månadsstora anrop.
+- Datumen är UTC-dygn om du inte skickar `timezone` (se [Tidszoner](#tidszoner)). En-månads-taket kontrolleras på datumen som de skickas, innan zonen tillämpas.
 - Sammanställningen täcker din API-nyckels leverantörsanläggning. En nyckel vars kontakt inte är kopplad till en leverantörsanläggning får `401`.
 
 Körtiden inkluderar körningar till en teknikers hemadress, till exempel hemresan i slutet av dagen eller tillbaka till en verkstad mitt på dagen. Händelser utan vare sig plats eller hemadress ignoreras fortfarande.
@@ -45,7 +46,8 @@ Körtiden inkluderar körningar till en teknikers hemadress, till exempel hemres
 | `scheduleId` | Ett WrenchMode-schema. **Inaktiverar paginering**: schemats fullständiga händelsetidslinje returneras i ett svar. |
 | `eventTypes` | Kommaseparerad. Giltiga värden: `began_trip`, `trip_paused`, `trip_resumed`, `arrived`, `trip_cancelled`, `drive_note`, `started_work`, `ended_work`, `location_started`, `location_paused`, `location_resumed`, `location_ended`. Okända värden avvisas med `400`. |
 | `supplierEmails` | Kommaseparerade e-postadresser för tekniker, matchas skiftlägesokänsligt. |
-| `fromDate`, `toDate` | `yyyy-MM-dd`; felaktiga datum ger `400`. |
+| `fromDate`, `toDate` | `yyyy-MM-dd`; felaktiga datum ger `400`. `fromDate` börjar vid dygnets start och `toDate` inkluderar hela sitt dygn. |
+| `timezone` | IANA-zonnamn, till exempel `America/Chicago` eller `UTC`, som `fromDate` och `toDate` läses i. Standard är UTC-dygn. Se [Tidszoner](#tidszoner). |
 
 Standardpaginering (`offset`, `limit` max 25, `sort_by`, `order`) gäller förutom under `scheduleId`. En formatfälla: ett närvarande men tomt CSV-filter (till exempel `eventTypes=,`) avvisas som felaktigt istället för att ignoreras.
 
@@ -73,6 +75,28 @@ En hemresa är en resehändelse (`began_trip`, `trip_paused`, `trip_resumed`, `t
   "workOrderId": null,
   "serviceCallId": null
 }
+```
+
+## Tidszoner
+
+Båda WrenchMode-rutterna accepterar en valfri frågeparameter `timezone`. Den anger zonen som `fromDate` och `toDate` läses i, så att ett dygn motsvarar teknikernas lokala dygn i stället för ett UTC-dygn.
+
+- Skicka ett IANA-zonnamn, till exempel `America/Chicago`, `Europe/Stockholm` eller `UTC`. Namnen är skiftlägeskänsliga.
+- `fromDate` börjar vid dygnets start i zonen. `toDate` inkluderar hela det dygnet i zonen.
+- OpenWrench använder zonens verkliga dygnsgränser. Ett dygn med sommartidsomställning är 23 eller 25 timmar långt.
+- Utan `timezone` är datumen UTC-dygn.
+- Fasta förskjutningar (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), förkortningar (`CST`) och okända namn ger `400`.
+
+Exempel: en tekniker i Chicago avslutar arbetet kl. 23:30 centraltid den 9 oktober. Det är 04:30 UTC den 10 oktober. Utan `timezone` hamnar händelsen den 10 oktober. Med `timezone=America/Chicago` hamnar den den 9 oktober:
+
+```bash
+# Händelser den 9 oktober i centraltid, inklusive händelsen kl. 23:30
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events?fromDate=2026-10-09&toDate=2026-10-09&timezone=America/Chicago"
+
+# En veckas teknikertid, i centraltidsdygn
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/wrench_mode/events/analytics/2026-10-05/2026-10-11?timezone=America/Chicago"
 ```
 
 ## Att välja mellan dem
