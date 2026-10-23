@@ -31,7 +31,7 @@ Delade förfrågningsfält: `workOrderId` och `numberOfTechs` krävs alltid. `id
 | `POST .../service_calls/status_update/tech_scheduled` | `TechScheduled` när `serviceScheduledAt` finns, annars `TechAssigned` |
 | `POST .../service_calls/status_update/tech_rescheduled` | `TechRescheduled` när `serviceScheduledAt` finns, annars `TechAssigned` |
 | `POST .../service_calls/status_update/check_in` | `TechWorkingOnSite` |
-| `POST .../service_calls/status_update/check_out` | `checkOutStatus` du skickar (obligatoriskt) |
+| `POST .../service_calls/status_update/check_out` | Den `checkOutStatus` du skickar (obligatoriskt) |
 | `POST .../service_calls/status_update/remote_check_in` / `remote_check_out` | Samma som deras motsvarigheter på plats, för fjärrarbete |
 
 Alla sökvägar ligger under `/v1/supplier/work_order/`. Det finns inga motsvarigheter på köparsidan: incheckning och utcheckning kan inte styras från Buyer API.
