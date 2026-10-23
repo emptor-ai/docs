@@ -154,10 +154,19 @@ Keys are case-sensitive. A singular key (`status`) takes one value; the plural k
 
 - **Use the plural key for several values.** `statuses=Unassigned,PendingApproval` matches either status. `status=Unassigned,PendingApproval` looks for one status with that literal name and returns nothing.
 - **One value per key.** If you repeat a parameter (`statuses=Unassigned&statuses=PendingApproval`), only the first is used. Comma-separate the values instead.
-- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required, and both ends of a window are inclusive. URL-encode the value (`curl -G --data-urlencode` does this for you). A date that does not parse is not rejected. It is read as 1 January 1970, so a bad start date matches everything and a bad end date matches nothing.
+- **Dates use `MM/dd/yyyy HH:mm:ss`**, for example `08/01/2026 00:00:00`. The value is a local wall-clock time, read in the zone you pass in `timezone`, or in UTC without it. The time is required, and both ends of a window are inclusive. End bounds are exact: OpenWrench doesn't round them to the end of the day, so send `23:59:59` to include a whole day. URL-encode the value (`curl -G --data-urlencode` does this for you). Don't add an offset such as `-05:00` to the value: OpenWrench ignores it.
+- **A date that doesn't parse returns `400`** with `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. That includes ISO 8601 values (`2026-10-09T00:00:00`), dates without a time (`10/09/2026`), and values of only spaces. An empty value is still read as 1 January 1970.
+- **`timezone` takes an IANA zone name**, such as `America/Chicago` or `UTC`. Fixed offsets (`-05:00`, `GMT-5`), abbreviations (`CST`), and unknown names return `400`. See [Date formats](/buyer-api/introduction#date-formats) for daylight saving time.
 - **Booleans are `true` or `false`.** `isStale` and `unscheduledOrPastSchedule` only act on `true`.
 - **Values must be well formed.** A non-numeric id, or a boolean other than `true` or `false`, can fail the request with a `500` rather than a `400`.
 - **Tenant scoping can't be overridden.** `buyerCompanyId` is always set from your API key, so passing it has no effect.
+
+To match one local day, send `00:00:00` and `23:59:59` on the same date along with your zone. This request returns work orders created on October 9, 2026, Central time:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?createdAtStartDate=10/09/2026%2000:00:00&createdAtEndDate=10/09/2026%2023:59:59&timezone=America/Chicago"
+```
 
 Fetch one work order with `GET /v1/buyer/work_order/work_orders/{id}`.
 

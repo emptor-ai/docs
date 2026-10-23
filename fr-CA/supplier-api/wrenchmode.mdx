@@ -34,6 +34,8 @@ Contraintes :
 - Les dates sont des jours UTC, sauf si vous passez `timezone` (voir [Fuseaux horaires](#fuseaux-horaires)). La limite d'un mois est vérifiée sur les dates telles que fournies, avant l'application du fuseau.
 - Le rollup couvre l'établissement fournisseur de votre clé d'API. Une clé dont le contact n'est pas rattaché à un établissement fournisseur reçoit `401`.
 
+Le temps de conduite inclut les trajets vers l'adresse de domicile d'un technicien, comme le retour à la maison en fin de journée ou le retour à un atelier en milieu de journée. Les événements sans emplacement ni adresse de domicile sont toujours ignorés.
+
 ## Le journal d'événements brut
 
 `GET /v1/supplier/wrench_mode/events` retourne les événements sous-jacents, restreints à votre fournisseur. Filtres :
@@ -59,7 +61,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
 ```
 
-Le vocabulaire d'événements se divise en événements de trajet (`began_trip` jusqu'à `trip_cancelled`, plus `drive_note`) et événements de travail (`started_work`, `ended_work`, et les événements de minuterie `location_*` qui marquent les pauses et reprises sur place).
+Le vocabulaire d'événements se divise en événements de trajet (`began_trip` jusqu'à `trip_cancelled`, plus `drive_note`) et événements de travail (`started_work`, `ended_work`, et les événements de minuterie `location_*` qui marquent les pauses et reprises sur place). Les événements de trajet peuvent pointer vers une adresse de domicile au lieu d'un emplacement.
+
+Un trajet vers le domicile est un événement de trajet (`began_trip`, `trip_paused`, `trip_resumed`, `trip_cancelled`, `drive_note` ou `arrived`) dont `homeAddressId` est défini et qui n'a ni `locationId`, ni `workOrderId`, ni `serviceCallId`. Les événements de travail ne portent jamais `homeAddressId`. C'est pourquoi `locationId` peut être `null` sur les événements de trajet.
+
+```json
+{
+  "scheduleId": 4417,
+  "supplierEmail": "tech@supplier.com",
+  "eventType": "began_trip",
+  "homeAddressId": 12,
+  "locationId": null,
+  "workOrderId": null,
+  "serviceCallId": null
+}
+```
 
 ## Fuseaux horaires
 
@@ -91,7 +107,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 ## Modèles éprouvés
 
-**Extraction hebdomadaire de la paie.** Chaque lundi, appelez l'analyse pour la semaine précédente, joignez sur le courriel du technicien contre votre système de paie, et utilisez le temps de travail plus le temps de conduite comme entrée d'heures payées. Un appel par semaine par établissement vous garde loin sous la limite de débit.
+**Extraction hebdomadaire de la paie.** Chaque lundi, appelez l'analyse pour la semaine précédente, joignez sur le courriel du technicien contre votre système de paie, et utilisez le temps de travail plus le temps de conduite comme entrée d'heures payées. Le trajet de retour à la maison compte dans le total du temps de conduite, même s'il n'est facturé à aucun bon de travail. Un appel par semaine par établissement vous garde loin sous la limite de débit.
 
 **Rapport d'utilisation mensuel.** Analyse avec des bornes de mois (`2026-08-01` à `2026-08-31` reste dans la limite d'un mois); divisez le temps de travail par le temps planifié depuis votre système de gestion d'horaires.
 

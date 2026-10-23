@@ -154,10 +154,19 @@ Las claves distinguen entre mayúsculas y minúsculas. Una clave en singular (`s
 
 - **Usa la clave en plural para varios valores.** `statuses=Unassigned,PendingApproval` coincide con cualquiera de los dos estados. `status=Unassigned,PendingApproval` busca un único estado con ese nombre literal y no devuelve nada.
 - **Un valor por clave.** Si repites un parámetro (`statuses=Unassigned&statuses=PendingApproval`), solo se usa el primero. Separa los valores con comas en su lugar.
-- **Las fechas usan `MM/dd/yyyy HH:mm:ss` en UTC**, por ejemplo `08/01/2026 00:00:00`. La hora es obligatoria, y ambos extremos de una ventana son inclusivos. Codifica el valor para URL (`curl -G --data-urlencode` lo hace por ti). Una fecha que no se puede interpretar no se rechaza. Se lee como 1 de enero de 1970, así que una fecha de inicio errónea coincide con todo y una fecha de fin errónea no coincide con nada.
+- **Las fechas usan `MM/dd/yyyy HH:mm:ss`**, por ejemplo `08/01/2026 00:00:00`. El valor es una hora local de reloj, interpretada en la zona que pases en `timezone`, o en UTC si no lo pasas. La hora es obligatoria, y ambos extremos de una ventana son inclusivos. Los extremos finales son exactos: OpenWrench no los redondea al final del día, así que envía `23:59:59` para incluir un día completo. Codifica el valor para URL (`curl -G --data-urlencode` lo hace por ti). No añadas un offset como `-05:00` al valor: OpenWrench lo ignora.
+- **Una fecha que no se puede interpretar devuelve `400`** con `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. Eso incluye valores ISO 8601 (`2026-10-09T00:00:00`), fechas sin hora (`10/09/2026`) y valores formados solo por espacios. Un valor vacío se sigue leyendo como 1 de enero de 1970.
+- **`timezone` acepta un nombre de zona IANA**, como `America/Chicago` o `UTC`. Los offsets fijos (`-05:00`, `GMT-5`), las abreviaturas (`CST`) y los nombres desconocidos devuelven `400`. Consulta [Formatos de fecha](/es/buyer-api/introduction#formatos-de-fecha) para el horario de verano.
 - **Los booleanos son `true` o `false`.** `isStale` y `unscheduledOrPastSchedule` solo actúan con `true`.
 - **Los valores deben estar bien formados.** Un id no numérico, o un booleano distinto de `true` o `false`, puede hacer fallar la solicitud con un `500` en lugar de un `400`.
 - **El alcance por inquilino no se puede anular.** `buyerCompanyId` siempre se establece a partir de tu clave de API, así que pasarlo no tiene efecto.
+
+Para obtener un único día local, envía `00:00:00` y `23:59:59` en la misma fecha junto con tu zona. Esta solicitud devuelve las órdenes de trabajo creadas el 9 de octubre de 2026, en hora central:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?createdAtStartDate=10/09/2026%2000:00:00&createdAtEndDate=10/09/2026%2023:59:59&timezone=America/Chicago"
+```
 
 Obtén una orden de trabajo con `GET /v1/buyer/work_order/work_orders/{id}`.
 

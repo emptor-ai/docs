@@ -74,7 +74,25 @@ Les endpoints de liste acceptent `offset`, `limit` (par défaut 10, maximum 25),
 
 ## Formats de date
 
-La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601. Les filtres de date de la liste des bons de travail font exception : ils prennent `MM/dd/yyyy HH:mm:ss` en UTC (voir les [règles des valeurs de filtre](/fr-CA/buyer-api/work-orders#règles-des-valeurs-de-filtre)).
+La plupart des horodatages sont des chaînes ISO 8601 avec décalage (par exemple `2026-08-14T13:05:22.000-07:00`); certains champs d'horodatage de base de données sont sérialisés au format `yyyy-MM-dd HH:mm:ss.S`. Les dates simples sont au format `yyyy-MM-dd`. Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601.
+
+Les filtres de date des listes de factures, de propositions et de bons de travail font exception. Ils prennent `MM/dd/yyyy HH:mm:ss`, une heure locale sans décalage, par exemple `10/09/2026 00:00:00` :
+
+- **Fuseau horaire.** Passez le paramètre de requête facultatif `timezone` pour définir le fuseau dans lequel les valeurs sont lues. Utilisez un nom de fuseau IANA, comme `America/Chicago`, `America/New_York` ou `UTC`. Les noms sont sensibles à la casse. Sans `timezone`, les valeurs sont lues en UTC.
+- **Fuseaux rejetés.** Les décalages fixes (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), les abréviations (`CST`) et les noms inconnus renvoient `400`.
+- **Aucun décalage dans la valeur.** OpenWrench ignore un décalage comme `-05:00` à la fin d'une valeur de filtre. Utilisez plutôt `timezone`.
+- **Les valeurs mal formées renvoient `400`.** Une valeur qui ne correspond pas au format renvoie `400`, par exemple `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Cela inclut les valeurs ISO 8601 (`2026-10-09T00:00:00`), les dates sans heure (`10/09/2026`) et les valeurs composées uniquement d'espaces. Une valeur vide est encore lue comme le 1er janvier 1970.
+- **Bornes de fin.** Les dates de fin des factures et des propositions couvrent toute la journée de fin : OpenWrench remplace l'heure par 23:59:59 à cette date dans le fuseau `timezone`. Les dates de fin des bons de travail sont exactes, alors envoyez `23:59:59` pour inclure toute la journée.
+- **Heure avancée.** Une heure située dans l'heure sautée lors du passage à l'heure avancée est avancée de la durée de l'écart. Une heure située dans l'heure répétée lors du retour à l'heure normale désigne l'occurrence en heure normale, soit la deuxième.
+
+Par exemple, cette requête renvoie les factures marquées payées le 9 octobre 2026, heure du Centre :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?markedPaidAtStartDate=10/09/2026%2000:00:00&markedPaidAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
+
+Pour les filtres de chaque liste, consultez les règles des valeurs de filtre pour les [bons de travail](/fr-CA/buyer-api/work-orders#règles-des-valeurs-de-filtre), les [factures](/fr-CA/buyer-api/invoices#règles-des-valeurs-de-filtre) et les [propositions](/fr-CA/buyer-api/quotes-and-proposals#référence-des-filtres).
 
 ## Guides détaillés
 

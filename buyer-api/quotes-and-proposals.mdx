@@ -80,9 +80,18 @@ Value rules:
 
 - **Sorting.** `sort_by` supports `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, or any other value, results are sorted by `id` ascending (oldest first). Once you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for newest first.
 - **Lists take commas with no spaces.** A singular key (`status`) takes one value; the plural key takes a comma-separated list. A space after a comma can fail the request.
-- **Dates use `MM/dd/yyyy HH:mm:ss` in UTC**, for example `08/01/2026 00:00:00`. The time is required. The start bound is inclusive at the time you send; the end bound covers the whole end day. A date that does not parse is read as 1 January 1970 rather than rejected, so a bad start date matches everything and a bad end date matches nothing.
+- **Dates use `MM/dd/yyyy HH:mm:ss`**, for example `08/01/2026 00:00:00`. The value is a local wall-clock time, read in the zone you pass in `timezone`, or in UTC without it. The time is required. The start bound is inclusive at the time you send. The end bound covers the whole end day in that zone: its time is replaced with 23:59:59. URL-encode the value. Don't add an offset such as `-05:00` to the value: OpenWrench ignores it.
+- **A date that doesn't parse returns `400`** with `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. That includes ISO 8601 values (`2026-10-09T00:00:00`), dates without a time (`10/09/2026`), and values of only spaces. An empty value is still read as 1 January 1970.
+- **`timezone` takes an IANA zone name**, such as `America/Chicago` or `UTC`. Fixed offsets (`-05:00`, `GMT-5`), abbreviations (`CST`), and unknown names return `400`. See [Date formats](/buyer-api/introduction#date-formats) for daylight saving time.
 - **Values must be well formed.** A non-numeric id, or a boolean other than `true` or `false`, can fail the request with a `500` rather than a `400`.
 - **Unrecognized filters are ignored**, and tenant scoping can't be overridden: `buyerCompanyId` is always set from your API key, and drafts are excluded even if you ask for `status=draft`.
+
+To match one local day, send the same date for both bounds along with your zone. This request returns proposals awarded on October 9, 2026, Central time:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?approvedAtStartDate=10/09/2026%2000:00:00&approvedAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
 
 ## Inside a proposal
 

@@ -72,7 +72,25 @@ List endpoints accept `offset`, `limit` (default 10, max 25), `sort_by`, and `or
 
 Most timestamps are ISO 8601 strings with offset (for example, `2026-08-14T13:05:22.000-07:00`); some database timestamp fields serialize as `yyyy-MM-dd HH:mm:ss.S`. Plain dates are `yyyy-MM-dd`.
 
-When sending date-times, use ISO 8601 with a `T` between the date and time and an explicit offset. A space-separated value such as `2026-09-10 10:43:00+00:00` is not ISO 8601 and is rejected; send `2026-09-10T10:43:00.000+00:00` instead. UTC may be written as `+00:00` or `Z`. Date filters on the work order list are the exception: they take `MM/dd/yyyy HH:mm:ss` in UTC (see [filter value rules](/supplier-api/work-orders#filter-value-rules)).
+When sending date-times, use ISO 8601 with a `T` between the date and time and an explicit offset. A space-separated value such as `2026-09-10 10:43:00+00:00` is not ISO 8601 and is rejected; send `2026-09-10T10:43:00.000+00:00` instead. UTC may be written as `+00:00` or `Z`.
+
+Date filters on the invoice, proposal, and work order lists are the exception. They take `MM/dd/yyyy HH:mm:ss`, a local wall-clock time with no offset, for example `10/09/2026 00:00:00`:
+
+- **Time zone.** Pass the optional `timezone` query parameter to set the zone the values are read in. Use an IANA zone name, such as `America/Chicago`, `America/New_York`, or `UTC`. Names are case-sensitive. Without `timezone`, values are read in UTC.
+- **Rejected zones.** Fixed offsets (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), abbreviations (`CST`), and unknown names return `400`.
+- **No offset in the value.** OpenWrench ignores an offset such as `-05:00` at the end of a filter value. Use `timezone` instead.
+- **Malformed values return `400`.** A value that doesn't match the format returns `400`, for example `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. That includes ISO 8601 values (`2026-10-09T00:00:00`), dates without a time (`10/09/2026`), and values of only spaces. An empty value is still read as 1 January 1970.
+- **End bounds.** Invoice and proposal end dates cover the whole end day: OpenWrench replaces the time with 23:59:59 on that date in `timezone`. Work order end dates are exact, so send `23:59:59` to include the whole day.
+- **Daylight saving time.** A time in the skipped hour of a spring-forward change moves forward by the length of the gap. A time in the repeated hour of a fall-back change means the standard-time occurrence, which is the second one.
+
+For example, this request returns invoices marked paid on October 9, 2026, Central time:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/invoice/invoices?markedPaidAtStartDate=10/09/2026%2000:00:00&markedPaidAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
+
+For each list's filters, see the filter value rules for [work orders](/supplier-api/work-orders#filter-value-rules) and for [proposals and invoices](/supplier-api/quotes-and-invoicing#filtering-lists).
 
 ## Technician time data
 
