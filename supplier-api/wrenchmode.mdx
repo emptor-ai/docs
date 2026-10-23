@@ -33,7 +33,7 @@ Constraints:
 - Both dates are `yyyy-MM-dd`, and the window may span **at most one month**. Split longer ranges into month-sized calls.
 - The rollup covers your API key's supplier facility. A key whose contact is not attached to a supplier facility gets `401`.
 
-Drive time includes drives to a technician's home address, such as the drive home at the end of the day or back to a shop mid-day. Events with neither a location nor a home address are ignored.
+Drive time includes drives to a technician's home address, such as the drive home at the end of the day or back to a shop mid-day. The rollup ignores events with neither a location nor a home address.
 
 ## The raw event log
 
