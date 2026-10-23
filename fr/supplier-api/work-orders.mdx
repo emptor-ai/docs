@@ -151,7 +151,24 @@ curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
 
 Valeurs par défaut si omises : `problemTypeId` revient au premier type de problème feuille de l'entreprise acheteur de l'emplacement, et `woPriorityId` à une priorité par défaut pour cette entreprise. Un `assetId`, s'il est fourni, doit exister, et sa zone est héritée lorsque `areaId` n'est pas défini. Le champ est `needApproval` (sans « s ») sur ce corps de création. Un `id` dans le corps est ignoré : cet appel crée toujours un nouveau bon de travail.
 
-**Le serveur fixe le statut initial.** Pour une clé de fournisseur tiers, tout `status` ou `isSupplierInitiated` dans le corps est ignoré. Le serveur crée le bon de travail en `SupplierInitiatedPendingApproval` avec `isSupplierInitiated: true`. La configuration d'approbation de l'acheteur décide ensuite de sa destination. Il reste en `SupplierInitiatedPendingApproval` jusqu'à ce qu'un acheteur l'approuve. Si l'acheteur approuve automatiquement les bons de travail à l'initiative du fournisseur, il est plutôt immédiatement confirmé à votre établissement en `ConfirmedByServiceProvider`. Les clés appartenant à l'équipe de service interne d'un acheteur, ainsi que les fournisseurs payants qui créent un bon de travail sur l'emplacement d'un client qu'ils gèrent, conservent le `status` qu'ils envoient. Si ces clés omettent `status`, le statut initial est dérivé de la configuration de l'entreprise acheteur ; une équipe interne arrive en `AssignedToInternalTech`.
+**Le serveur fixe le statut initial.** Pour une clé de fournisseur tiers, tout `status` ou `isSupplierInitiated` dans le corps est ignoré. Le serveur crée le bon de travail en `SupplierInitiatedPendingApproval` avec `isSupplierInitiated: true`. La configuration d'approbation de l'acheteur décide ensuite de sa destination. Il reste en `SupplierInitiatedPendingApproval` jusqu'à ce qu'un acheteur l'approuve. Si l'acheteur approuve automatiquement les bons de travail à l'initiative du fournisseur, il est plutôt immédiatement confirmé à votre établissement en `ConfirmedByServiceProvider`. Les clés appartenant à l'équipe de service interne d'un acheteur, ainsi que les fournisseurs payants qui créent un bon de travail sur l'emplacement d'un client qu'ils gèrent, peuvent définir `status`. Si ces clés omettent `status`, OpenWrench dérive le statut initial de la configuration de l'entreprise acheteur. Une équipe interne arrive en `AssignedToInternalTech`.
+
+**Transferts par l'équipe interne.** Une clé d'équipe de service interne peut créer un bon de travail pour un autre établissement fournisseur en envoyant le `supplierFacilityId` de cet établissement. Cela ne fonctionne que si la configuration de votre établissement autorise le transfert de travail. OpenWrench traite alors la création comme un transfert. Si la requête n'envoie aucun `status`, ou envoie `SupplierInitiatedPendingApproval` (comme le fait toujours l'application mobile des sous-traitants), OpenWrench fixe `PendingConfirmationByServiceProvider`. Le bon de travail va au fournisseur de destination pour confirmation, au lieu de la file d'approbation des travaux à l'initiative du fournisseur de l'acheteur. Un établissement de destination privé correspond toujours à `AssignedToInternalTech`. OpenWrench conserve le `status` tel qu'envoyé dans ces cas :
+
+- La requête envoie un autre `status` explicite.
+- Le `supplierFacilityId` est votre propre établissement.
+- La configuration de votre établissement n'autorise pas le transfert de travail.
+
+```bash
+curl -X POST "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Fuite de toit au-dessus de la réserve, couvreur requis",
+    "locationId": 1204,
+    "supplierFacilityId": 3381
+  }'
+```
 
 ## Types de problème
 
