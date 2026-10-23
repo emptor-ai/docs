@@ -79,7 +79,7 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
   }'
 ```
 
-`checkInTime` toma por defecto la hora actual del servidor cuando estableces un `checkInStatus` sin hora, así que las integraciones en vivo pueden omitirlo; los backfills deberían pasarlo explícitamente. `checkInImages` toma referencias de foto, y las coordenadas geográficas dan al comprador la prueba en sitio.
+`checkInTime` toma por defecto la hora actual del servidor cuando estableces un `checkInStatus` sin hora, así que puedes omitirlo en las integraciones en vivo. Pásalo explícitamente al cargar datos históricos. `checkInImages` toma referencias de foto, y las coordenadas geográficas dan al comprador la prueba en sitio.
 
 ## 3. Check-out y establecer el resultado
 

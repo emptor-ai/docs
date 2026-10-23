@@ -83,7 +83,7 @@ curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_in"
 
 ## 3. Quitter et définir le résultat
 
-Le départ est où le prochain statut du bon de travail est décidé. **`checkOutStatus` est requis et doit être un nom de statut de bon de travail valide**; il devient le nouveau statut du bon de travail.
+C'est au départ que se décide le prochain statut du bon de travail. **`checkOutStatus` est requis et doit être un nom de statut de bon de travail valide**; il devient le nouveau statut du bon de travail.
 
 ```bash
 curl -X POST "$BASE/v1/supplier/work_order/service_calls/status_update/check_out" \
