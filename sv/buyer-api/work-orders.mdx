@@ -154,10 +154,19 @@ Nycklarna är skiftlägeskänsliga. En nyckel i singular (`status`) tar ett vär
 
 - **Använd pluralnyckeln för flera värden.** `statuses=Unassigned,PendingApproval` matchar någon av statusarna. `status=Unassigned,PendingApproval` letar efter en enda status med just det namnet och returnerar ingenting.
 - **Ett värde per nyckel.** Om du upprepar en parameter (`statuses=Unassigned&statuses=PendingApproval`) används bara den första. Kommaseparera värdena istället.
-- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk, och båda ändarna av ett fönster är inkluderande. URL-koda värdet (`curl -G --data-urlencode` gör det åt dig). Ett datum som inte kan tolkas avvisas inte. Det läses som 1 januari 1970, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Datum använder `MM/dd/yyyy HH:mm:ss`**, till exempel `08/01/2026 00:00:00`. Värdet är en lokal klocktid som läses i den zon du anger i `timezone`, eller i UTC om den saknas. Tiden är obligatorisk, och båda ändarna av ett fönster är inkluderande. Slutgränser är exakta: OpenWrench avrundar dem inte till slutet av dagen, så skicka `23:59:59` för att ta med en hel dag. URL-koda värdet (`curl -G --data-urlencode` gör det åt dig). Lägg inte till en offset som `-05:00` i värdet: OpenWrench ignorerar den.
+- **Ett datum som inte kan tolkas returnerar `400`** med `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. Det gäller även ISO 8601-värden (`2026-10-09T00:00:00`), datum utan tid (`10/09/2026`) och värden som bara består av mellanslag. Ett tomt värde läses fortfarande som 1 januari 1970.
+- **`timezone` tar ett IANA-zonnamn**, som `America/Chicago` eller `UTC`. Fasta offset (`-05:00`, `GMT-5`), förkortningar (`CST`) och okända namn returnerar `400`. Se [Datumformat](/sv/buyer-api/introduction#datumformat) för sommartid.
 - **Booleska värden är `true` eller `false`.** `isStale` och `unscheduledOrPastSchedule` agerar bara på `true`.
 - **Värden måste vara välformade.** Ett icke-numeriskt id, eller ett booleskt värde annat än `true` eller `false`, kan få anropet att misslyckas med `500` istället för `400`.
 - **Tenant-avgränsningen kan inte åsidosättas.** `buyerCompanyId` sätts alltid från din API-nyckel, så att skicka det har ingen effekt.
+
+Om du vill matcha en lokal dag skickar du `00:00:00` och `23:59:59` på samma datum tillsammans med din zon. Den här förfrågan returnerar arbetsordrar som skapades den 9 oktober 2026, Central time:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/work_order/work_orders?createdAtStartDate=10/09/2026%2000:00:00&createdAtEndDate=10/09/2026%2023:59:59&timezone=America/Chicago"
+```
 
 Hämta en enskild arbetsorder med `GET /v1/buyer/work_order/work_orders/{id}`.
 

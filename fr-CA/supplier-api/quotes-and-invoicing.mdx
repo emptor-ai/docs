@@ -171,9 +171,18 @@ Règles des valeurs :
 - **Tri.** Les deux listes se trient par `createdAt`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` ou `buyerFacilityId`; les factures se trient aussi par `invoiceTotalAfterTax`, et les propositions par `updatedAt` et `totalAfterTax`. Dès que vous définissez `sort_by`, `order` est `asc` par défaut, alors envoyez `order=desc` pour obtenir les plus récentes en premier. Sans `sort_by`, les factures arrivent des plus récentes aux plus anciennes et les propositions dans l'ordre des `id` (les plus anciennes en premier). Un `sort_by` non pris en charge sur les propositions revient aussi à l'ordre des `id`.
 - **Les listes prennent des virgules, sans espaces.** Une clé au singulier (`status`) prend une seule valeur; la clé au pluriel prend une liste séparée par des virgules. `status=pending,approved` cherche un unique statut portant ce nom littéral et ne renvoie rien. Une espace après une virgule peut faire échouer la requête.
 - **Une valeur par clé.** Si vous répétez un paramètre, seul le premier est utilisé.
-- **Les dates utilisent `MM/dd/yyyy HH:mm:ss` en UTC**, par exemple `08/01/2026 00:00:00`. L'heure est obligatoire. La borne de début est incluse à l'heure que vous envoyez; la borne de fin couvre toute la journée de fin (son heure est remplacée par 23:59:59). Encodez la valeur pour l'URL. Une date qui ne peut pas être analysée est lue comme le 1er janvier 1970 plutôt que rejetée, alors une date de début invalide correspond à tout et une date de fin invalide ne correspond à rien.
+- **Les dates utilisent `MM/dd/yyyy HH:mm:ss`**, par exemple `08/01/2026 00:00:00`. La valeur est une heure locale, lue dans le fuseau que vous passez dans `timezone`, ou en UTC sans celui-ci. L'heure est obligatoire. La borne de début est incluse à l'heure que vous envoyez. La borne de fin couvre toute la journée de fin dans ce fuseau : son heure est remplacée par 23:59:59. Encodez la valeur pour l'URL. N'ajoutez pas de décalage comme `-05:00` à la valeur : OpenWrench l'ignore.
+- **Une date qui ne peut pas être analysée renvoie `400`** avec `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. Cela inclut les valeurs ISO 8601 (`2026-10-09T00:00:00`), les dates sans heure (`10/09/2026`) et les valeurs composées uniquement d'espaces. Une valeur vide est encore lue comme le 1er janvier 1970.
+- **`timezone` prend un nom de fuseau IANA**, comme `America/Chicago` ou `UTC`. Les décalages fixes (`-05:00`, `GMT-5`), les abréviations (`CST`) et les noms inconnus renvoient `400`. Consultez [Formats de date](/fr-CA/supplier-api/introduction#formats-de-date) pour l'heure avancée.
 - **Les valeurs doivent être bien formées.** Un id non numérique, ou un booléen autre que `true` ou `false`, peut faire échouer la requête avec un `500` plutôt qu'un `400`.
 - **Les filtres non reconnus sont ignorés**, et votre portée de locataire ne peut pas être contournée : `supplierFacilityId` est toujours défini à partir de votre clé d'API.
+
+Pour cibler une seule journée locale, envoyez la même date pour les deux bornes avec votre fuseau. Cette requête renvoie les factures marquées payées le 9 octobre 2026, heure du Centre :
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/supplier/invoice/invoices?markedPaidAtStartDate=10/09/2026%2000:00:00&markedPaidAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
 
 ## Flux de facturation de bout en bout
 

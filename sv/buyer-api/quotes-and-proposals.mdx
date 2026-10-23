@@ -80,9 +80,18 @@ Regler för filtervärden:
 
 - **Sortering.** `sort_by` stöder `createdAt`, `updatedAt`, `totalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId` och `buyerFacilityId`. Utan `sort_by`, eller med något annat värde, sorteras resultaten efter `id` stigande (äldst först). När du sätter `sort_by` blir `order` som standard `asc`, så skicka `order=desc` för nyast först.
 - **Listor tar kommatecken utan mellanslag.** En nyckel i singular (`status`) tar ett värde; nyckeln i plural tar en kommaseparerad lista. Ett mellanslag efter ett kommatecken kan få anropet att misslyckas.
-- **Datum använder `MM/dd/yyyy HH:mm:ss` i UTC**, till exempel `08/01/2026 00:00:00`. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar; slutgränsen täcker hela slutdagen. Ett datum som inte kan tolkas läses som 1 januari 1970 istället för att avvisas, så ett felaktigt startdatum matchar allt och ett felaktigt slutdatum matchar ingenting.
+- **Datum använder `MM/dd/yyyy HH:mm:ss`**, till exempel `08/01/2026 00:00:00`. Värdet är en lokal klocktid som läses i den zon du anger i `timezone`, eller i UTC om den saknas. Tiden är obligatorisk. Startgränsen är inkluderande från den tid du skickar. Slutgränsen täcker hela slutdagen i den zonen: dess tid ersätts med 23:59:59. URL-koda värdet. Lägg inte till en offset som `-05:00` i värdet: OpenWrench ignorerar den.
+- **Ett datum som inte kan tolkas returnerar `400`** med `Invalid <key>. Expected format MM/dd/yyyy HH:mm:ss`. Det gäller även ISO 8601-värden (`2026-10-09T00:00:00`), datum utan tid (`10/09/2026`) och värden som bara består av mellanslag. Ett tomt värde läses fortfarande som 1 januari 1970.
+- **`timezone` tar ett IANA-zonnamn**, som `America/Chicago` eller `UTC`. Fasta offset (`-05:00`, `GMT-5`), förkortningar (`CST`) och okända namn returnerar `400`. Se [Datumformat](/sv/buyer-api/introduction#datumformat) för sommartid.
 - **Värden måste vara välformade.** Ett icke-numeriskt id, eller ett booleskt värde annat än `true` eller `false`, kan få anropet att misslyckas med `500` istället för `400`.
 - **Okända filter ignoreras**, och tenant-avgränsningen kan inte åsidosättas: `buyerCompanyId` sätts alltid från din API-nyckel, och utkast utesluts även om du ber om `status=draft`.
+
+Om du vill matcha en lokal dag skickar du samma datum för båda gränserna tillsammans med din zon. Den här förfrågan returnerar förslag som tilldelades den 9 oktober 2026, Central time:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?approvedAtStartDate=10/09/2026%2000:00:00&approvedAtEndDate=10/09/2026%2000:00:00&timezone=America/Chicago"
+```
 
 ## Inuti ett förslag
 
