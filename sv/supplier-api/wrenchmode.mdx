@@ -33,6 +33,8 @@ Begränsningar:
 - Båda datumen är `yyyy-MM-dd`, och fönstret får spänna **högst en månad**. Dela längre intervall i månadsstora anrop.
 - Sammanställningen täcker din API-nyckels leverantörsanläggning. En nyckel vars kontakt inte är kopplad till en leverantörsanläggning får `401`.
 
+Körtiden inkluderar körningar till en teknikers hemadress, till exempel hemresan i slutet av dagen eller tillbaka till en verkstad mitt på dagen. Händelser utan vare sig plats eller hemadress ignoreras fortfarande.
+
 ## Den råa händelseloggen
 
 `GET /v1/supplier/wrench_mode/events` returnerar de underliggande händelserna, tenant-avgränsade till din leverantör. Filter:
@@ -57,7 +59,21 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/wrench_mode/events?supplierEmails=tech@supplier.com&fromDate=2026-08-21&toDate=2026-08-21&limit=25"
 ```
 
-Händelsevokabulären delas i resehändelser (`began_trip` genom `trip_cancelled`, plus `drive_note`) och arbetshändelser (`started_work`, `ended_work` och `location_*`-tidshändelserna som markerar pauser och återupptaganden på plats).
+Händelsevokabulären delas i resehändelser (`began_trip` genom `trip_cancelled`, plus `drive_note`) och arbetshändelser (`started_work`, `ended_work` och `location_*`-tidshändelserna som markerar pauser och återupptaganden på plats). Resehändelser kan peka på en hemadress i stället för en plats.
+
+En hemresa är en resehändelse (`began_trip`, `trip_paused`, `trip_resumed`, `trip_cancelled`, `drive_note` eller `arrived`) som har `homeAddressId` satt och saknar `locationId`, `workOrderId` och `serviceCallId`. Arbetshändelser har aldrig `homeAddressId`. Därför kan `locationId` vara `null` på resehändelser.
+
+```json
+{
+  "scheduleId": 4417,
+  "supplierEmail": "tech@supplier.com",
+  "eventType": "began_trip",
+  "homeAddressId": 12,
+  "locationId": null,
+  "workOrderId": null,
+  "serviceCallId": null
+}
+```
 
 ## Att välja mellan dem
 
@@ -67,7 +83,7 @@ Händelsevokabulären delas i resehändelser (`began_trip` genom `trip_cancelled
 
 ## Beprövade mönster
 
-**Veckovis lönehämtning.** Varje måndag, anropa analys för föregående vecka, matcha på teknikernas e-postadress mot ditt lönesystem och använd arbete + körtid som betald-timmar-underlag. Ett anrop per vecka per anläggning håller dig långt under hastighetsgränsen.
+**Veckovis lönehämtning.** Varje måndag, anropa analys för föregående vecka, matcha på teknikernas e-postadress mot ditt lönesystem och använd arbete + körtid som betald-timmar-underlag. Hemresan räknas in i den totala körtiden, även om den inte faktureras på någon arbetsorder. Ett anrop per vecka per anläggning håller dig långt under hastighetsgränsen.
 
 **Månadsvis utnyttjanderapport.** Analys med månadsgränser (`2026-08-01` till `2026-08-31` ligger inom en-månads-taket); dividera arbetstid med schemalagd tid från ditt bemanningssystem.
 
