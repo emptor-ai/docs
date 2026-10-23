@@ -76,10 +76,10 @@ Lorsque vous envoyez des dates-heures, utilisez le format ISO 8601 avec un `T` e
 
 Les filtres de date des listes de factures, de propositions et de bons de travail font exception. Ils prennent `MM/dd/yyyy HH:mm:ss`, une heure locale sans décalage, par exemple `10/09/2026 00:00:00` :
 
-- **Fuseau horaire.** Passez le paramètre de requête facultatif `timezone` pour définir le fuseau dans lequel les valeurs sont lues. Utilisez un nom de fuseau IANA, comme `America/Chicago`, `America/New_York` ou `UTC`. Les noms sont sensibles à la casse. Sans `timezone`, les valeurs sont lues en UTC.
+- **Fuseau horaire.** Passez le paramètre de requête facultatif `timezone` pour définir le fuseau dans lequel OpenWrench lit les valeurs. Utilisez un nom de fuseau IANA, comme `America/Chicago`, `America/New_York` ou `UTC`. Les noms sont sensibles à la casse. Sans `timezone`, OpenWrench lit les valeurs en UTC.
 - **Fuseaux rejetés.** Les décalages fixes (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), les abréviations (`CST`) et les noms inconnus renvoient `400`.
 - **Aucun décalage dans la valeur.** OpenWrench ignore un décalage comme `-05:00` à la fin d'une valeur de filtre. Utilisez plutôt `timezone`.
-- **Les valeurs mal formées renvoient `400`.** Une valeur qui ne correspond pas au format renvoie `400`, par exemple `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Cela inclut les valeurs ISO 8601 (`2026-10-09T00:00:00`), les dates sans heure (`10/09/2026`) et les valeurs composées uniquement d'espaces. Une valeur vide est encore lue comme le 1er janvier 1970.
+- **Les valeurs mal formées renvoient `400`.** Une valeur qui ne correspond pas au format renvoie `400`, par exemple `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Cela inclut les valeurs ISO 8601 (`2026-10-09T00:00:00`), les dates sans heure (`10/09/2026`) et les valeurs composées uniquement d'espaces. OpenWrench lit encore une valeur vide comme le 1er janvier 1970.
 - **Bornes de fin.** Les dates de fin des factures et des propositions couvrent toute la journée de fin : OpenWrench remplace l'heure par 23:59:59 à cette date dans le fuseau `timezone`. Les dates de fin des bons de travail sont exactes, alors envoyez `23:59:59` pour inclure toute la journée.
 - **Heure avancée.** Une heure située dans l'heure sautée lors du passage à l'heure avancée est avancée de la durée de l'écart. Une heure située dans l'heure répétée lors du retour à l'heure normale désigne l'occurrence en heure normale, soit la deuxième.
 

@@ -76,10 +76,10 @@ Cuando envíes fecha-hora, usa ISO 8601 con una `T` entre la fecha y la hora y u
 
 Los filtros de fecha de los listados de facturas, propuestas y órdenes de trabajo son la excepción. Usan `MM/dd/yyyy HH:mm:ss`, una hora local de reloj sin offset, por ejemplo `10/09/2026 00:00:00`:
 
-- **Zona horaria.** Pasa el parámetro de consulta opcional `timezone` para establecer la zona en la que se interpretan los valores. Usa un nombre de zona IANA, como `America/Chicago`, `America/New_York` o `UTC`. Los nombres distinguen mayúsculas y minúsculas. Sin `timezone`, los valores se interpretan en UTC.
+- **Zona horaria.** Pasa el parámetro de consulta opcional `timezone` para establecer la zona en la que OpenWrench interpreta los valores. Usa un nombre de zona IANA, como `America/Chicago`, `America/New_York` o `UTC`. Los nombres distinguen mayúsculas y minúsculas. Sin `timezone`, OpenWrench interpreta los valores en UTC.
 - **Zonas rechazadas.** Los offsets fijos (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), las abreviaturas (`CST`) y los nombres desconocidos devuelven `400`.
 - **Sin offset en el valor.** OpenWrench ignora un offset como `-05:00` al final de un valor de filtro. Usa `timezone` en su lugar.
-- **Los valores mal formados devuelven `400`.** Un valor que no coincide con el formato devuelve `400`, por ejemplo `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Eso incluye valores ISO 8601 (`2026-10-09T00:00:00`), fechas sin hora (`10/09/2026`) y valores formados solo por espacios. Un valor vacío se sigue leyendo como 1 de enero de 1970.
+- **Los valores mal formados devuelven `400`.** Un valor que no coincide con el formato devuelve `400`, por ejemplo `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Eso incluye valores ISO 8601 (`2026-10-09T00:00:00`), fechas sin hora (`10/09/2026`) y valores formados solo por espacios. OpenWrench sigue leyendo un valor vacío como 1 de enero de 1970.
 - **Extremos finales.** Las fechas finales de facturas y propuestas cubren todo el día final: OpenWrench reemplaza la hora por 23:59:59 en esa fecha en `timezone`. Las fechas finales de órdenes de trabajo son exactas, así que envía `23:59:59` para incluir el día completo.
 - **Horario de verano.** Una hora dentro de la hora omitida en un cambio de adelanto de reloj se desplaza hacia delante la duración del salto. Una hora dentro de la hora repetida en un cambio de atraso de reloj se refiere a la ocurrencia en horario estándar, que es la segunda.
 

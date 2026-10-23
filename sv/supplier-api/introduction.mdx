@@ -76,10 +76,10 @@ När du skickar datum-tider, använd ISO 8601 med ett `T` mellan datum och tid o
 
 Datumfilter i faktura-, förslags- och arbetsorderlistorna är undantaget. De tar `MM/dd/yyyy HH:mm:ss`, en lokal klocktid utan offset, till exempel `10/09/2026 00:00:00`:
 
-- **Tidszon.** Skicka den valfria frågeparametern `timezone` för att ange vilken zon värdena läses i. Använd ett IANA-zonnamn, som `America/Chicago`, `America/New_York` eller `UTC`. Namnen är skiftlägeskänsliga. Utan `timezone` läses värdena i UTC.
+- **Tidszon.** Skicka den valfria frågeparametern `timezone` för att ange vilken zon OpenWrench läser värdena i. Använd ett IANA-zonnamn, som `America/Chicago`, `America/New_York` eller `UTC`. Namnen är skiftlägeskänsliga. Utan `timezone` läser OpenWrench värdena i UTC.
 - **Avvisade zoner.** Fasta offset (`-05:00`, `GMT-5`, `Z`, `Etc/GMT+5`), förkortningar (`CST`) och okända namn returnerar `400`.
 - **Ingen offset i värdet.** OpenWrench ignorerar en offset som `-05:00` i slutet av ett filtervärde. Använd `timezone` i stället.
-- **Felformaterade värden returnerar `400`.** Ett värde som inte matchar formatet returnerar `400`, till exempel `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Det gäller även ISO 8601-värden (`2026-10-09T00:00:00`), datum utan tid (`10/09/2026`) och värden som bara består av mellanslag. Ett tomt värde läses fortfarande som 1 januari 1970.
+- **Felformaterade värden returnerar `400`.** Ett värde som inte matchar formatet returnerar `400`, till exempel `Invalid markedPaidAtStartDate. Expected format MM/dd/yyyy HH:mm:ss`. Det gäller även ISO 8601-värden (`2026-10-09T00:00:00`), datum utan tid (`10/09/2026`) och värden som bara består av mellanslag. OpenWrench läser fortfarande ett tomt värde som 1 januari 1970.
 - **Slutgränser.** Slutdatum för fakturor och förslag täcker hela slutdagen: OpenWrench ersätter tiden med 23:59:59 på det datumet i `timezone`. Slutdatum för arbetsordrar är exakta, så skicka `23:59:59` för att ta med hela dagen.
 - **Sommartid.** En tid i den överhoppade timmen vid övergång till sommartid flyttas framåt med glappets längd. En tid i den upprepade timmen vid övergång till normaltid avser förekomsten i normaltid, alltså den andra.
 
