@@ -7603,6 +7603,13 @@
                   "invoiceTotalPostExchange": {
                     "type": "string"
                   },
+                  "invoiceAttachments": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/FileDetails"
+                    },
+                    "description": "Invoice PDFs for this receipt, as uploaded-file references. Each entry must include fileId; an entry without one is rejected with a 400 parse error. Omit the field on an update to keep the stored attachments; send an empty array to remove them"
+                  },
                   "equipmentPerStockLocationReceiptValues": {
                     "type": "array",
                     "items": {
@@ -16140,6 +16147,20 @@
                 "type": "null"
               }
             ]
+          },
+          "invoiceAttachments": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/FileDetails"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Invoice PDFs attached to the receipt. Empty or null for receipts created automatically on work order completion or by webhook"
           },
           "receivedOnWorkOrderCompletion": {
             "type": "boolean"

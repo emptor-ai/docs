@@ -134,8 +134,9 @@ Required: `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receiv
 - Receiving updates the PO line item's received quantities/costs and the stock records at the destination stock location; PO status rolls up to `partially_received`/`received` accordingly.
 - For serialized equipment, `equipmentPerStockLocationReceiptValues` (or `assetReceiptValues`/`receiptValuesWithoutId`) carries one `{ serialNumber, assetNumber }` entry per unit. The list length must equal `receivedQuantity`, these arrays are not allowed on returns, and serial or asset numbers already in use are rejected.
 - Vendor invoice metadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) can be recorded on the receipt.
+- Attach the vendor's invoice PDFs with `invoiceAttachments`, an array of `{ fileName, fileId }` objects returned by the [file upload endpoint](/supplier-api/files-and-users), for example `"invoiceAttachments": [{ "fileName": "INV-5521.pdf", "fileId": "<fileId>" }]`. Every entry needs a `fileId`; an entry without one returns `400` with a parse error. On an update, omit the field to keep the stored files or send `[]` to remove them. Adding, replacing, or removing files is recorded on the PO audit trail. Receipts created automatically on work order completion or by the Order.co webhook have no attachments.
 
-Read one back with `GET /v1/supplier/inventory/purchase_order_receipts/{id}`.
+Read one back, including any `invoiceAttachments`, with `GET /v1/supplier/inventory/purchase_order_receipts/{id}`.
 
 ## Catalog: parts, equipment, vendors, and stock
 
