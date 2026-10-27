@@ -5065,7 +5065,7 @@
         "tags": [
           "Invoices"
         ],
-        "description": "Flattened invoice rows suitable for spreadsheet export. Includes both work-order and project invoices; work-order-derived columns (workOrderId, workOrderTitle, problem type, location) are null on project rows. Takes the same filters as the list endpoint. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that is not a supported filter is ignored rather than rejected. A non-numeric id, a space in a list, or a boolean other than `true`/`false` can fail the request with a 500. Filters are combined with the tenant-security filters derived from the API key, which can't be overridden. `sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, results are newest first (`createdAt` descending). When you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for descending.",
+        "description": "Flattened invoice rows suitable for spreadsheet export. Includes both work-order and project invoices; work-order-derived columns (workOrderId, workOrderTitle, problem type, location, areaName) are null on project rows. Every row includes `areaName` and `deptCode`; `deptCode` is null unless you send `includeDeptCode=true`. Takes the same filters as the list endpoint. A singular key (`status`) takes one value; the plural key (`statuses`) takes a comma-separated list with no spaces. If a parameter is repeated, only the first value is used. A query parameter that is not a supported filter is ignored rather than rejected. A non-numeric id, a space in a list, or a boolean other than `true`/`false` can fail the request with a 500. Filters are combined with the tenant-security filters derived from the API key, which can't be overridden. `sort_by` supports `createdAt`, `invoiceTotalAfterTax`, `id`, `workOrderId`, `locationId`, `supplierFacilityId`, and `buyerFacilityId`. With no `sort_by`, results are newest first (`createdAt` descending). When you set `sort_by`, `order` defaults to `asc`, so send `order=desc` for descending.",
         "parameters": [
           {
             "$ref": "#/components/parameters/offset"
@@ -5195,6 +5195,19 @@
           },
           {
             "$ref": "#/components/parameters/timezone"
+          },
+          {
+            "name": "includeDeptCode",
+            "in": "query",
+            "required": false,
+            "description": "`true` fills `deptCode` on each row from the buyer's invoice attributes. Omit it, or send `false`, to return `deptCode` as null. The flag changes the columns only: it doesn't change which rows are returned or the `count`. It makes the export slower, so send it only when you need Dept #.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -12878,6 +12891,20 @@
               "string",
               "null"
             ]
+          },
+          "areaName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Name of the work order's area. Null when the work order has no area, when the area has been deleted, and on project invoices."
+          },
+          "deptCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Dept # from the buyer's invoice attributes. Always null unless the request sends `includeDeptCode=true`. With the flag, this is the dept code of the most specific invoice attribute that matches the invoice, for the invoice's own buyer. Project invoices fall back to the buyer-wide attribute. Null when no attribute matches."
           }
         },
         "required": [

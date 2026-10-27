@@ -138,7 +138,35 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 ### Flattened export
 
-`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. Same filters as the list endpoint. On project invoice rows, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId`, and `locationName` are `null`; `projectId` is set.
+`GET /v1/buyer/invoice/invoices/download` returns the same data as flat rows (one row per invoice with the totals denormalized), built for spreadsheet export and AP-system imports. Same filters as the list endpoint. On project invoice rows, `workOrderId`, `workOrderTitle`, `problemTypeId`, `problemTypeName`, `locationId`, `locationName`, and `areaName` are `null`; `projectId` is set.
+
+Every row also carries two accounting columns:
+
+| Field | Value |
+| --- | --- |
+| `areaName` | The name of the work order's area. `null` when the work order has no area or its area has been deleted. |
+| `deptCode` | The Dept # from your invoice attributes. Always `null` unless you send `includeDeptCode=true`. |
+
+With `includeDeptCode=true`, OpenWrench sets `deptCode` from the most specific invoice attribute that matches the invoice, using only the attributes of the invoice's own buyer. Project invoices have no area or problem type, so they fall back to the buyer-wide attribute. `deptCode` stays `null` when no attribute matches.
+
+`includeDeptCode` changes the columns, not the rows. The same filters return the same rows and the same `count`, and `count_by` ignores the flag. Filling `deptCode` makes the export slower, so send the flag only when you need Dept #.
+
+```bash
+curl -G -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices/download" \
+  -d statuses=approved,processing -d includeDeptCode=true
+```
+
+```json
+{
+  "type": "InvoiceForDownload",
+  "data": [
+    { "id": 7710, "status": "approved", "workOrderId": "9001", "locationName": "Store 112", "areaName": "Deli", "deptCode": "4100" }
+  ],
+  "count": 1,
+  "status": "ok"
+}
+```
 
 ## Moving an invoice through approval
 
