@@ -134,6 +134,7 @@ Rules:
 - Updating a receipt adjusts the received quantities and costs on the PO line item and the stock records at the destination stock location.
 - For serialized equipment, send one entry per unit in `equipmentPerStockLocationReceiptValues`, `assetReceiptValues`, or `receiptValuesWithoutId`. The array length must equal `receivedQuantity`, these arrays may not accompany a return, and serial or asset numbers already in use are rejected.
 - Vendor invoice metadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) can be captured on the receipt.
+- Attach the vendor's invoice PDFs with `invoiceAttachments`, an array of uploaded-file references `{ fileName, fileId }`, for example `"invoiceAttachments": [{ "fileName": "INV-5521.pdf", "fileId": "<fileId>" }]`. Every entry needs a `fileId`; an entry without one returns `400` with a parse error. On an update, omit the field to keep the stored files or send `[]` to remove them. Adding, replacing, or removing files is recorded on the PO audit trail, and the files are returned when you read the receipt. Receipts created automatically on work order completion or by webhook have no attachments.
 
 Read a receipt back with `GET /v1/partners/inventory/purchase_order_receipts/{id}`.
 

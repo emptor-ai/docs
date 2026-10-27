@@ -4024,6 +4024,24 @@
           "isDeleted"
         ]
       },
+      "FileDetails": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Original file name"
+          },
+          "fileId": {
+            "type": "string",
+            "description": "Server-assigned file identifier"
+          }
+        },
+        "required": [
+          "fileName",
+          "fileId"
+        ],
+        "description": "Uploaded-file reference, as returned by the file upload endpoint."
+      },
       "EquipmentReceiptValues": {
         "type": "object",
         "properties": {
@@ -4180,6 +4198,16 @@
               "string",
               "null"
             ]
+          },
+          "invoiceAttachments": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FileDetails"
+            },
+            "description": "Invoice PDFs attached to the receipt. Empty or null for receipts created automatically on work order completion or by webhook"
           },
           "receivedOnWorkOrderCompletion": {
             "type": "boolean"
@@ -6423,6 +6451,16 @@
               "string",
               "null"
             ]
+          },
+          "invoiceAttachments": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FileDetails"
+            },
+            "description": "Invoice PDFs for this receipt, as uploaded-file references. Each entry must include fileId; an entry without one is rejected with a 400 parse error. Omit the field on an update to keep the stored attachments; send an empty array to remove them"
           },
           "updatedBy": {
             "type": "string",
