@@ -52,7 +52,9 @@ Behavior to know:
 - `proposalPdfLink`, if sent, must be a valid URL. `attachments` take `FileDetails` from the [file upload endpoint](/supplier-api/files-and-users).
 - Passing an `id` updates an existing proposal.
 
-Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or `declined` (decline reasons appear in `declineNotes`). List with `GET /v1/supplier/quote/proposals` (see [filtering lists](#filtering-lists)), read one with `GET /v1/supplier/quote/proposals/{id}`.
+Track the outcome by re-fetching: `status` moves from `pending` to `awarded` or `declined` (decline reasons appear in `declineNotes`).
+
+A proposal may be awarded as soon as you submit it. If the buyer has turned on auto-approval of quotes below the NTE, OpenWrench awards a non-RFP proposal whose total is at or under the work order's NTE without waiting for an approver. The check runs in the location's currency, so OpenWrench converts your total first if you bill in another currency. Changing the price of a pending proposal triggers the check again. An auto-awarded proposal returns `status: "awarded"` with `isAutoApproved: true`, and you get the usual awarded notification. `isAutoApproved` is read-only and ignored in requests. List with `GET /v1/supplier/quote/proposals` (see [filtering lists](#filtering-lists)), read one with `GET /v1/supplier/quote/proposals/{id}`.
 
 ## Invoices
 
