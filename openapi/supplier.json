@@ -11864,6 +11864,11 @@
               }
             ]
           },
+          "isAutoApproved": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "`true` when the buyer awarded this proposal automatically because its total was at or under the work order's NTE and the buyer has auto-approval of quotes below the NTE turned on. Read-only; ignored in requests. Reset to `false` by a manual award or decline, by moving the proposal back to `pending`, or by a price change."
+          },
           "proposalPdfLink": {
             "anyOf": [
               {

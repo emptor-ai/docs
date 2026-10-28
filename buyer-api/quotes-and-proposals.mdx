@@ -97,12 +97,39 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
 
 The money is broken into the same sections as invoices: `laborLineItems`, `materialLineItems`, `travelLineItems`, `freightLineItems`, and `miscLineItems`. Each section has its own tax rate and `...TotalBeforeTax`, and the sections roll up to `totalBeforeTax`, `tax`, and `totalAfterTax`. **Monetary values serialize as strings**; parse them as decimals, not floats, if you are doing arithmetic.
 
-Other useful fields: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (the work order's not-to-exceed at submission time), `proposalPdfLink`, `attachments`, `submittedAt`, and `approvedAt`.
+Other useful fields: `workOrderId`, `supplierFacilityId`, `workOrderNTEBeforeApproval` (the work order's not-to-exceed at submission time), `proposalPdfLink`, `attachments`, `submittedAt`, `approvedAt`, and `isAutoApproved` (`true` when OpenWrench awarded the proposal automatically; see [Auto-awarded proposals](#auto-awarded-proposals)).
 
 ## Where proposals fit the flow
 
 1. The supplier submits a proposal; the work order typically pauses awaiting approval.
-2. Your approvers award or decline it in the app. Award raises the effective spend ceiling for the job.
+2. Your approvers award or decline it in the app. Award raises the effective spend ceiling for the job. If your company turns on auto-approval of quotes below the NTE, OpenWrench awards qualifying proposals itself, with no approver action (see [Auto-awarded proposals](#auto-awarded-proposals)).
 3. When the final [invoice](/buyer-api/invoices) arrives, compare `invoiceTotalAfterTax` against the awarded proposal's `totalAfterTax` before approving payment. Flag variances above your tolerance for human review.
+
+### Auto-awarded proposals
+
+With your company's auto-approval of quotes below the NTE turned on, OpenWrench awards a proposal automatically when its `totalAfterTax` is at or under the work order's not-to-exceed (NTE). OpenWrench checks when the proposal is created, when it is first published, and when the price of a pending proposal changes.
+
+- OpenWrench compares the amounts in the location's currency. A proposal from a supplier billing in another currency is converted first.
+- Work orders with no NTE, bids on an RFP, and proposals submitted while the setting is off still go to your approvers.
+- An auto-awarded proposal has `status: "awarded"`, `approvedAt` set, `isAutoApproved: true`, and no approval hierarchy or signature. OpenWrench sends no approver emails or escalations for it and clears approvers' action-required notifications. The supplier still gets the usual awarded notification.
+- `isAutoApproved` is read-only. It resets to `false` when someone awards or declines the proposal manually, moves it back to `pending`, or changes its price. A proposal someone moves from `awarded` back to `pending` is not auto-awarded again.
+
+To list proposals OpenWrench awarded without an approver, filter `status=awarded` and check `isAutoApproved` on each result:
+
+```bash
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/quote/proposals?status=awarded&sort_by=createdAt&order=desc&limit=25"
+```
+
+```json
+{
+  "id": 3320,
+  "status": "awarded",
+  "totalAfterTax": "922.25",
+  "workOrderNTEBeforeApproval": "1000.00",
+  "approvedAt": "2026-10-27T18:04:11Z",
+  "isAutoApproved": true
+}
+```
 
 A practical polling loop for a procurement dashboard: filter `status=pending`, sort with `sort_by=createdAt&order=desc`, and page with `limit=25`, respecting the rate limit of 10 requests per 20-second window.

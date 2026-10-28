@@ -13063,6 +13063,11 @@
             ],
             "format": "date-time"
           },
+          "isAutoApproved": {
+            "type": "boolean",
+            "readOnly": true,
+            "description": "`true` when OpenWrench awarded the proposal automatically because its total was at or under the work order's NTE and your company has auto-approval of quotes below the NTE turned on. Auto-awarded proposals have `approvedAt` set but no approval hierarchy or signature. Reset to `false` by a manual award or decline, by moving the proposal back to `pending`, or by a price change."
+          },
           "proposalPdfLink": {
             "type": [
               "string",
