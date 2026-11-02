@@ -120,7 +120,7 @@ Record parts and stock consumed on the visit through `partsWithQuantity`, `stock
 Two automation behaviors trigger at this point:
 
 - **Auto-approval.** For third-party suppliers whose buyer company has `autoApproveWorkOrdersCompletedByThirdParty` enabled, a `WaitingForReview` outcome is auto-promoted to `WorkReviewedAndCompleted`.
-- **Invoice auto-publishing.** Whenever the resulting status is `WorkReviewedAndCompleted`, invoice auto-publishing rules may run and publish your draft invoice. See [Quotes and invoicing](/supplier-api/quotes-and-invoicing).
+- **Invoice auto-publishing.** Whenever the resulting status is `WorkReviewedAndCompleted`, invoice auto-publishing rules may run and publish your draft invoice. See [Quotes and invoicing](/supplier-api/quotes-and-invoicing). If that invoice's total is over the work order's not-to-exceed (NTE) amount, the check-out returns `400` with `{"message": "...", "type": "BadRequestException"}`. The message names the NTE, for example `"You can't submit an Invoice for more than the not-to-exceed amount (500.00 USD) for this work order. ..."`. OpenWrench still saves the service call check-out, but the work order keeps its previous status. Reduce the invoice to at most the NTE, or submit a quote to raise the NTE, then check out again.
 
 `remote_check_in` and `remote_check_out` behave identically for work done off-site.
 

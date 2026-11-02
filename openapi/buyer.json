@@ -3439,7 +3439,7 @@
         "tags": [
           "Work Orders"
         ],
-        "description": "Sets the work order status to WorkReviewedAndCompleted. Side effects: may publish the supplier's draft invoice (per supplier company settings) and fulfil linked purchase requests.",
+        "description": "Sets the work order status to WorkReviewedAndCompleted. Side effects: may publish the supplier's draft invoice (per supplier company settings) and fulfil linked purchase requests. If the supplier's draft invoice total exceeds the work order's NTE, completion is blocked and the call returns 400 {message, type: BadRequestException} with a message stating the NTE amount.",
         "requestBody": {
           "required": true,
           "content": {
