@@ -3622,7 +3622,7 @@
       "post": {
         "operationId": "serviceCallCheckOut",
         "summary": "Service call status update: check out",
-        "description": "Records an on-site check-out. The body's checkOutStatus (REQUIRED) must be a valid work-order status name and becomes the work order's new status. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Records an on-site check-out. The body's checkOutStatus (REQUIRED) must be a valid work-order status name and becomes the work order's new status. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted. If the auto-published invoice's total exceeds the work order's NTE, the call returns 400 {message, type: BadRequestException} with a message stating the NTE amount. The service call check-out is still saved, but the work order keeps its previous status.",
         "tags": [
           "Service Calls"
         ],
@@ -3985,7 +3985,7 @@
       "post": {
         "operationId": "serviceCallRemoteCheckOut",
         "summary": "Service call status update: remote check out",
-        "description": "Records a remote check-out. The body's checkOutStatus (REQUIRED) must be a valid work-order status name and becomes the work order's new status. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted.",
+        "description": "Records a remote check-out. The body's checkOutStatus (REQUIRED) must be a valid work-order status name and becomes the work order's new status. On success the ASSOCIATED WORK ORDER (not the service call) is returned with its status updated. When the resulting status is WorkReviewedAndCompleted, invoice auto-publishing rules may run. For third-party suppliers whose buyer company has autoApproveWorkOrdersCompletedByThirdParty enabled, a WaitingForReview outcome is auto-promoted to WorkReviewedAndCompleted. If the auto-published invoice's total exceeds the work order's NTE, the call returns 400 {message, type: BadRequestException} with a message stating the NTE amount. The service call check-out is still saved, but the work order keeps its previous status.",
         "tags": [
           "Service Calls"
         ],

@@ -198,7 +198,7 @@ Four dedicated endpoints move a work order through the buyer-owned parts of the 
 
 | Endpoint | Resulting status | Side effects |
 | --- | --- | --- |
-| `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | May publish the supplier's draft invoice (per supplier settings) and fulfill linked purchase requests. |
+| `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | May publish the supplier's draft invoice (per supplier settings) and fulfill linked purchase requests. Returns `400 BadRequestException` if that invoice's total exceeds the work order's NTE. |
 | `POST .../status_update/cancelled` | `CancelledWithReason` | Rejected with `409` while a technician is checked in, if your company enables the [cancellation lock](#cancellation-lock-while-a-technician-is-checked-in). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Sends the attached note to the supplier. |
 | `POST .../status_update/reopen` | Reopened | Sends the attached note. |
