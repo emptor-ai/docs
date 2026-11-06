@@ -89,6 +89,14 @@ curl -X POST "$BASE/v1/supplier/inventory/purchase_orders" \
 
 Line items distinguish part lines from equipment lines via `isEquipmentLine`; part lines carry `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, equipment lines the `equipment*` equivalents. `prLineItemIds` ties the line back to the purchase requests it fulfils. Passing a top-level `id` updates an existing PO.
 
+### Spot item lines
+
+Users in the OpenWrench app can add **spot items** to PRs and POs: free-text, non-catalog items bought from a vendor. Spot item lines have `isSpotItemLine: true` and carry `spotItemName`, `spotItemQuantity`, `spotItemReceivedQuantity`, `spotItemCost`, and `spotItemCurrencyId`. PR spot lines also carry the vendor in `spotItemVendorId`. PRs return them in `spotItemSupplierPurchaseRequestLineItems` and POs in `spotItemSupplierPurchaseOrderLineItems`. They never appear in the part or equipment arrays.
+
+- This API reads spot item lines but cannot create them. A PO create or update with an incoming line item that sets `isSpotItemLine: true` returns `400` with `"Spot items are not supported on this API"`.
+- Receiving a spot item line updates its received quantity and the PR and PO statuses. It does not change stock, equipment, or assets.
+- On the PR line item list, filter with `isSpotItemLine=true` for spot lines. `isEquipmentLine=false` returns part lines only.
+
 ### Replace line items in bulk
 
 `POST /v1/supplier/inventory/purchase_order_line_items/bulk` takes a **JSON array** of line-item payloads and has replace semantics:
