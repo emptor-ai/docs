@@ -78,6 +78,14 @@ curl -X POST "$BASE/v1/partners/inventory/purchase_orders" \
 
 Each line item sets `isEquipmentLine` and then either the `part*` fields or the `equipment*` fields. `prLineItemIds` records which PR lines the PO line fulfils. Passing a top-level `id` replaces an existing PO's writable fields instead of creating a new one.
 
+### Spot item lines
+
+Users in the OpenWrench app can add **spot items** to PRs and POs: free-text, non-catalog items bought from a vendor. Spot item lines have `isSpotItemLine: true` and carry `spotItemName`, `spotItemQuantity`, `spotItemReceivedQuantity`, `spotItemCost`, and `spotItemCurrencyId`. PR spot lines also carry the vendor in `spotItemVendorId`. PRs return them in `spotItemSupplierPurchaseRequestLineItems` and POs in `spotItemSupplierPurchaseOrderLineItems`. They never appear in the part or equipment arrays.
+
+- These endpoints read spot item lines but cannot create them. A PO create or update with an incoming line item that sets `isSpotItemLine: true` returns `400` with `"Spot items are not supported on this API"`.
+- Receiving a spot item line updates its received quantity and the PR and PO statuses. It does not change stock, equipment, or assets.
+- On the PR line item list, filter with `isSpotItemLine=true` for spot lines. `isEquipmentLine=false` returns part lines only.
+
 ### Associate PR line items
 
 If you did not link PRs via `prLineItemIds` at creation time, associate them explicitly:

@@ -2239,6 +2239,20 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "spotItemSupplierPurchaseRequestLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseRequestLineItem"
+            },
+            "description": "Spot item lines. Not included in the part or equipment arrays."
+          },
+          "deletedSpotItemSupplierPurchaseRequestLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseRequestLineItem"
+            },
+            "description": "Deleted spot item lines."
           }
         },
         "required": [
@@ -2599,6 +2613,48 @@
               "string",
               "null"
             ]
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "`true` for a spot item line: a free-text, non-catalog item added in the OpenWrench app. Spot item lines are read-only through this API."
+          },
+          "spotItemName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Spot item name. Unique per purchase request or purchase order (case-insensitive, trimmed)."
+          },
+          "spotItemQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemReceivedQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemCost": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "spotItemCurrencyId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spotItemVendorId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Vendor of a spot item line (a part/equipment vendor id)."
           }
         },
         "required": [
@@ -3063,6 +3119,10 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "Spot items are not supported on this API. Sending `true` returns 400 \"Spot items are not supported on this API\"."
           }
         },
         "required": [
@@ -3642,6 +3702,20 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "spotItemSupplierPurchaseOrderLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseOrderLineItem"
+            },
+            "description": "Spot item lines. Not included in the part or equipment arrays."
+          },
+          "deletedSpotItemSupplierPurchaseOrderLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseOrderLineItem"
+            },
+            "description": "Deleted spot item lines."
           }
         },
         "required": [
@@ -4009,6 +4083,47 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "`true` for a spot item line: a free-text, non-catalog item added in the OpenWrench app. Spot item lines are read-only through this API."
+          },
+          "spotItemName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Spot item name. Unique per purchase request or purchase order (case-insensitive, trimmed)."
+          },
+          "spotItemQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemReceivedQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemCost": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "spotItemCurrencyId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spotItemReceivedAverageCost": {
+            "type": [
+              "number",
+              "null"
+            ]
           }
         },
         "required": [
@@ -5014,6 +5129,20 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Latitude of the vendor's address, when set."
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Longitude of the vendor's address, when set."
           }
         },
         "required": [
