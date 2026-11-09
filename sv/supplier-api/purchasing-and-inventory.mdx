@@ -14,7 +14,7 @@ export KEY="<your-api-key>"
 export SECRET="<shared-secret>"
 ```
 
-## Inköpsförfrågningar
+## Inköpsförfrågningar {#purchase-requests}
 
 PR-statusar: `requested`, `denied`, `cancelled`, `approved`, `orderInProgress`, `ordered`, `partially_ordered`, `fulfilled`, `partially_fulfilled`.
 
@@ -35,7 +35,7 @@ Två statusskrivningar:
 
 I normal drift sätter du sällan PR-statusar direkt: de **beräknas om från rader** allteftersom du associerar dem till PO:er, och uppfyllelse sker vid arbetsorderns slutförande.
 
-### PR-rader
+### PR-rader {#pr-line-items}
 
 Rader frågas separat, vilket är hur du bygger en beställningsarbetslista över många PR:er:
 
@@ -50,13 +50,13 @@ De här två slutpunkterna är inte hastighetsbegränsade och använder interna 
 
 Bryggan mellan PR:er och PO:er är `PATCH /v1/supplier/inventory/purchase_request_line_items/associate_po_line_item/{ids}/{poLineItem}`: den tar kommaseparerade PR-rad-id:n, sätter var och en till `orderInProgress` med sitt `associatedPurchaseOrderLineItemId` och räknar om varje förälder-PR:s status. Id:n du saknar behörighet för släpps tyst, så jämför den returnerade listan mot vad du skickade.
 
-## Inköpsordrar
+## Inköpsordrar {#purchase-orders}
 
 PO-statusar: `new`, `ordered`, `received`, `partially_received`, `cancelled`, `closed`.
 
 Varje ändring av inköpsorder, orderrad eller mottagning som görs via de här slutpunkterna registreras i inköpsorderns granskningslogg i OpenWrench, tillskriven kontakten bakom din API-nyckel.
 
-### Skapa
+### Skapa {#create}
 
 `POST /v1/supplier/inventory/purchase_orders` kräver `status` (vanligtvis `new`), `partEquipmentVendorId`, `currencyId` och `createdByEmail`. `totalCost` krävs också om inte ditt företags lagerinställningar markerar PO-kostnad som icke-obligatorisk.
 
@@ -89,7 +89,7 @@ curl -X POST "$BASE/v1/supplier/inventory/purchase_orders" \
 
 Rader skiljer del-rader från utrustnings-rader via `isEquipmentLine`; del-rader bär `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, utrustnings-rader `equipment*`-motsvarigheterna. `prLineItemIds` knyter raden tillbaka till inköpsförfrågningarna den uppfyller. Att skicka ett `id` på översta nivån uppdaterar en befintlig PO.
 
-### Ersätt rader i massa
+### Ersätt rader i massa {#replace-line-items-in-bulk}
 
 `POST /v1/supplier/inventory/purchase_order_line_items/bulk` tar en **JSON-array** av radnyttolaster och har ersättningssemantik:
 
@@ -99,7 +99,7 @@ OpenWrench raderar först alla **ej mottagna** rader på mål-inköpsordern och 
 
 `supplierFacilityId` och `supplierCompanyId` på varje post skrivs över från din nyckel, PO:s del-/utrustnings-/PR-id-listor räknas om och inköpsorder-aviseringen skickas igen. Inte hastighetsbegränsad.
 
-### Markera som beställd
+### Markera som beställd {#mark-ordered}
 
 `PATCH /v1/supplier/inventory/purchase_orders/{id}/ordered` sätter statusen till `ordered` och mejlar ordern till leverantören.
 
@@ -109,7 +109,7 @@ Framgångssvaret är ett stränghölje (`"type": "Email"`, `"data": "Email has b
 
 `PATCH /v1/supplier/inventory/purchase_orders/{id}/cancel` avbryter och returnerar den uppdaterade PO:n.
 
-## Mottagningar och returer
+## Mottagningar och returer {#receipts-and-returns}
 
 Mottagning är en `PUT` nycklad efter PO-raden:
 
@@ -137,7 +137,7 @@ Krävs: `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `received
 
 Läs tillbaka en med `GET /v1/supplier/inventory/purchase_order_receipts/{id}`.
 
-## Katalog: delar, utrustning, leverantörer och lager
+## Katalog: delar, utrustning, leverantörer och lager {#catalog-parts-equipment-vendors-and-stock}
 
 Skrivskyddad referensdata, alla med standardpaginering och fältfilter:
 
@@ -151,18 +151,18 @@ Skrivskyddad referensdata, alla med standardpaginering och fältfilter:
 
 `parts_per_stock_locations?partId=210` besvarar "var har vi den här delen och hur många"; filtrera efter `stockLocationId` för en plats hela lagerlista.
 
-## Order.co-webhook
+## Order.co-webhook {#order-co-webhook}
 
 `POST /v1/supplier/inventory/webhook/purchase_order` är en **inkommande** webhook för tredjeparts inköpssystem, för närvarande Order.co, och endast för leverantörsföretag som är registrerade för den (andra får `400`). Nyttolasten bär `order_id` (tredjepartsid), `purchase_order_number` (OpenWrench-PO:s id som en sträng), en `status` och ett statusspecifikt `message`-objekt. Effekter per status:
 
-- `approved` / `error` — lägg till en anteckning på PO:n.
-- `rejected` — avbryt PO:n.
-- `completed` — markera PO:n som beställd.
-- `shipping_update` — lägg till en fraktnotering; när `message.shipment_delivery_date` finns, skapa automatiskt mottagningar för alla ej mottagna rader.
+- `approved` / `error`: lägg till en anteckning på PO:n.
+- `rejected`: avbryt PO:n.
+- `completed`: markera PO:n som beställd.
+- `shipping_update`: lägg till en fraktnotering; när `message.shipment_delivery_date` finns, skapa automatiskt mottagningar för alla ej mottagna rader.
 
 Varje förfrågan och svar granskas, och svarsformen varierar per gren.
 
-## Hela flödet i korthet
+## Hela flödet i korthet {#the-full-flow-at-a-glance}
 
 1. Lista `approved` PR-rader för att bygga beställningsarbetslistan.
 2. Skapa PO:n med `incomingLineItems` som refererar till `prLineItemIds` (eller associera PR-rader uttryckligen efteråt).
