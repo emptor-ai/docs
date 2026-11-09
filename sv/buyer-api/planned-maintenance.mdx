@@ -14,7 +14,7 @@ export KEY="<your-api-key>"
 export SECRET="<shared-secret>"
 ```
 
-## Läsa scheman
+## Läsa scheman {#reading-schedules}
 
 ```bash
 # Alla scheman och en filtrerad räkning
@@ -35,7 +35,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders?plannedMaintenanceScheduleId=512&sort_by=createdAt&order=desc"
 ```
 
-## Hoppa över en körning
+## Hoppa över en körning {#skipping-a-run}
 
 `PATCH /v1/buyer/pm/planned_maintenance_schedules/skip_schedule` flyttar ett schema förbi dess nästa schemalagda körning (till exempel när en plats är stängd för renovering). Schemats `id` är det enda obligatoriska fältet:
 
@@ -46,9 +46,9 @@ curl -X PATCH "$BASE/v1/buyer/pm/planned_maintenance_schedules/skip_schedule" \
   -d '{ "id": 512 }'
 ```
 
-Det uppdaterade schemat returneras. Den här slutpunkten är inte hastighetsbegränsad.
+Slutpunkten returnerar det uppdaterade schemat. Den är inte hastighetsbegränsad.
 
-## Driva PM från en extern schemaläggare
+## Driva PM från en extern schemaläggare {#driving-pm-from-an-external-scheduler}
 
 Om ditt eget system bestämmer när PM-arbetsordrar ska skapas, stäng loopen genom att registrera varje körning med `POST /v1/buyer/pm/scheduler_run_logs`:
 
@@ -73,4 +73,4 @@ Hela loopen för extern schemaläggare:
 1. Läs scheman och deras takt från API:et.
 2. När en körning blir aktuell, skapa PM-arbetsordern.
 3. Registrera körningen med `scheduler_run_logs` och länka `woId`.
-4. Om en körning istället måste hoppas över, anropa `skip_schedule` så att nästa förfallodatum flyttas fram.
+4. Om du istället behöver hoppa över en körning, anropa `skip_schedule` så att nästa förfallodatum flyttas fram.

@@ -14,7 +14,7 @@ export KEY="<your-api-key>"
 export SECRET="<shared-secret>"
 ```
 
-## Leer cronogramas
+## Leer cronogramas {#reading-schedules}
 
 ```bash
 # Todos los cronogramas y un conteo filtrado
@@ -35,7 +35,7 @@ curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/work_order/work_orders?plannedMaintenanceScheduleId=512&sort_by=createdAt&order=desc"
 ```
 
-## Omitir una ejecución
+## Omitir una ejecución {#skipping-a-run}
 
 `PATCH /v1/buyer/pm/planned_maintenance_schedules/skip_schedule` avanza el cronograma más allá de su próxima ejecución programada (por ejemplo, cuando un sitio está cerrado por renovación). El `id` del cronograma es el campo requerido:
 
@@ -46,9 +46,9 @@ curl -X PATCH "$BASE/v1/buyer/pm/planned_maintenance_schedules/skip_schedule" \
   -d '{ "id": 512 }'
 ```
 
-Se devuelve el cronograma actualizado. Este endpoint no tiene límite de tasa.
+El endpoint devuelve el cronograma actualizado. No tiene límite de tasa.
 
-## Controlar el PM desde un planificador externo
+## Controlar el PM desde un planificador externo {#driving-pm-from-an-external-scheduler}
 
 Si tu propio sistema decide cuándo se crean las órdenes de trabajo de PM, cierra el ciclo registrando cada ejecución con `POST /v1/buyer/pm/scheduler_run_logs`:
 
@@ -73,4 +73,4 @@ El ciclo completo del planificador externo:
 1. Lee los cronogramas y su cadencia desde la API.
 2. Cuando toca una ejecución, crea la orden de trabajo de PM.
 3. Registra la ejecución con `scheduler_run_logs`, enlazando el `woId`.
-4. Si en cambio hay que omitir una ejecución, llama a `skip_schedule` para que avance la próxima fecha.
+4. Si en cambio necesitas omitir una ejecución, llama a `skip_schedule` para que avance la próxima fecha.

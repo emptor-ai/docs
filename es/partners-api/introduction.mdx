@@ -7,7 +7,7 @@ icon: "boxes-stacked"
 
 La Internal Teams API es la superficie de integración para los sistemas detrás de las compras e inventario de tus equipos internos de servicio: solicitudes de compra y sus líneas, órdenes de compra hasta la recepción, catálogos de partes y equipo, ubicaciones de stock y las partes consumidas en órdenes de trabajo.
 
-## URL base
+## URL base {#base-url}
 
 ```text
 https://api.useopenwrench.com/api/external
@@ -15,7 +15,7 @@ https://api.useopenwrench.com/api/external
 
 Los endpoints de equipos internos se sirven bajo el prefijo `/v1/partners/`.
 
-## Autenticación
+## Autenticación {#authentication}
 
 Estos endpoints requieren una **clave de API de partner**, una credencial separada de las claves de comprador y de proveedor. Una clave de API de comprador no funcionará contra los endpoints `/v1/partners/`, aunque esta sección viva bajo la documentación de la Buyer API.
 
@@ -26,13 +26,13 @@ curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
   "https://api.useopenwrench.com/api/external/v1/partners/ping"
 ```
 
-Para que te emitan una clave de API de partner y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com).
+Para obtener una clave de API de partner y un secreto compartido, contacta a [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
-## Límites de tasa
+## Límites de tasa {#rate-limits}
 
 10 solicitudes por ventana de 20 segundos por clave. Al superarlo recibirás `429 Too Many Requests`. Reduce la frecuencia de tus solicitudes y reintenta.
 
-## Envoltura de respuesta
+## Envoltura de respuesta {#response-envelope}
 
 Respuestas de una sola entidad:
 
@@ -54,15 +54,15 @@ Errores:
 
 `401` significa clave faltante o inválida; `400` cubre entrada inválida, filtros incorrectos y denegaciones de permisos; `429` es el límite de tasa.
 
-## Paginación y filtrado
+## Paginación y filtrado {#pagination-and-filtering}
 
 Los endpoints de listado aceptan `offset`, `limit` (por defecto 10, máx. 25), `sort_by` y `order` (`asc` | `desc`). Los parámetros de consulta adicionales se tratan como filtros de campo: pasa un nombre de campo con un valor (separa varios valores por coma) para filtrar el conjunto de resultados.
 
-## El flujo de compras
+## El flujo de compras {#the-purchasing-flow}
 
 Una integración típica sigue el ciclo de compras: lee **solicitudes de compra** aprobadas y sus líneas, crea una **orden de compra** contra un proveedor, asocia las líneas de PR a líneas de PO, marca la PO como **ordenada** y registra **recibos** a medida que llegan los artículos (las cantidades recibidas negativas registran devoluciones). Partes, tipos de equipo, proveedores y ubicaciones de stock completan los datos de referencia.
 
-## Guías detalladas
+## Guías detalladas {#detailed-guides}
 
 <CardGroup cols={2}>
   <Card title="Flujo de compras" href="/es/partners-api/purchasing-flow" icon="cart-flatbed">

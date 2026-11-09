@@ -7,7 +7,7 @@ icon: "boxes-stacked"
 
 Internal Teams API är integrationsytan för systemen bakom dina interna serviceteams inköp och lager: inköpsförfrågningar och deras rader, inköpsordrar genom mottagning, kataloger för delar och utrustning, lagerplatser och delarna som förbrukas på arbetsordrar.
 
-## Bas-URL
+## Bas-URL {#base-url}
 
 ```text
 https://api.useopenwrench.com/api/external
@@ -15,7 +15,7 @@ https://api.useopenwrench.com/api/external
 
 Interna-team-slutpunkter serveras under prefixet `/v1/partners/`.
 
-## Autentisering
+## Autentisering {#authentication}
 
 De här slutpunkterna kräver en **partner-API-nyckel**, en separat referens från köpar- och leverantörs-API-nycklar. En köpar-API-nyckel fungerar inte mot slutpunkter under `/v1/partners/`, även om den här sektionen ligger under Buyer API-dokumentationen.
 
@@ -26,13 +26,13 @@ curl -H "X-API-KEY: <partner-key>" -H "OW-KEY: <shared-secret>" \
   "https://api.useopenwrench.com/api/external/v1/partners/ping"
 ```
 
-För att få en partner-API-nyckel och delad hemlighet utfärdad, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com).
+För att få en partner-API-nyckel och en delad hemlighet, kontakta [support@useopenwrench.com](mailto:support@useopenwrench.com).
 
-## Hastighetsgränser
+## Hastighetsgränser {#rate-limits}
 
 10 förfrågningar per 20-sekundersfönster per nyckel. Utöver det får du `429 Too Many Requests`. Backa av och försök igen.
 
-## Svarshöljet
+## Svarshöljet {#response-envelope}
 
 Svar för enskilda entiteter:
 
@@ -54,15 +54,15 @@ Fel:
 
 `401` betyder att en nyckel saknas eller är ogiltig; `400` täcker felaktig indata, felaktiga filter och behörighetsavslag; `429` är hastighetsgränsen.
 
-## Paginering och filtrering
+## Paginering och filtrering {#pagination-and-filtering}
 
 List-slutpunkter accepterar `offset`, `limit` (standard 10, max 25), `sort_by` och `order` (`asc` | `desc`). Ytterligare frågeparametrar behandlas som fältfilter. Skicka ett fältnamn med ett värde (kommaseparera flera värden) för att filtrera resultatuppsättningen.
 
-## Inköpsflödet
+## Inköpsflödet {#the-purchasing-flow}
 
 En typisk integration följer inköpscykeln: läs godkända **inköpsförfrågningar** och deras rader, skapa en **inköpsorder** mot en leverantör, associera PR-rader till PO-rader, markera PO:n **ordered** och registrera **mottagningar** när artiklar anländer (negativa mottagna kvantiteter registrerar returer). Delar, utrustningstyper, leverantörer och lagerplatser avrundar referensdatan.
 
-## Detaljerade guider
+## Detaljerade guider {#detailed-guides}
 
 <CardGroup cols={2}>
   <Card title="Inköpsflöde" href="/sv/partners-api/purchasing-flow" icon="cart-flatbed">
