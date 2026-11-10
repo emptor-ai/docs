@@ -199,7 +199,7 @@ Four dedicated endpoints move a work order through the buyer-owned parts of the 
 | Endpoint | Resulting status | Side effects |
 | --- | --- | --- |
 | `POST .../status_update/work_reviewed_and_completed` | `WorkReviewedAndCompleted` | May publish the supplier's draft invoice (per supplier settings) and fulfill linked purchase requests. |
-| `POST .../status_update/cancelled` | `CancelledWithReason` | Rejected with `409` while a technician is checked in, if your company enables the [cancellation lock](#cancellation-lock-while-a-technician-is-checked-in). |
+| `POST .../status_update/cancelled` | `CancelledWithReason` | Optionally records the work order it [duplicates](#cancel-a-work-order-as-a-duplicate). Rejected with `409` while a technician is checked in, if your company enables the [cancellation lock](#cancellation-lock-while-a-technician-is-checked-in). |
 | `POST .../status_update/work_unsatisfactory` | `WorkUnsatisfactory` | Sends the attached note to the supplier. |
 | `POST .../status_update/reopen` | Reopened | Sends the attached note. |
 
@@ -218,6 +218,34 @@ curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_
 ```
 
 Every status action returns the updated work order in the standard envelope.
+
+### Cancel a work order as a duplicate
+
+When you cancel a work order because it duplicates another one, pass the original work order's id as `duplicateOfWorkOrderId` alongside `id` and `note`. OpenWrench stores the link on the cancelled work order, and work order responses return it as `duplicateOfWorkOrderId`.
+
+```bash
+curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/cancelled" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 9002,
+    "duplicateOfWorkOrderId": 9001,
+    "note": {
+      "text": "Duplicate of work order 9001.",
+      "noteAddedBy": "ops@example.com",
+      "noteAddedAt": "2026-08-21T09:00:00.000-07:00"
+    }
+  }'
+```
+
+The field is optional. Omit it to cancel without recording a duplicate, or to keep a link already stored on the work order.
+
+OpenWrench returns `400` and saves nothing when `duplicateOfWorkOrderId` is:
+
+- the id of the work order you are cancelling (`"Work order 9002 can't be a duplicate of itself"`)
+- an unknown or deleted work order, or one that belongs to another buyer company (`"Could not find work order: 9001"`)
+
+Reopening the work order clears `duplicateOfWorkOrderId`.
 
 ### Cancellation lock while a technician is checked in
 
