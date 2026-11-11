@@ -4753,6 +4753,9 @@
             "$ref": "#/components/parameters/invFilter_buyerProjectId"
           },
           {
+            "$ref": "#/components/parameters/invFilter_projectIdWithWorkOrders"
+          },
+          {
             "$ref": "#/components/parameters/invFilter_invoiceNumber"
           },
           {
@@ -4966,6 +4969,9 @@
             "$ref": "#/components/parameters/invFilter_buyerProjectId"
           },
           {
+            "$ref": "#/components/parameters/invFilter_projectIdWithWorkOrders"
+          },
+          {
             "$ref": "#/components/parameters/invFilter_invoiceNumber"
           },
           {
@@ -5105,6 +5111,9 @@
           },
           {
             "$ref": "#/components/parameters/invFilter_buyerProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/invFilter_projectIdWithWorkOrders"
           },
           {
             "$ref": "#/components/parameters/invFilter_invoiceNumber"
@@ -7904,6 +7913,15 @@
         "in": "query",
         "required": false,
         "description": "Invoices for the work orders in one project. A work order lists its projects in `buyerProjectIds`.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "invFilter_projectIdWithWorkOrders": {
+        "name": "projectIdWithWorkOrders",
+        "in": "query",
+        "required": false,
+        "description": "Invoices raised directly against one project, plus invoices on any of that project's work orders. Use it instead of combining `projectId` and `buyerProjectId`, which match nothing together because filters combine with AND.",
         "schema": {
           "type": "integer"
         }

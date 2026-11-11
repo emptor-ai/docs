@@ -62,6 +62,10 @@ curl -G "$BASE/v1/buyer/invoice/invoices" \
 # Just project invoices for this project
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/buyer/invoice/invoices?invoiceEntityType=project&projectId=482"
+
+# Every invoice for this project: project invoices plus invoices on its work orders
+curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  "$BASE/v1/buyer/invoice/invoices?projectIdWithWorkOrders=482"
 ```
 
 `GET /invoices`, `/invoices/count_by`, and `/invoices/download` take the same filters from the [filter reference](#filter-reference) below. Filters combine with AND, and always combine with the tenant scoping derived from your key. Supplier drafts and voided invoices are never returned, whatever you filter on.
@@ -90,6 +94,7 @@ Keys are case-sensitive. A singular key (`status`) takes one value; the plural k
 | `externalWorkOrderId` | Invoices for one work order, by the external reference your system stores on it. |
 | `projectId` | Invoices anchored to one project. |
 | `buyerProjectId` | Invoices for the work orders in one project. A work order lists its projects in `buyerProjectIds`. |
+| `projectIdWithWorkOrders` | Invoices raised directly against one project, plus invoices on any of that project's work orders. Use it to get every invoice for a project in one request: sending `projectId` and `buyerProjectId` together matches nothing, because filters combine with AND. |
 | `invoiceNumber` | Invoices with this supplier invoice number. |
 | `locationId`, `locationIds` | Invoices for these locations. Get location ids from [`GET /v1/buyer/location/locations`](/buyer-api/assets-and-locations#locations). |
 | `regionIds` | Invoices for locations in these regions. |
