@@ -48,7 +48,7 @@ Standard pagination applies (`offset`, `limit` default 10 max 25, `sort_by`, `or
 The list and count resolve which work orders match in OpenWrench's search index, then load the full records from the database. The count endpoint runs the same query as the list, so the two always agree. Behavior to know:
 
 - **Full-text search.** `search=` matches words (with prefix and stem matching) across the title, description, location name, notes, service call check-in and check-out notes, and problem type name. It also matches reference numbers such as the work order number, PO number, and asset serial number. Wrap the value in double quotes to require the exact phrase.
-- **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), and `lastServiceCallServiceScheduledAt`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
+- **Sorting.** `sort_by` supports `createdAt`, `locationName`, `woPriority` (by the priority's expected resolution time), `lastServiceCallServiceScheduledAt`, and `calendarTime`. `calendarTime` orders work orders by their earliest matching time inside a [calendar window](#calendar-day-view), and only applies when you send `calendarStartDate` and `calendarEndDate`. Any other value, or no `sort_by`, sorts by `createdAt` descending.
 - **Unrecognized filters are ignored.** Only the keys in the filter reference below are supported. Any other query parameter is ignored rather than rejected, and the request still succeeds. That includes misspelled keys and `updatedAtStartDate`, `updatedAtEndDate`, `statusChangedAt`, `assignedAt`, `buyerFacilityId`, and `walkthroughId`, which are not in the search index. Before relying on a new filter, compare `count_by` with and without it.
 - **Freshness.** Search index and replica updates lag writes by a moment. Your own just-written change, or a work order assigned seconds ago, can be briefly absent from list results and counts.
 - **Pagination depth.** `offset + limit` cannot exceed the search result window of 10,000. Narrow the filter rather than paging that deep.
@@ -93,6 +93,9 @@ Keys are case-sensitive. A singular key (`status`) takes one value; the plural k
 | `createdAtStartDate`, `createdAtEndDate` | Work created within the window. |
 | `completedAtStartDate`, `completedAtEndDate` | Work completed within the window. Useful for reporting on finished work and for catching recent closures. |
 | `lastServiceCallServiceScheduledAtStartDate`, `lastServiceCallServiceScheduledAtEndDate` | Work whose most recent visit is scheduled within the window. Pair with `sort_by=lastServiceCallServiceScheduledAt` for a schedule view. |
+| `dueAtStartDate`, `dueAtEndDate` | Work whose due date falls within the window. Closed work is included, so add `isActive=true` to see only open work. |
+| `calendarStartDate`, `calendarEndDate` | Work with a scheduled visit, completion, or due date inside the window, as chosen by `calendarTypes`. Send both keys; one without the other is ignored. See [calendar day view](#calendar-day-view). |
+| `calendarTypes` | Which times the calendar window matches on: a comma-separated list of `scheduled`, `completed`, and `due`. Without it, or with no recognized value, the window matches `scheduled` and `completed`. `due` leaves out `Completed` and `Cancelled` work, judged on your own sub-contract's status for work sub-contracted to you. Only applies with `calendarStartDate` and `calendarEndDate`. |
 | `pastDue` | `true` returns open work whose due date has passed; `false` returns open work that is not yet due. Closed work (`Completed` or `Cancelled`) and work with no due date match neither value. |
 | `pastSchedule` | Like `pastDue`, on the scheduled visit date: `true` returns open work whose scheduled date has passed. |
 | `pastEstimatedCompletion` | Like `pastDue`, on the estimated completion date you set for the work order. When you haven't set one, the due date is used. |
@@ -126,6 +129,23 @@ To match one local day, send `00:00:00` and `23:59:59` on the same date along wi
 curl -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
   "$BASE/v1/supplier/work_order/work_orders?completedAtStartDate=10/09/2026%2000:00:00&completedAtEndDate=10/09/2026%2023:59:59&timezone=America/Chicago"
 ```
+
+### Calendar day view
+
+To list one day's work in the order it happens, send a calendar window with `sort_by=calendarTime&order=asc`. Each work order is placed by its earliest scheduled visit, completion, or due time inside the window, counting only the types in `calendarTypes`. This request returns the visits scheduled, work completed, and open work due on November 12, 2026, Central time, earliest first:
+
+```bash
+curl -G "$BASE/v1/supplier/work_order/work_orders" \
+  -H "X-API-KEY: $KEY" -H "OW-KEY: $SECRET" \
+  --data-urlencode "calendarStartDate=11/12/2026 00:00:00" \
+  --data-urlencode "calendarEndDate=11/12/2026 23:59:59" \
+  --data-urlencode "calendarTypes=scheduled,completed,due" \
+  --data-urlencode "timezone=America/Chicago" \
+  --data-urlencode "fieldTechnicianEmail=tech@supplier.com" \
+  -d limit=5 -d sort_by=calendarTime -d order=asc
+```
+
+The list response's count covers every work order in the window, so you can show the first page and the number left over.
 
 ## Accept or decline
 
