@@ -7388,6 +7388,17 @@
                     },
                     "glCode": {
                       "type": "string"
+                    },
+                    "deptCode": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Department code for the line. Trimmed on save. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. A non-string value returns 400."
                     }
                   },
                   "required": [
@@ -14321,6 +14332,28 @@
                 "type": "null"
               }
             ]
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Latitude of the vendor's address, when set."
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Longitude of the vendor's address, when set."
           }
         },
         "required": [
@@ -14762,6 +14795,20 @@
                 "type": "null"
               }
             ]
+          },
+          "spotItemSupplierPurchaseRequestLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseRequestLineItem"
+            },
+            "description": "Spot item lines. Not included in the part or equipment arrays."
+          },
+          "deletedSpotItemSupplierPurchaseRequestLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseRequestLineItem"
+            },
+            "description": "Deleted spot item lines."
           }
         },
         "required": [
@@ -14997,7 +15044,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Suggested GL code for a PO line built from this PR line. When GL codes for inventory are enabled and the default PO line GL code in your inventory settings is set, that default is returned. Otherwise it is built from your GL code pattern, then falls back to the part's or equipment type's GL code."
           },
           "supplierFacilityId": {
             "type": "integer"
@@ -15043,6 +15091,72 @@
                 "type": "null"
               }
             ]
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "`true` for a spot item line: a free-text, non-catalog item added in the OpenWrench app. Spot item lines are read-only through this API."
+          },
+          "spotItemName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Spot item name. Unique per purchase request or purchase order (case-insensitive, trimmed)."
+          },
+          "spotItemQuantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemReceivedQuantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemCost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemCurrencyId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemVendorId": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vendor of a spot item line (a part/equipment vendor id)."
           }
         },
         "required": [
@@ -15229,6 +15343,17 @@
               }
             ]
           },
+          "deptCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Department code for the line. Trimmed on save. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. A non-string value returns 400."
+          },
           "createdAt": {
             "anyOf": [
               {
@@ -15240,6 +15365,10 @@
                 "type": "null"
               }
             ]
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "Spot items are not supported on this API. Sending `true` returns 400 \"Spot items are not supported on this API\"."
           }
         },
         "required": [
@@ -15615,6 +15744,20 @@
                 "type": "null"
               }
             ]
+          },
+          "spotItemSupplierPurchaseOrderLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseOrderLineItem"
+            },
+            "description": "Spot item lines. Not included in the part or equipment arrays."
+          },
+          "deletedSpotItemSupplierPurchaseOrderLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseOrderLineItem"
+            },
+            "description": "Deleted spot item lines."
           }
         },
         "required": [
@@ -15892,6 +16035,17 @@
               }
             ]
           },
+          "deptCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Department code for the line, or `null` when none is set."
+          },
           "supplierFacilityId": {
             "type": "integer"
           },
@@ -15931,6 +16085,71 @@
                 "type": "string",
                 "format": "date-time",
                 "description": "ISO 8601 date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "`true` for a spot item line: a free-text, non-catalog item added in the OpenWrench app. Spot item lines are read-only through this API."
+          },
+          "spotItemName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Spot item name. Unique per purchase request or purchase order (case-insensitive, trimmed)."
+          },
+          "spotItemQuantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemReceivedQuantity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemCost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemCurrencyId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "spotItemReceivedAverageCost": {
+            "anyOf": [
+              {
+                "type": "number"
               },
               {
                 "type": "null"

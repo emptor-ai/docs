@@ -2239,6 +2239,20 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "spotItemSupplierPurchaseRequestLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseRequestLineItem"
+            },
+            "description": "Spot item lines. Not included in the part or equipment arrays."
+          },
+          "deletedSpotItemSupplierPurchaseRequestLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseRequestLineItem"
+            },
+            "description": "Deleted spot item lines."
           }
         },
         "required": [
@@ -2598,7 +2612,50 @@
             "type": [
               "string",
               "null"
+            ],
+            "description": "Suggested GL code for a PO line built from this PR line. When GL codes for inventory are enabled and the default PO line GL code in your inventory settings is set, that default is returned. Otherwise it is built from your GL code pattern, then falls back to the part's or equipment type's GL code."
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "`true` for a spot item line: a free-text, non-catalog item added in the OpenWrench app. Spot item lines are read-only through this API."
+          },
+          "spotItemName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Spot item name. Unique per purchase request or purchase order (case-insensitive, trimmed)."
+          },
+          "spotItemQuantity": {
+            "type": [
+              "integer",
+              "null"
             ]
+          },
+          "spotItemReceivedQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemCost": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "spotItemCurrencyId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spotItemVendorId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Vendor of a spot item line (a part/equipment vendor id)."
           }
         },
         "required": [
@@ -3056,6 +3113,13 @@
               "null"
             ]
           },
+          "deptCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Department code for the line. Trimmed on save. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. A non-string value returns 400."
+          },
           "createdAt": {
             "type": [
               "string",
@@ -3063,6 +3127,10 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "Spot items are not supported on this API. Sending `true` returns 400 \"Spot items are not supported on this API\"."
           }
         },
         "required": [
@@ -3642,6 +3710,20 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "spotItemSupplierPurchaseOrderLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseOrderLineItem"
+            },
+            "description": "Spot item lines. Not included in the part or equipment arrays."
+          },
+          "deletedSpotItemSupplierPurchaseOrderLineItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseOrderLineItem"
+            },
+            "description": "Deleted spot item lines."
           }
         },
         "required": [
@@ -3947,6 +4029,13 @@
               "null"
             ]
           },
+          "deptCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Department code for the line, or `null` when none is set."
+          },
           "supplierPurchaseRequestLineItems": {
             "type": "array",
             "items": {
@@ -4009,6 +4098,47 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "isSpotItemLine": {
+            "type": "boolean",
+            "description": "`true` for a spot item line: a free-text, non-catalog item added in the OpenWrench app. Spot item lines are read-only through this API."
+          },
+          "spotItemName": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Spot item name. Unique per purchase request or purchase order (case-insensitive, trimmed)."
+          },
+          "spotItemQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemReceivedQuantity": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "spotItemCost": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "spotItemCurrencyId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spotItemReceivedAverageCost": {
+            "type": [
+              "number",
+              "null"
+            ]
           }
         },
         "required": [
@@ -5014,6 +5144,20 @@
             ],
             "format": "date-time",
             "description": "ISO 8601 date-time"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Latitude of the vendor's address, when set."
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Longitude of the vendor's address, when set."
           }
         },
         "required": [
@@ -6319,6 +6463,13 @@
               "string",
               "null"
             ]
+          },
+          "deptCode": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Department code for the line. Trimmed on save. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. A non-string value returns 400."
           }
         },
         "required": [
