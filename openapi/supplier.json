@@ -7388,6 +7388,17 @@
                     },
                     "glCode": {
                       "type": "string"
+                    },
+                    "deptCode": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Department code for the line. Trimmed on save. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. A non-string value returns 400."
                     }
                   },
                   "required": [
@@ -15033,7 +15044,8 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "description": "Suggested GL code for a PO line built from this PR line. When GL codes for inventory are enabled and the default PO line GL code in your inventory settings is set, that default is returned. Otherwise it is built from your GL code pattern, then falls back to the part's or equipment type's GL code."
           },
           "supplierFacilityId": {
             "type": "integer"
@@ -15330,6 +15342,17 @@
                 "type": "null"
               }
             ]
+          },
+          "deptCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Department code for the line. Trimmed on save. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. A non-string value returns 400."
           },
           "createdAt": {
             "anyOf": [
@@ -16011,6 +16034,17 @@
                 "type": "null"
               }
             ]
+          },
+          "deptCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Department code for the line, or `null` when none is set."
           },
           "supplierFacilityId": {
             "type": "integer"

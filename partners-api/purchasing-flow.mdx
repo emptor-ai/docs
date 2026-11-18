@@ -76,7 +76,7 @@ curl -X POST "$BASE/v1/partners/inventory/purchase_orders" \
   }'
 ```
 
-Each line item sets `isEquipmentLine` and then either the `part*` fields or the `equipment*` fields. `prLineItemIds` records which PR lines the PO line fulfils. Passing a top-level `id` replaces an existing PO's writable fields instead of creating a new one.
+Each line item sets `isEquipmentLine` and then either the `part*` fields or the `equipment*` fields. `prLineItemIds` records which PR lines the PO line fulfils. Each line also takes optional `glCode` and `deptCode` (department code) strings. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. Passing a top-level `id` replaces an existing PO's writable fields instead of creating a new one.
 
 ### Spot item lines
 
@@ -139,9 +139,10 @@ Rules:
 
 - `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy`, and `supplierFacilityId` are required.
 - `receivedQuantity` must be non-zero; **a negative value records a return**.
-- Updating a receipt adjusts the received quantities and costs on the PO line item and the stock records at the destination stock location.
+- Updating a receipt adjusts the received quantities and costs on the PO line item and the stock records where its units landed.
+- Each linked PR line's share lands where that PR was raised, so one PO can stock several places. For parts, a stock location PR's share stocks that stock location, and a location PR's share goes to its work order. For equipment, a stock location PR's share becomes equipment at that stock location, and a location PR's share becomes assets at that location. A PR without a ship-to falls back to the PO's ship-to.
 - For serialized equipment, send one entry per unit in `equipmentPerStockLocationReceiptValues`, `assetReceiptValues`, or `receiptValuesWithoutId`. The array length must equal `receivedQuantity`, these arrays may not accompany a return, and serial or asset numbers already in use are rejected.
-- Vendor invoice metadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) can be captured on the receipt.
+- Vendor invoice metadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) can be captured on the receipt. Editing a receipt's invoice total splits the cost change across the line's PR ship-tos: in proportion to what each PR line has received for parts, and per unit for equipment.
 
 Read a receipt back with `GET /v1/partners/inventory/purchase_order_receipts/{id}`.
 

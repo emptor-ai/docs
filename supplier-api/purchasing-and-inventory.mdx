@@ -87,7 +87,7 @@ curl -X POST "$BASE/v1/supplier/inventory/purchase_orders" \
   }'
 ```
 
-Line items distinguish part lines from equipment lines via `isEquipmentLine`; part lines carry `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, equipment lines the `equipment*` equivalents. `prLineItemIds` ties the line back to the purchase requests it fulfils. Passing a top-level `id` updates an existing PO.
+Line items distinguish part lines from equipment lines via `isEquipmentLine`; part lines carry `partId`/`partQuantity`/`partUomId`/`partCost`/`partCurrencyId`, equipment lines the `equipment*` equivalents. `prLineItemIds` ties the line back to the purchase requests it fulfils. Each line also takes optional `glCode` and `deptCode` (department code) strings. On an update, omitting `deptCode` keeps the stored code, and a blank or `null` value clears it. Passing a top-level `id` updates an existing PO.
 
 ### Spot item lines
 
@@ -139,9 +139,11 @@ curl -X PUT "$BASE/v1/supplier/inventory/purchase_order_receipts" \
 Required: `receiptNumber`, `purchaseOrderId`, `purchaseOrderLineItemId`, `receivedQuantity`, `updatedBy`, `supplierFacilityId`. Rules:
 
 - `receivedQuantity` must be non-zero. **A negative quantity records a return.**
-- Receiving updates the PO line item's received quantities/costs and the stock records at the destination stock location; PO status rolls up to `partially_received`/`received` accordingly.
+- Receiving updates the PO line item's received quantities/costs; PO status rolls up to `partially_received`/`received` accordingly.
+- Each linked PR line's share lands where that PR was raised, so one PO can stock several places. For parts, a stock location PR's share stocks that stock location, and a location PR's share goes to its work order. For equipment, a stock location PR's share becomes equipment at that stock location, and a location PR's share becomes assets at that location. A PR without a ship-to falls back to the PO's ship-to.
 - For serialized equipment, `equipmentPerStockLocationReceiptValues` (or `assetReceiptValues`/`receiptValuesWithoutId`) carries one `{ serialNumber, assetNumber }` entry per unit. The list length must equal `receivedQuantity`, these arrays are not allowed on returns, and serial or asset numbers already in use are rejected.
 - Vendor invoice metadata (`invoiceNumber`, `invoiceCurrency`, `invoiceTotal`, `exchangeRate`, `invoiceTotalPostExchange`) can be recorded on the receipt.
+- Editing a receipt's invoice total splits the cost change across the line's PR ship-tos: in proportion to what each PR line has received for parts, and per unit for equipment.
 
 Read one back with `GET /v1/supplier/inventory/purchase_order_receipts/{id}`.
 
@@ -166,7 +168,7 @@ Read-only reference data, all with standard pagination and field filters:
 - `approved` / `error`: append a note to the PO.
 - `rejected`: cancel the PO.
 - `completed`: mark the PO ordered.
-- `shipping_update`: append a shipping note; when `message.shipment_delivery_date` is present, auto-create receipts for all non-received line items.
+- `shipping_update`: append a shipping note; when `message.shipment_delivery_date` is present, auto-create receipts for all non-received line items. An equipment line whose units would land at a location without an asset type (on the receipt or as the equipment type's default) is skipped and logged, and the other lines are still received. When every line is refused, the webhook responds `400` with the refusal.
 
 Every request and response is audited, and the response shape varies by branch.
 
