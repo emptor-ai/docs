@@ -8755,11 +8755,14 @@
             "type": "string",
             "enum": [
               "text",
-              "user"
-            ]
+              "user",
+              "userGroup"
+            ],
+            "description": "text is a run of note text. user is an @mention of a contact. userGroup is an @mention of a user group, added in the OpenWrench apps."
           },
           "value": {
-            "type": "string"
+            "type": "string",
+            "description": "The text for a text element, the contact's email for a user element, or the numeric user group id (as a string) for a userGroup element."
           },
           "userObject": {
             "anyOf": [

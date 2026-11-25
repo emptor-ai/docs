@@ -319,7 +319,7 @@ curl -X PATCH "$BASE/v1/buyer/work_order/work_orders/append_notes/bulk" \
   }'
 ```
 
-**Read** with `GET /v1/buyer/work_order/work_order_notes/{woId}`. This returns the root buyer–supplier thread only (contractor and internal threads are separate), and reading marks the notes as read for your contact. A denied read returns an empty list rather than an error.
+**Read** with `GET /v1/buyer/work_order/work_order_notes/{woId}`. This returns the root buyer–supplier thread only (contractor and internal threads are separate), and reading marks the notes as read for your contact. A denied read returns an empty list rather than an error. Notes written in the OpenWrench apps can @mention a user group as well as people. A group mention appears in `note.elements` as a `userGroup` element whose `value` is the group's numeric id. `taggedUsers` tags individual contacts only.
 
 ## Labels
 
