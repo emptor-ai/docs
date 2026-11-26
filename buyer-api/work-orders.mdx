@@ -219,6 +219,8 @@ curl -X POST "$BASE/v1/buyer/work_order/work_orders/status_update/work_reviewed_
 
 Every status action returns the updated work order in the standard envelope.
 
+`work_reviewed_and_completed` can return a status other than `WorkReviewedAndCompleted` when the work order has a supplier invoice. If the invoice is already published, the work order moves to the status that matches it: `PaymentMade` for a `paid` invoice, and `Invoiced` for any other published status. If OpenWrench auto-publishes a draft invoice on completion, the work order moves to `Invoiced`. With no invoice, a `draft` invoice that is not auto-published, or a `void` invoice, the status stays `WorkReviewedAndCompleted`. In every case `displayStatus` is `Completed`.
+
 ### Cancellation lock while a technician is checked in
 
 Companies can opt in to a cancellation lock that keeps work orders open while a technician is on site. With the lock enabled, OpenWrench rejects any cancellation with `409 Conflict` if a technician is actively checked in on any of the work order's service calls. This covers visits on the work order itself and visits on its sub-contracted work orders. OpenWrench blocks canceling a sub-contract whose status propagates to the root work order in the same way, and commits nothing on either work order.
@@ -255,6 +257,8 @@ When your integration receives this `409`, wait for the technician to check out 
 | `PartsRequested`, `PartsOnOrder`, `PartsReceived` | Supplier | Parts procurement in progress. |
 | `WaitingForReview` | Supplier | Work finished, awaiting your review. |
 | `WorkReviewedAndCompleted` | Buyer | You reviewed and closed the job. |
+| `Invoiced` | System | Completed, with a published supplier invoice that is not yet paid. |
+| `PaymentMade` | System | Completed, and the supplier invoice is paid. |
 | `WorkUnsatisfactory` | Buyer | You rejected the completed work. |
 | `CancelledWithReason` | Buyer | Cancelled. |
 
